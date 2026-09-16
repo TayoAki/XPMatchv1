@@ -25,7 +25,9 @@ import; **4** waits on a fare API and email.
 
 ## Wave 1 status: shipped
 
-Design and review in `docs/WAVE1_PLAN.md`; flows in `docs/USER_FLOWS.md`.
+Design and review in `docs/WAVE1_PLAN.md`; flows in `docs/USER_FLOWS.md`. The build-and-test plan for
+the next four features (review Q&A, itinerary board, taste profile, inspiration import) is in
+`docs/WAVE2_PLAN.md`.
 
 | # | What shipped | Left for Wave 2 |
 | --- | --- | --- |
