@@ -52,6 +52,8 @@ function startStack() {
       PLACES_PORT: String(APP_PORT + 1346),
       SITE_PORT: String(APP_PORT + 1347),
       PGLITE_DIR: dataDir,
+      // `next dev` without its on-screen dev badge (see next.config.ts).
+      NEXT_DEV_INDICATORS: "0",
     },
     stdio: ["ignore", "inherit", "inherit"],
   });
@@ -118,28 +120,30 @@ async function main() {
     await sleep(1200);
     await type(dialog.getByPlaceholder("Austell, GA"), "Austell, GA", 300);
     await type(dialog.getByPlaceholder("ATL"), "ATL", 300);
-    const next = async () => click(dialog.getByRole("button", { name: "Next", exact: true }), 900);
-    await next();
-    mark("interests");
+    // Mark the next step as it appears, before the pause, so the caption changes with the screen.
+    const next = async (key) => {
+      const button = dialog.getByRole("button", { name: "Next", exact: true });
+      await cursor(button);
+      await button.click();
+      mark(key);
+      await sleep(900);
+    };
+    await next("interests");
     await chips("style-chips", ["Food & drink", "Culture & history"]);
     await chips("interest-chips", ["Museums & art", "Food tours & markets", "Local neighborhoods"]);
-    await next();
-    mark("stays");
+    await next("stays");
     await chips("stay-type-chips", ["Boutique hotel"]);
     await chips("must-have-chips", ["Pool", "Central location"]);
-    await next();
-    mark("food");
+    await next("food");
     await chips("cuisine-chips", ["Italian", "Cafés & bakeries"]);
     await chips("dietary-chips", ["Vegetarian"]);
     await click(dialog.getByRole("button", { name: /Try anything/ }), 500);
-    await next();
-    mark("logistics");
+    await next("logistics");
     await click(dialog.getByRole("button", { name: /Night owl/ }), 400);
     await click(dialog.getByRole("button", { name: /Love long walks/ }), 400);
     await type(dialog.getByPlaceholder("Rome, Italy"), "Rome, Italy", 300);
     await type(dialog.getByPlaceholder("October"), "October", 300);
-    await next();
-    mark("dealbreakers");
+    await next("dealbreakers");
     await chips("dealbreaker-chips", ["Street noise at night", "Early starts"]);
     await click(dialog.getByRole("button", { name: "Save preferences" }), 800);
 

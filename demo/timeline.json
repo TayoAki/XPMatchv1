@@ -1,71 +1,71 @@
 {
-  "duration": 88.5,
+  "duration": 88.1,
   "width": 1440,
   "height": 900,
   "marks": [
     {
       "key": "signup",
-      "at": 0.4
+      "at": 0.5
     },
     {
       "key": "onboarding",
-      "at": 9.3
+      "at": 8.7
     },
     {
       "key": "interests",
-      "at": 13.3
+      "at": 11.9
     },
     {
       "key": "stays",
-      "at": 18.3
+      "at": 16.9
     },
     {
       "key": "food",
-      "at": 21.5
+      "at": 20.2
     },
     {
       "key": "logistics",
-      "at": 25.8
+      "at": 24.3
     },
     {
       "key": "dealbreakers",
-      "at": 30.2
+      "at": 29
     },
     {
       "key": "home",
-      "at": 32.8
+      "at": 32.5
     },
     {
       "key": "score",
-      "at": 37.7
+      "at": 37.3
     },
     {
       "key": "chat",
-      "at": 42.7
+      "at": 42.5
     },
     {
       "key": "proposal",
-      "at": 46.9
+      "at": 46.1
     },
     {
       "key": "board",
-      "at": 52.6
+      "at": 52.4
     },
     {
       "key": "details",
-      "at": 58.6
+      "at": 58.3
     },
     {
       "key": "reservation",
-      "at": 63.9
+      "at": 63.7
     },
     {
       "key": "bookings",
-      "at": 74.6
+      "at": 74.2
     },
     {
       "key": "bug",
-      "at": 81.7
+      "at": 81.2
     }
   ]
 }
