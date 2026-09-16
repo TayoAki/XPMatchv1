@@ -8,7 +8,7 @@ assumptions are stated so the model can be re-run with real numbers.
 
 | Driver | Where it is incurred | List price | Notes |
 | --- | --- | --- | --- |
-| Hosting (Railway) | App service + Postgres + 1 volume | Hobby plan $5/month incl. $5 usage; then ~$10 per GB RAM-month, ~$20 per vCPU-month, $0.15 per GB volume | Two small services idle around 300–400 MB RAM total |
+| Hosting (Railway) | App service + Postgres + 1 volume | Pro plan $20/month per seat, usage on top: ~$10 per GB RAM-month, ~$20 per vCPU-month, $0.15 per GB volume | Both services idle around 50 MB RAM each and near-zero CPU (about $1–2/month of usage); the Postgres volume holds under 1 GB |
 | Model (OpenRouter → `openai/gpt-4o-mini`) | Every chat message | $0.15 per 1M input tokens, $0.60 per 1M output | Each message = ~3 model calls (answer, tool follow-up, suggestions) of ~8k input tokens each |
 | Google Places Text Search | Every recommended hotel/restaurant/attraction card, destination focus, search-and-pin, guide editor lookups | $40 per 1,000 (Enterprise + Atmosphere tier, because the field mask includes rating, price level and editorial summary) | 1 call per place; in-process cache per query |
 | Google Places Nearby Search / Text Search (Explore) | Each Explore tab or search | $35 per 1,000 (Enterprise tier: rating, price) | "For you" = 2 calls; cached 10 minutes per area/tab |
@@ -60,7 +60,7 @@ loads.
 | Routes API (board travel legs, ~20 changes) | ~$0.10 |
 | Home picks (~3 destinations, mostly cache hits) | ~$0.40 |
 | **Variable COGS** | **≈ $9–10 per active user** (≈95% Google Places) |
-| Fixed hosting | ≈ $5–15 per month total |
+| Fixed hosting | Pro plan $20/month plus ≈ $1–2 of usage at beta scale |
 
 At 100 active users that is roughly $900/month of Google Places before free tiers, versus ~$15 of model
 spend and ~$15 of hosting: the map/places experience, not the AI, is the cost center.

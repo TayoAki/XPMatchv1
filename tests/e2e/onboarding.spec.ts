@@ -13,7 +13,8 @@ interface RecRow {
 }
 
 test("in-depth onboarding drives home picks with match scores and thumbs; itinerary detail; bug reports reach the admin page", async ({ page, browser, baseURL }) => {
-  test.setTimeout(360_000);
+  // Nine steps, several first-visit compiles in dev mode; production mode (CI) finishes in a fraction of this.
+  test.setTimeout(540_000);
   const email = uniqueEmail("deep");
   const stateJson = async () => (await (await page.request.get("/api/me/state")).json()) as { profile: Record<string, unknown>; chats: { destination?: string }[] };
   const recsJson = async () => (await (await page.request.get("/api/me/recs")).json()) as { recFeedback: RecRow[]; quality: { hitRate: number | null } };
@@ -151,6 +152,10 @@ test("in-depth onboarding drives home picks with match scores and thumbs; itiner
     const wizard = admin.getByRole("dialog", { name: /personalize/i });
     await expect(wizard.or(admin.getByRole("heading", { name: /Where to today/ }))).toBeVisible({ timeout: 30_000 });
     if (await wizard.isVisible()) await completeOnboarding(admin);
+    await eventually(
+      async () => (await (await admin.request.get("/api/me/state")).json()) as { profile: { onboarded: boolean } },
+      (s) => s.profile.onboarded === true,
+    );
     await admin.goto("/admin");
     const report = admin.getByTestId("bug-report").filter({ hasText: "The stays row overlaps the map" });
     await expect(report).toBeVisible({ timeout: 20_000 });

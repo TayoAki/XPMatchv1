@@ -319,7 +319,8 @@ export const travelActions = {
       profile,
       user: prev.user && patch.name?.trim() ? { ...prev.user, name: patch.name.trim() } : prev.user,
     });
-    api("/api/me/profile", { method: "PUT", json: profile }).catch((err) => report("saving preferences", err));
+    // keepalive: finishing onboarding and leaving the page at once must not drop the save.
+    api("/api/me/profile", { method: "PUT", json: profile, keepalive: true }).catch((err) => report("saving preferences", err));
   },
 
   updatePlanner(patch: Partial<TripPlanner>) {
