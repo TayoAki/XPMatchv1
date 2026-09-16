@@ -178,7 +178,9 @@ export async function homePicks(destinationQuery: string, inputs: MatchInputs): 
     for (const list of lists) {
       for (const place of list) {
         if (seen.has(place.id) || place.kind === "destination") continue;
-        // Text Search answers with whatever matched the words; keep only what Google's own type agrees with.
+        // Text Search answers with whatever matched the words; keep only what Google's own type agrees
+        // with, and nothing without a type at all (a locality such as the city itself).
+        if (!place.category) continue;
         const inferred = inferKind(place.category);
         if (inferred && inferred !== rowKind) continue;
         seen.add(place.id);

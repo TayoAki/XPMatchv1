@@ -113,7 +113,7 @@ export function Sidebar() {
 
       <div className="flex-1" />
 
-      {!promoDismissed ? (
+      {!promoDismissed && !profile.onboarded ? (
         <div className="relative mb-4 overflow-hidden rounded-2xl bg-gradient-to-br from-teal-100 via-cyan-100 to-emerald-100 p-4">
           <button
             type="button"

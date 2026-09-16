@@ -401,6 +401,8 @@ function textSearch(body) {
       else score -= 50;
     }
     if (p.kind === "destination" && !/\brome\b|\broma\b|\baustell\b/.test(q)) score -= 20;
+    // "hotels in Rome" is a query for hotels, not for the city: Google would not answer with the locality.
+    if (p.kind === "destination" && Object.values(KIND_WORDS).some((re) => re.test(q))) score -= 50;
     return { p, score };
   })
     .filter((x) => x.score > 0)
@@ -421,8 +423,31 @@ function nearbySearch(body) {
     .slice(0, body.maxResultCount ?? 20);
 }
 
-// A 1x1 PNG so <img> elements load successfully.
-const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
+// Placeholder "photos": an SVG gradient with the place's name, so cards and demo recordings look like
+// something without any network. The proxy passes the content type through, so <img> renders it.
+const PALETTES = [
+  ["#f59e0b", "#ef4444"],
+  ["#0ea5e9", "#6366f1"],
+  ["#10b981", "#0ea5e9"],
+  ["#a855f7", "#ec4899"],
+  ["#84cc16", "#14b8a6"],
+  ["#f97316", "#e11d48"],
+];
+function photoSvg(placeId) {
+  const place = PLACES.find((p) => p.id === placeId);
+  const name = place?.displayName?.text ?? placeId;
+  let h = 0;
+  for (const c of placeId) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const [a, b] = PALETTES[h % PALETTES.length];
+  const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs>
+  <rect width="800" height="600" fill="url(#g)"/>
+  <circle cx="640" cy="140" r="90" fill="#fff" fill-opacity="0.18"/>
+  <circle cx="160" cy="470" r="140" fill="#fff" fill-opacity="0.12"/>
+  <text x="40" y="540" font-family="Helvetica, Arial, sans-serif" font-size="44" font-weight="700" fill="#fff" fill-opacity="0.92">${esc(name)}</text>
+</svg>`;
+}
 
 const server = http.createServer((req, res) => {
   let body = "";
@@ -445,8 +470,10 @@ const server = http.createServer((req, res) => {
         return send(200, { photoUri: `http://localhost:${PORT}/photo/${photo[1]}-${photo[2]}.png` });
       }
       if (req.method === "GET" && url.pathname.startsWith("/photo/")) {
-        res.writeHead(200, { "Content-Type": "image/png", "Content-Length": PNG.length });
-        return res.end(PNG);
+        const placeId = url.pathname.slice("/photo/".length).replace(/-p\d+\.png$/, "");
+        const svg = photoSvg(placeId);
+        res.writeHead(200, { "Content-Type": "image/svg+xml", "Content-Length": Buffer.byteLength(svg) });
+        return res.end(svg);
       }
       const details = url.pathname.match(/^\/v1\/places\/([^/]+)$/);
       if (req.method === "GET" && details) {

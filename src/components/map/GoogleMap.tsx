@@ -324,7 +324,7 @@ function MapFallback({ status, error, focus, pins }: { status: MapStatus; error:
         <div className="text-[14px] text-muted">Loading map…</div>
       ) : (
         <>
-          <div className="max-w-md text-[14px] text-neutral-700">{error}</div>
+          <div className="max-w-md text-[12px] text-muted">{error}</div>
           {focus || pins.length ? (
             <div className="max-h-[60%] overflow-y-auto rounded-2xl bg-white px-5 py-4 text-left shadow-sm">
               {focus ? (

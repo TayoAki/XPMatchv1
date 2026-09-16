@@ -80,17 +80,19 @@ function PickCard({ place, match, destination, context }: { place: ResolvedPlace
         </div>
       </div>
       <div className="flex flex-1 flex-col gap-1 p-3">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="line-clamp-2 text-[14px] font-semibold leading-snug">{place.name}</h3>
+        <h3 className="line-clamp-2 text-[14px] font-semibold leading-snug" title={place.name}>
+          {place.name}
+        </h3>
+        <div className="flex flex-wrap items-center gap-x-2 text-[12px] text-muted">
           {place.rating ? (
-            <span className="inline-flex shrink-0 items-center gap-1 text-[12px] font-semibold">
+            <span className="inline-flex items-center gap-1 font-semibold text-foreground">
               <Star className="h-3 w-3 fill-current" /> {place.rating.toFixed(1)}
               {place.userRatingCount ? <span className="font-normal text-muted">({compact(place.userRatingCount)})</span> : null}
             </span>
           ) : null}
+          <span className="truncate">{[place.category, place.priceLevel].filter(Boolean).join(" · ")}</span>
         </div>
-        <div className="text-[12px] text-muted">{[place.category, place.priceLevel].filter(Boolean).join(" · ")}</div>
-        {match.reasons[0] && match.reasons[0].delta > 0 ? <div className="text-[12px] text-neutral-700">{match.reasons[0].text}</div> : null}
+        {match.reasons[0] && match.reasons[0].delta > 0 && match.reasons[0].factor !== "quality" ? <div className="line-clamp-2 text-[12px] text-neutral-700">{match.reasons[0].text}</div> : null}
         <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-2">
           <RecThumbs name={place.name} kind={place.kind} place={place} destination={destination} context={context} match={match} size="sm" />
           <div className="flex items-center gap-1">

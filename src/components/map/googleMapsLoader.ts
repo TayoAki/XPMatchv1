@@ -63,7 +63,7 @@ export function loadGoogleMaps(): Promise<GoogleGlobal> {
     script.async = true;
     script.onerror = () => {
       loading = null;
-      reject(new Error("Could not load Google Maps (network blocked or key restricted)"));
+      reject(new Error("Map tiles are unavailable here (network blocked or key restricted); the pins are listed instead."));
     };
     document.head.appendChild(script);
   });
