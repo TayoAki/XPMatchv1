@@ -5,13 +5,15 @@ import { useEffect, useMemo } from "react";
 import { Lightbulb, Luggage, Sparkles } from "lucide-react";
 import { ToolCallStatus } from "@copilotkit/core";
 import { useAgentContext, useFrontendTool } from "@copilotkit/react-core/v2";
-import { formatDateRange, travelActions, useTravelStore } from "@/lib/store";
+import { formatDateRange, travelActions, useTravelStore, type TripPatch } from "@/lib/store";
 import { mapActions } from "@/lib/map-store";
 import { preferencesForContext } from "@/components/chat/TravelCopilot";
 import { resolvePlaces } from "@/lib/places/client";
 import type { MapPlace, ResolvedPlace } from "@/lib/places/types";
 import type { TripDetail } from "@/lib/types";
-import { addTripIdeasSchema, updateTripPlanSchema, type AddTripIdeasArgs, type Streaming, type UpdateTripPlanArgs } from "@/lib/travel/schemas";
+import { addTripIdeasSchema, scheduleStopsSchema, updateTripPlanSchema, type AddTripIdeasArgs, type ScheduleStopsArgs, type Streaming, type UpdateTripPlanArgs } from "@/lib/travel/schemas";
+import { addDay, daysFromModel, insertStop, newStopId } from "@/lib/itinerary";
+import { CalendarPlus } from "lucide-react";
 import { useTripDetail } from "@/components/trips/useTripDetail";
 import { useTripScope } from "@/components/trips/TripScope";
 
@@ -70,6 +72,27 @@ function IdeasAddedChip({ args, status }: RenderProps<AddTripIdeasArgs>) {
 const TripUpdatedRenderer = (props: RenderProps<UpdateTripPlanArgs>) => <TripUpdatedChip {...props} />;
 const IdeasAddedRenderer = (props: RenderProps<AddTripIdeasArgs>) => <IdeasAddedChip {...props} />;
 
+function StopsScheduledChip({ args, status }: RenderProps<ScheduleStopsArgs>) {
+  const tripId = useTripScope();
+  const stops = ((args as Streaming<ScheduleStopsArgs>).stops ?? []).filter((st) => st && st.name);
+  return (
+    <div className="mt-2 inline-flex max-w-full items-start gap-2 rounded-2xl border border-border bg-surface/70 px-3 py-2 text-[13px]">
+      <CalendarPlus className="mt-0.5 h-4 w-4 shrink-0" />
+      <div>
+        <div className="font-semibold">{status === ToolCallStatus.Complete ? `Scheduled ${stops.length} stop${stops.length === 1 ? "" : "s"}` : "Scheduling…"}</div>
+        {stops.length ? <div className="text-neutral-700">{stops.map((st) => `Day ${st.day}: ${st.name}`).join(" · ")}</div> : null}
+        {status === ToolCallStatus.Complete ? (
+          <Link href={tripId ? `/trips/${tripId}?view=board` : "/trips"} className="font-semibold underline-offset-2 hover:underline">
+            Open the board
+          </Link>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+const StopsScheduledRenderer = (props: RenderProps<ScheduleStopsArgs>) => <StopsScheduledChip {...props} />;
+
 function cleanPatch(args: UpdateTripPlanArgs): UpdateTripPlanArgs {
   return Object.fromEntries(Object.entries(args).filter(([, v]) => v !== undefined && v !== null && v !== "")) as UpdateTripPlanArgs;
 }
@@ -123,11 +146,12 @@ export function TripChatScope({ tripId, threadId }: { tripId: string; threadId?:
           members: trip.members.map((m) => m.name),
           ideas: trip.items.filter((i) => i.kind === "idea").map((i) => i.title).slice(0, 30),
           bookings: trip.items.filter((i) => i.kind === "booking").map((i) => i.title).slice(0, 20),
-          itinerary: trip.itinerary.map((d) => ({ day: d.day, title: d.title, items: d.items })),
+          itinerary: trip.itinerary.map((d) => ({ day: d.day, title: d.title, stops: d.stops.map((st) => `${st.title}${st.startTime ? ` (${st.startTime})` : ""}`) })),
         }
       : { status: "loading" },
   });
 
+  const itinerary = trip?.itinerary;
   useFrontendTool(
     {
       name: "update_trip_plan",
@@ -136,7 +160,9 @@ export function TripChatScope({ tripId, threadId }: { tripId: string; threadId?:
       parameters: updateTripPlanSchema,
       followUp: true,
       handler: async (args) => {
-        const patch = cleanPatch(args);
+        const { itinerary: modelDays, ...rest } = cleanPatch(args);
+        const patch: TripPatch = { ...rest };
+        if (modelDays?.length) patch.itinerary = daysFromModel(modelDays, itinerary ?? []);
         if (Object.keys(patch).length === 0) return "Nothing to update.";
         const detail = await travelActions.patchTrip(tripId, patch);
         setTrip(detail);
@@ -144,7 +170,7 @@ export function TripChatScope({ tripId, threadId }: { tripId: string; threadId?:
       },
       render: TripUpdatedRenderer,
     },
-    [tripId, setTrip],
+    [tripId, itinerary, setTrip],
   );
 
   const destination = trip?.destination;
@@ -179,6 +205,35 @@ export function TripChatScope({ tripId, threadId }: { tripId: string; threadId?:
       render: IdeasAddedRenderer,
     },
     [tripId, destination, setTrip],
+  );
+
+  useFrontendTool(
+    {
+      name: "schedule_stops",
+      description:
+        "Put specific places or activities on a day of this trip's itinerary (creates the day when needed). Use it for 'put the Colosseum on day 2', 'add lunch at Roscioli after the Pantheon'. Real places get a kind so they are resolved and pinned.",
+      parameters: scheduleStopsSchema,
+      followUp: true,
+      handler: async ({ stops }) => {
+        let days = itinerary ?? [];
+        for (const stop of stops) {
+          while (days.length < stop.day) days = addDay(days);
+          days = insertStop(days, stop.day - 1, {
+            id: newStopId(),
+            title: stop.name,
+            note: stop.note ?? "",
+            kind: stop.kind,
+            startTime: stop.startTime,
+            durationMin: stop.durationMin,
+          });
+        }
+        const detail = await travelActions.patchTrip(tripId, { itinerary: days });
+        setTrip(detail);
+        return `Scheduled ${stops.map((st) => `${st.name} on day ${st.day}`).join(", ")}; places were resolved and pinned. Confirm in one short sentence.`;
+      },
+      render: StopsScheduledRenderer,
+    },
+    [tripId, itinerary, setTrip],
   );
 
   if (!trip) return null;

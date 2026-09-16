@@ -1,4 +1,4 @@
-import type { ResolvedPlace } from "@/lib/places/types";
+import type { PlaceKind, ResolvedPlace } from "@/lib/places/types";
 
 export type BudgetTier = "budget" | "mid-range" | "premium" | "luxury";
 export type Pace = "relaxed" | "balanced" | "packed";
@@ -93,10 +93,24 @@ export interface SavedItem {
   savedAt: string;
 }
 
+/** One stop of a day: a place (when resolved) or a text-only line, with optional timing. */
+export interface ItineraryStop {
+  id: string;
+  title: string;
+  note: string;
+  kind?: PlaceKind;
+  place?: ResolvedPlace;
+  /** "HH:MM" local time. */
+  startTime?: string;
+  durationMin?: number;
+  /** The trip idea this stop was scheduled from, when any. */
+  itemId?: string;
+}
+
 export interface ItineraryDay {
   day: number;
   title: string;
-  items: string[];
+  stops: ItineraryStop[];
 }
 
 export type TripRole = "owner" | "editor" | "viewer";

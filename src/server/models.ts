@@ -18,6 +18,7 @@ import type {
 import { DEFAULT_PROFILE } from "@/lib/types";
 import { queryAll, queryOne, type Row } from "./db";
 import { trimTranscript, type TranscriptMessage } from "./transcripts";
+import { normalizeItinerary } from "@/lib/itinerary";
 
 /* ----------------------------- helpers ----------------------------- */
 
@@ -339,7 +340,7 @@ const mapTrip = (r: TripRow): Trip => ({
   travelers: r.travelers ?? undefined,
   budgetTier: r.budget_tier ?? undefined,
   summary: r.summary ?? undefined,
-  itinerary: jsonb<Trip["itinerary"]>(r.itinerary) ?? [],
+  itinerary: normalizeItinerary(jsonb<unknown>(r.itinerary)),
   preferences: r.preferences ?? "",
   memberCount: Number(r.member_count ?? 1),
   createdAt: iso(r.created_at),

@@ -6,6 +6,7 @@ import { Calendar, Check, Users, Wallet } from "lucide-react";
 import { ToolCallStatus } from "@copilotkit/core";
 import type { CreateTripArgs, Streaming } from "@/lib/travel/schemas";
 import { formatDateRange, useTravelStore } from "@/lib/store";
+import { daysFromModel, type ModelStop } from "@/lib/itinerary";
 import { useHitlPendingMarker } from "@/lib/hitl-store";
 import { PlaceImage } from "@/components/ui/PlaceImage";
 import { Button } from "@/components/ui/Button";
@@ -54,11 +55,15 @@ export function TripProposalCard({ args, status, result, toolCallId, respond }: 
         travelers: args.travelers,
         budgetTier: args.budgetTier,
         summary: args.summary,
-        itinerary: days.map((d) => ({
-          day: d.day ?? 0,
-          title: d.title ?? `Day ${d.day}`,
-          items: (d.items ?? []).filter((i): i is string => typeof i === "string"),
-        })),
+        itinerary: daysFromModel(
+          days.map((d) => ({
+            day: d.day ?? 0,
+            title: d.title,
+            stops: (d.stops ?? []).flatMap<ModelStop>((st) =>
+              st && st.name ? [{ name: st.name, kind: st.kind, note: st.note, startTime: st.startTime, durationMin: st.durationMin }] : [],
+            ),
+          })),
+        ),
       });
       await respond({ created: true, tripId: trip.id, note: "Trip saved to the traveler's Trips page. Confirm in one short sentence and offer a next step." });
     } catch (err) {
@@ -118,9 +123,14 @@ export function TripProposalCard({ args, status, result, toolCallId, respond }: 
                     {d.title ? <span className="text-neutral-600"> · {d.title}</span> : null}
                   </div>
                   <ul className="mt-1 list-disc pl-4 text-[13px] text-neutral-700">
-                    {(d.items ?? []).filter(Boolean).map((item, j) => (
-                      <li key={j}>{item}</li>
-                    ))}
+                    {(d.stops ?? [])
+                      .filter((st) => st && st.name)
+                      .map((st, j) => (
+                        <li key={j}>
+                          {st.name}
+                          {st.note ? <span className="text-neutral-500"> · {st.note}</span> : null}
+                        </li>
+                      ))}
                   </ul>
                 </li>
               ))}

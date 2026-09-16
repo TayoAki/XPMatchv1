@@ -189,7 +189,18 @@ const server = http.createServer((req, res) => {
       if (toolName === "remember_preference") return streamReply(res, { text: "Got it — noted for next time." });
       if (toolName === "ask_about_place") return streamReply(res, { text: "Front rooms hear the buses early; a courtyard room fixes that." });
       if (toolName === "compare_options") return streamReply(res, { text: "Artemide is the safer pick for a quiet night at that budget." });
+      if (toolName === "schedule_stops") return streamReply(res, { text: "Done — it's on the board." });
       return streamReply(res, { text: "Done — those are on the cards above. Want stays or things to do next?" });
+    }
+    const schedule = text.match(/put (?:the )?(.+?) on day (\d+)/);
+    if (schedule && tools.includes("schedule_stops")) {
+      const raw = schedule[1].trim();
+      const name = raw.replace(/\b\w/g, (c) => c.toUpperCase());
+      const kind = /hotel|artemide|russie/.test(raw) ? "hotel" : /roscioli|enzo|trattoria/.test(raw) ? "restaurant" : "attraction";
+      return streamReply(res, {
+        text: "Adding it to the board.",
+        toolCall: { name: "schedule_stops", args: { stops: [{ name, day: Number(schedule[2]), kind, note: "from chat" }] } },
+      });
     }
     if (/\b(is|does|do|are|how)\b.*\b(noisy|quiet|dogs|vegetarian|crowded|book|desk|kids)\b/.test(text) && tools.includes("ask_about_place")) {
       const name = /artemide/.test(text) ? "Hotel Artemide" : /russie/.test(text) ? "Hotel de Russie" : /roscioli/.test(text) ? "Roscioli Salumeria con Cucina" : "Colosseum";

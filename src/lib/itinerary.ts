@@ -49,13 +49,13 @@ function normalizeStop(raw: unknown, day: number, index: number): ItineraryStop 
 export function normalizeItinerary(raw: unknown): ItineraryDay[] {
   if (!Array.isArray(raw)) return [];
   const days: ItineraryDay[] = [];
-  raw.forEach((entry, i) => {
+  raw.forEach((entry) => {
     if (!entry || typeof entry !== "object") return;
     const d = entry as LegacyDay;
     const day = typeof d.day === "number" && d.day >= 1 ? Math.round(d.day) : days.length + 1;
     const source = Array.isArray(d.stops) ? d.stops : Array.isArray(d.items) ? d.items : [];
     const stops = source.map((s, j) => normalizeStop(s, day, j)).filter((s): s is ItineraryStop => s !== null);
-    days.push({ day, title: asString(d.title, 200) || `Day ${i + 1}`, stops });
+    days.push({ day, title: asString(d.title, 200) || `Day ${days.length + 1}`, stops });
   });
   // Renumber so days are 1..n in order.
   return days.map((d, i) => ({ ...d, day: i + 1 }));
@@ -64,6 +64,58 @@ export function normalizeItinerary(raw: unknown): ItineraryDay[] {
 export function newStopId(): string {
   const rand = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID().slice(0, 8) : Math.random().toString(36).slice(2, 10);
   return `stop-${rand}`;
+}
+
+/** Shape of a stop as the assistant's tools produce it (`name` instead of `title`, no id). */
+export interface ModelStop {
+  name: string;
+  kind?: PlaceKind;
+  note?: string;
+  startTime?: string;
+  durationMin?: number;
+}
+
+export interface ModelDay {
+  day: number;
+  title?: string;
+  stops: ModelStop[];
+}
+
+const titleKey = (title: string) => title.trim().toLowerCase();
+
+/**
+ * Turns the assistant's itinerary (names, kinds, notes) into structured days.
+ * When the trip already has stops, a stop with the same title keeps its id,
+ * its resolved place and its link to a trip idea, so rewriting the plan does
+ * not drop pins or trigger another lookup.
+ */
+export function daysFromModel(days: ModelDay[], existing: ItineraryDay[] = []): ItineraryDay[] {
+  const known = new Map<string, ItineraryStop>();
+  for (const day of existing) for (const stop of day.stops) if (!known.has(titleKey(stop.title))) known.set(titleKey(stop.title), stop);
+  const used = new Set<string>();
+  const out: ItineraryDay[] = [];
+  days.filter((d) => d && typeof d.day === "number").forEach((d, i) => {
+    const stops: ItineraryStop[] = [];
+    for (const st of d.stops ?? []) {
+      if (!st || !st.name || !st.name.trim()) continue;
+      const match = known.get(titleKey(st.name));
+      const reuse = match && !used.has(match.id) ? match : undefined;
+      if (reuse) used.add(reuse.id);
+      const stop: ItineraryStop = {
+        id: reuse?.id ?? newStopId(),
+        title: reuse?.place?.name ?? st.name.trim().slice(0, 200),
+        note: st.note ?? reuse?.note ?? "",
+        kind: st.kind ?? reuse?.kind,
+        place: reuse?.place,
+        itemId: reuse?.itemId,
+        startTime: st.startTime,
+        durationMin: st.durationMin,
+      };
+      stops.push(stop);
+    }
+    out.push({ day: i + 1, title: (d.title ?? "").trim() || `Day ${i + 1}`, stops });
+  });
+  return out;
 }
 
 /** A stop made from a trip idea (keeps the link so the idea can be shown as scheduled). */
@@ -167,12 +219,13 @@ export interface TravelLeg {
 
 /**
  * Travel time estimate between two stops: straight-line distance times a 1.3
- * path factor, walking at 5 km/h up to 2 km, otherwise driving at 25 km/h in
- * town. Labeled as an estimate in the UI; routing APIs can replace it later.
+ * path factor, walking at 5 km/h up to 2.5 km (about half an hour), otherwise
+ * driving at 25 km/h in town. Labeled as an estimate in the UI; routing APIs
+ * can replace it later.
  */
 export function estimateLeg(a: LatLngLike, b: LatLngLike): TravelLeg {
   const km = haversineKm(a, b) * 1.3;
-  const mode: TravelLeg["mode"] = km <= 2 ? "walk" : "drive";
+  const mode: TravelLeg["mode"] = km <= 2.5 ? "walk" : "drive";
   const speed = mode === "walk" ? 5 : 25;
   const minutes = Math.max(1, Math.round((km / speed) * 60));
   return { km: Math.round(km * 10) / 10, minutes, mode };

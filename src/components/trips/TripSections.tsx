@@ -9,6 +9,7 @@ import {
   ExternalLink,
   Heart,
   Image as ImageIcon,
+  KanbanSquare,
   Lightbulb,
   ListOrdered,
   LogOut,
@@ -23,7 +24,8 @@ import {
   X,
 } from "lucide-react";
 import { findSaved, formatDateRange, useTravelStore, type BudgetTier } from "@/lib/store";
-import type { ItineraryDay, TripDetail, TripItem, TripItemKind, TripMember } from "@/lib/types";
+import type { ItineraryDay, ItineraryStop, TripDetail, TripItem, TripItemKind, TripMember } from "@/lib/types";
+import { newStopId } from "@/lib/itinerary";
 import type { PlaceKind } from "@/lib/places/types";
 import { resolvePlaces } from "@/lib/places/client";
 import { Button } from "@/components/ui/Button";
@@ -95,6 +97,8 @@ interface SectionProps {
   isOwner: boolean;
   onTrip: (trip: TripDetail) => void;
   onSelectPlace: (key: string | null) => void;
+  /** Switches the page to the itinerary board. */
+  onOpenBoard?: () => void;
 }
 
 /** Tile grid (overview) or one opened section of a trip. */
@@ -340,24 +344,49 @@ function IdeasSection(props: SectionProps) {
 
 /* ----------------------------- itinerary ----------------------------- */
 
-function ItinerarySection({ trip, canEdit, onTrip }: SectionProps) {
+interface DayDraft {
+  title: string;
+  lines: string;
+  stops: ItineraryStop[];
+}
+
+/** Text lines back to stops: a line that still matches an existing stop keeps its place and timing. */
+function linesToStops(lines: string, existing: ItineraryStop[]): ItineraryStop[] {
+  const pool = [...existing];
+  return lines
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .map((title) => {
+      const at = pool.findIndex((st) => st.title.toLowerCase() === title.toLowerCase());
+      if (at >= 0) return pool.splice(at, 1)[0];
+      return { id: newStopId(), title, note: "" };
+    });
+}
+
+function ItinerarySection({ trip, canEdit, onTrip, onOpenBoard }: SectionProps) {
   const { patchTrip } = useTravelStore();
   const send = useSendMessage();
-  const [draft, setDraft] = useState<ItineraryDay[] | null>(null);
+  const [draft, setDraft] = useState<DayDraft[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const startEditing = () => setDraft(trip.itinerary.length ? trip.itinerary : [{ day: 1, title: "", items: [] }]);
+  const startEditing = () =>
+    setDraft(
+      trip.itinerary.length
+        ? trip.itinerary.map((d) => ({ title: d.title, lines: d.stops.map((st) => st.title).join("\n"), stops: d.stops }))
+        : [{ title: "", lines: "", stops: [] }],
+    );
 
   const save = async () => {
     if (!draft) return;
     setBusy(true);
     setError(null);
     try {
-      const itinerary = draft.map((d, i) => ({
+      const itinerary: ItineraryDay[] = draft.map((d, i) => ({
         day: i + 1,
         title: d.title.trim() || `Day ${i + 1}`,
-        items: d.items.map((s) => s.trim()).filter(Boolean),
+        stops: linesToStops(d.lines, d.stops),
       }));
       onTrip(await patchTrip(trip.id, { itinerary }));
       setDraft(null);
@@ -369,7 +398,7 @@ function ItinerarySection({ trip, canEdit, onTrip }: SectionProps) {
   };
 
   if (draft) {
-    const update = (index: number, patch: Partial<ItineraryDay>) => setDraft(draft.map((d, i) => (i === index ? { ...d, ...patch } : d)));
+    const update = (index: number, patch: Partial<DayDraft>) => setDraft(draft.map((d, i) => (i === index ? { ...d, ...patch } : d)));
     return (
       <div className="grid gap-4">
         {draft.map((d, i) => (
@@ -382,8 +411,8 @@ function ItinerarySection({ trip, canEdit, onTrip }: SectionProps) {
               </IconButton>
             </div>
             <TextArea
-              value={d.items.join("\n")}
-              onChange={(e) => update(i, { items: e.target.value.split("\n") })}
+              value={d.lines}
+              onChange={(e) => update(i, { lines: e.target.value })}
               placeholder="One stop per line"
               aria-label={`Day ${i + 1} stops`}
               className="mt-2"
@@ -391,7 +420,7 @@ function ItinerarySection({ trip, canEdit, onTrip }: SectionProps) {
           </div>
         ))}
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" onClick={() => setDraft([...draft, { day: draft.length + 1, title: "", items: [] }])}>
+          <Button variant="outline" onClick={() => setDraft([...draft, { title: "", lines: "", stops: [] }])}>
             <Plus className="h-4 w-4" /> Add day
           </Button>
           <div className="flex-1" />
@@ -417,6 +446,11 @@ function ItinerarySection({ trip, canEdit, onTrip }: SectionProps) {
             <Button onClick={() => send("Build a day-by-day itinerary for this trip from my ideas and preferences, then save it to the trip.")}>
               <Sparkles className="h-4 w-4" /> Build it with the assistant
             </Button>
+            {onOpenBoard ? (
+              <Button variant="outline" onClick={onOpenBoard}>
+                <KanbanSquare className="h-4 w-4" /> Open the board
+              </Button>
+            ) : null}
             {canEdit ? (
               <Button variant="outline" onClick={startEditing}>
                 Write it myself
@@ -438,17 +472,27 @@ function ItinerarySection({ trip, canEdit, onTrip }: SectionProps) {
               {d.title ? <span className="text-neutral-600"> · {d.title}</span> : null}
             </div>
             <ul className="mt-1 list-disc pl-5 text-[14px] text-neutral-700">
-              {d.items.map((item, j) => (
-                <li key={j}>{item}</li>
+              {d.stops.map((st) => (
+                <li key={st.id}>
+                  {st.startTime ? <span className="font-medium">{st.startTime} · </span> : null}
+                  {st.title}
+                  {st.place ? <MapPin className="ml-1 inline h-3.5 w-3.5 text-neutral-400" aria-label="pinned" /> : null}
+                  {st.note ? <span className="text-neutral-500"> · {st.note}</span> : null}
+                </li>
               ))}
             </ul>
           </li>
         ))}
       </ol>
       <div className="flex flex-wrap gap-2">
+        {onOpenBoard ? (
+          <Button onClick={onOpenBoard}>
+            <KanbanSquare className="h-4 w-4" /> Open the board
+          </Button>
+        ) : null}
         {canEdit ? (
           <Button variant="outline" onClick={startEditing}>
-            Edit
+            Edit as text
           </Button>
         ) : null}
         <Button variant="outline" onClick={() => send("Refine the itinerary for this trip: keep what works, fix the pacing and fill any gaps, then save it to the trip.")}>

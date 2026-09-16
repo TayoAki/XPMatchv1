@@ -113,11 +113,37 @@ export const showAttractionsSchema = z.object({
   attractions: z.array(attractionSchema).min(1).max(8),
 });
 
+export const itineraryStopSchema = z.object({
+  name: z.string().describe("The place exactly as named on Google Maps (e.g. 'Colosseum', 'Roscioli Salumeria con Cucina'), or a plain activity like 'Check in and drop bags'"),
+  kind: z.enum(["hotel", "restaurant", "attraction"]).optional().describe("Set when the stop is a real place so it can be pinned on the map"),
+  note: z.string().optional().describe("Timing or tip, e.g. 'at opening, book the arena floor'"),
+  startTime: z.string().optional().describe("HH:MM when the day has a schedule"),
+  durationMin: z.number().int().optional().describe("Typical time spent, in minutes"),
+});
+
 export const itineraryDaySchema = z.object({
   day: z.number().int().min(1),
   title: z.string().describe("Theme of the day, e.g. 'Old town & sunset views'"),
-  items: z.array(z.string()).describe("3-6 concrete stops in order with a short note each"),
+  stops: z.array(itineraryStopSchema).min(1).max(8).describe("3-6 stops in order; real places get a kind so they appear on the map"),
 });
+
+export const scheduleStopsSchema = z.object({
+  stops: z
+    .array(
+      z.object({
+        name: z.string().describe("Place exactly as named on Google Maps, or a plain activity"),
+        day: z.number().int().min(1).describe("Day number to put it on (a new day is created when needed)"),
+        kind: z.enum(["hotel", "restaurant", "attraction"]).optional(),
+        note: z.string().optional(),
+        startTime: z.string().optional().describe("HH:MM"),
+        durationMin: z.number().int().optional(),
+      }),
+    )
+    .min(1)
+    .max(10),
+});
+
+export type ScheduleStopsArgs = z.infer<typeof scheduleStopsSchema>;
 
 export const createTripSchema = z.object({
   title: z.string().describe("Short trip title, e.g. 'Long weekend in Dallas'"),

@@ -14,18 +14,26 @@ export function iconSvg(kind: PlaceKind, size = 16): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${PATHS[kind]}</svg>`;
 }
 
-export function buildMarkerElement(
-  kind: PlaceKind,
-  name: string,
-  options: { focus?: boolean; label?: string } = {},
-): HTMLElement {
+export interface MarkerOptions {
+  focus?: boolean;
+  /** Text label next to the pin (Explore style). */
+  label?: string;
+  /** Short text inside the pin instead of the icon, e.g. the stop number of a day. */
+  badge?: string;
+  /** Pin color (itinerary days are colored per day). */
+  color?: string;
+}
+
+export function buildMarkerElement(kind: PlaceKind, name: string, options: MarkerOptions = {}): HTMLElement {
   const el = document.createElement("div");
-  el.className = options.focus ? "xp-marker xp-marker--focus" : "xp-marker xp-marker--poi";
+  el.className = options.focus ? "xp-marker xp-marker--focus" : options.badge ? "xp-marker xp-marker--poi xp-marker--day" : "xp-marker xp-marker--poi";
   el.setAttribute("role", "button");
-  el.setAttribute("aria-label", name);
+  el.setAttribute("aria-label", options.badge ? `${options.badge}. ${name}` : name);
+  if (options.color) el.style.setProperty("--xp-pin", options.color);
   const pin = document.createElement("div");
   pin.className = "xp-marker-pin";
-  pin.innerHTML = iconSvg(options.focus ? "destination" : kind, options.focus ? 18 : 16);
+  if (options.badge) pin.textContent = options.badge;
+  else pin.innerHTML = iconSvg(options.focus ? "destination" : kind, options.focus ? 18 : 16);
   el.appendChild(pin);
   const labelText = options.focus ? name : options.label;
   if (labelText) {

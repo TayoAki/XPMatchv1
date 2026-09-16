@@ -29,6 +29,7 @@ export type {
   ChatSummary,
   Companions,
   ItineraryDay,
+  ItineraryStop,
   LearnedPreference,
   Pace,
   PreferenceDomain,

@@ -132,3 +132,20 @@ body {
   background: #111111;
   color: #ffffff;
 }
+/* Itinerary stops: numbered pins colored per day. */
+.xp-marker--day .xp-marker-pin {
+  width: 30px;
+  height: 30px;
+  background: var(--xp-pin, #7fd8c8);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+.xp-marker--day.is-selected .xp-marker-pin {
+  background: var(--xp-pin, #7fd8c8);
+  color: #ffffff;
+  box-shadow:
+    0 0 0 3px #111111,
+    0 2px 6px rgba(0, 0, 0, 0.25);
+}

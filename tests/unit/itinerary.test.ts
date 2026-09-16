@@ -1,6 +1,19 @@
 import { describe, expect, it } from "vitest";
 import type { ItineraryDay, ItineraryStop } from "@/lib/types";
-import { dayColor, directionsUrl, estimateLeg, formatLeg, insertStop, moveStop, normalizeItinerary, optimizeDay, removeStop, scheduledItemIds, updateStop } from "@/lib/itinerary";
+import {
+  dayColor,
+  daysFromModel,
+  directionsUrl,
+  estimateLeg,
+  formatLeg,
+  insertStop,
+  moveStop,
+  normalizeItinerary,
+  optimizeDay,
+  removeStop,
+  scheduledItemIds,
+  updateStop,
+} from "@/lib/itinerary";
 
 const place = (name: string, lat: number, lng: number) => ({ id: name.toLowerCase(), name, kind: "attraction" as const, lat, lng, photos: [], source: "google" as const });
 const stop = (id: string, name: string, lat?: number, lng?: number): ItineraryStop => ({ id, title: name, note: "", ...(lat !== undefined && lng !== undefined ? { kind: "attraction", place: place(name, lat, lng) } : {}) });
@@ -35,6 +48,35 @@ describe("normalizeItinerary", () => {
   it("drops junk", () => {
     expect(normalizeItinerary("nope")).toEqual([]);
     expect(normalizeItinerary([null, 42, { stops: [{}, 7, { title: "  " }] }])).toEqual([{ day: 1, title: "Day 1", stops: [] }]);
+  });
+});
+
+describe("daysFromModel", () => {
+  it("keeps ids, places and idea links for stops whose titles match the current itinerary", () => {
+    const existing: ItineraryDay[] = [{ day: 1, title: "A", stops: [stop("p", "Pantheon", 41.9, 12.47), { ...stop("i", "Lunch"), itemId: "item-1" }] }];
+    const days = daysFromModel(
+      [
+        { day: 1, title: "", stops: [{ name: "pantheon", kind: "attraction", note: "early" }, { name: "Trevi Fountain", kind: "attraction" }] },
+        { day: 2, title: "Food", stops: [{ name: "Lunch" }] },
+      ],
+      existing,
+    );
+    expect(days.map((d) => d.day)).toEqual([1, 2]);
+    expect(days[0].title).toBe("Day 1");
+    expect(days[0].stops[0]).toMatchObject({ id: "p", title: "Pantheon", note: "early", kind: "attraction" });
+    expect(days[0].stops[0].place?.name).toBe("Pantheon");
+    expect(days[0].stops[1].place).toBeUndefined();
+    expect(days[0].stops[1].id).toMatch(/^stop-/);
+    expect(days[1].stops[0]).toMatchObject({ id: "i", itemId: "item-1" });
+  });
+
+  it("skips blank stops and never reuses one stop twice", () => {
+    const existing: ItineraryDay[] = [{ day: 1, title: "", stops: [stop("p", "Pantheon", 41.9, 12.47)] }];
+    const days = daysFromModel([{ day: 1, title: "x", stops: [{ name: "Pantheon" }, { name: " " }, { name: "Pantheon" }] }], existing);
+    expect(days[0].stops).toHaveLength(2);
+    expect(days[0].stops[0].id).toBe("p");
+    expect(days[0].stops[1].id).not.toBe("p");
+    expect(daysFromModel([])).toEqual([]);
   });
 });
 

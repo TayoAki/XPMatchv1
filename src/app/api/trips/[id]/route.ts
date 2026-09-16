@@ -3,6 +3,7 @@ import { queryAll } from "@/server/db";
 import { HttpError, json, parseBody, requireUser, resolveParams, route } from "@/server/http";
 import { loadTrip, loadTripDetail, notify, tripMemberIds } from "@/server/models";
 import { resolveDestination } from "@/server/places";
+import { resolveItinerary } from "@/server/itinerary";
 import { itinerarySchema } from "../route";
 
 export const dynamic = "force-dynamic";
@@ -56,7 +57,7 @@ export const PATCH = route(async (request, ctx: Ctx) => {
   if (body.travelers !== undefined) add("travelers", body.travelers);
   if (body.budgetTier !== undefined) add("budget_tier", body.budgetTier);
   if (body.summary !== undefined) add("summary", body.summary);
-  if (body.itinerary !== undefined) add("itinerary", JSON.stringify(body.itinerary), "::jsonb");
+  if (body.itinerary !== undefined) add("itinerary", JSON.stringify(await resolveItinerary(body.itinerary, existing.place ?? null)), "::jsonb");
   if (body.preferences !== undefined) add("preferences", body.preferences);
   if (sets.length) {
     await queryAll(`UPDATE trips SET ${sets.join(", ")}, updated_at = now() WHERE id = $1`, values);

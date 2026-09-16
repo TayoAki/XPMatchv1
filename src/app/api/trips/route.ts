@@ -3,12 +3,33 @@ import { queryAll, queryOne } from "@/server/db";
 import { json, parseBody, requireUser, route } from "@/server/http";
 import { loadTrip, loadTripsForUser } from "@/server/models";
 import { resolveDestination } from "@/server/places";
+import { resolveItinerary } from "@/server/itinerary";
 
 export const dynamic = "force-dynamic";
 
-export const itinerarySchema = z.array(
-  z.object({ day: z.number().int().min(1), title: z.string().max(200), items: z.array(z.string().max(500)).max(20) }),
-).max(30);
+const stopSchema = z.object({
+  id: z.string().max(80).optional(),
+  title: z.string().max(200).optional(),
+  name: z.string().max(200).optional(),
+  note: z.string().max(1000).optional(),
+  kind: z.enum(["hotel", "restaurant", "attraction", "destination"]).optional(),
+  place: z.object({}).passthrough().optional(),
+  startTime: z.string().max(5).optional(),
+  durationMin: z.number().min(0).max(1440).optional(),
+  itemId: z.string().max(80).optional(),
+});
+
+/** Accepts version 1 (`items: string[]`) and version 2 (`stops`) days; the server normalizes and resolves places. */
+export const itinerarySchema = z
+  .array(
+    z.object({
+      day: z.number().int().min(1),
+      title: z.string().max(200),
+      items: z.array(z.string().max(500)).max(20).optional(),
+      stops: z.array(stopSchema).max(20).optional(),
+    }),
+  )
+  .max(30);
 
 const createSchema = z.object({
   title: z.string().trim().min(1).max(160),
@@ -32,6 +53,7 @@ export const POST = route(async (request) => {
   const body = await parseBody(request, createSchema);
   // Best effort: pin the destination so the trip has a cover photo and a map center.
   const place = body.place ?? (await resolveDestination(body.destination).catch(() => null));
+  const itinerary = await resolveItinerary(body.itinerary ?? [], (place as { lat?: number } | null)?.lat !== undefined ? (place as never) : null);
   const row = await queryOne<{ id: string }>(
     `INSERT INTO trips (owner_id, title, destination, place, start_date, end_date, travelers, budget_tier, summary, itinerary)
      VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7, $8, $9, $10::jsonb) RETURNING id`,
@@ -45,7 +67,7 @@ export const POST = route(async (request) => {
       body.travelers ?? null,
       body.budgetTier ?? null,
       body.summary ?? null,
-      JSON.stringify(body.itinerary ?? []),
+      JSON.stringify(itinerary),
     ],
   );
   if (!row) throw new Error("Could not create trip");

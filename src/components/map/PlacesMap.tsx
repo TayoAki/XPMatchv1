@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { MapPin } from "lucide-react";
 import type { ResolvedPlace } from "@/lib/places/types";
-import { FOCUS_PIN_KEY, GoogleMap, type MapPin as Pin } from "./GoogleMap";
+import { FOCUS_PIN_KEY, GoogleMap, type MapPin as Pin, type MapRoute } from "./GoogleMap";
 import { PlaceDetailSheet } from "./PlaceDetailSheet";
 
 export interface PlacesMapProps {
@@ -11,6 +11,7 @@ export interface PlacesMapProps {
   focus: ResolvedPlace | null;
   focusLabel?: string;
   pins: Pin[];
+  routes?: MapRoute[];
   selectedKey: string | null;
   onSelect: (key: string | null) => void;
   hoveredKey?: string | null;
@@ -22,7 +23,7 @@ export interface PlacesMapProps {
 }
 
 /** Map of a set of places with the destination chip and the place sheet. Used by trips, guides and Explore. */
-export function PlacesMap({ focus, focusLabel, pins, selectedKey, onSelect, hoveredKey, onHover, labels = true, className, testId, children }: PlacesMapProps) {
+export function PlacesMap({ focus, focusLabel, pins, routes, selectedKey, onSelect, hoveredKey, onHover, labels = true, className, testId, children }: PlacesMapProps) {
   const [localHovered, setLocalHovered] = useState<string | null>(null);
   const hovered = hoveredKey === undefined ? localHovered : hoveredKey;
   const hover = onHover ?? setLocalHovered;
@@ -32,7 +33,7 @@ export function PlacesMap({ focus, focusLabel, pins, selectedKey, onSelect, hove
 
   return (
     <div className={className ?? "relative h-full w-full"} data-testid={testId ?? "places-map"}>
-      <GoogleMap focus={focus} pins={pins} selectedKey={selectedKey} hoveredKey={hovered} onSelect={onSelect} onHover={hover} labels={labels}>
+      <GoogleMap focus={focus} pins={pins} routes={routes} selectedKey={selectedKey} hoveredKey={hovered} onSelect={onSelect} onHover={hover} labels={labels}>
         {label ? (
           <div className="absolute left-4 top-4 flex items-center gap-2">
             <button

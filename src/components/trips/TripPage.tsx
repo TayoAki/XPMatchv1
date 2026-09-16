@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type FormEvent } from "react";
-import { ArrowLeft, ArrowUp, Calendar, Luggage, MapPin, MessageCircle, MoreHorizontal, Sparkles, Users, Wallet } from "lucide-react";
+import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
+import clsx from "clsx";
+import { ArrowLeft, ArrowUp, Calendar, KanbanSquare, LayoutGrid, Luggage, MapPin, MessageCircle, MoreHorizontal, Sparkles, Users, Wallet } from "lucide-react";
 import { formatDateRange, useTravelStore } from "@/lib/store";
 import type { TripDetail } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
@@ -15,8 +16,27 @@ import { useTripDetail } from "./useTripDetail";
 import { TripSections, type TripSection } from "./TripSections";
 import { TripMap } from "./TripMap";
 import { TripDetailsDialog } from "./TripDetailsDialog";
+import { TripBoard } from "./board/TripBoard";
 
 const BUDGET_LABEL: Record<string, string> = { budget: "Budget", "mid-range": "Mid-range", premium: "Premium", luxury: "Luxury" };
+
+type TripView = "tiles" | "board";
+const VIEW_KEY = "xp-trip-view";
+
+const noSubscribe = () => () => {};
+
+/** The view to open with: `?view=board` (links from chat) beats the last choice remembered in this browser. */
+function readInitialView(): TripView {
+  try {
+    const fromUrl = new URLSearchParams(window.location.search).get("view");
+    if (fromUrl === "board" || fromUrl === "tiles") return fromUrl;
+    const stored = window.localStorage.getItem(VIEW_KEY);
+    if (stored === "board" || stored === "tiles") return stored;
+  } catch {
+    // Storage can be unavailable (private mode); the default view is fine.
+  }
+  return "tiles";
+}
 
 /** "Rome next week", "Rome in October", "Rome right now". */
 function relativePhrase(trip: TripDetail): string {
@@ -39,19 +59,57 @@ export function TripPage({ tripId }: { tripId: string }) {
   );
 }
 
+function ViewToggle({ view, onChange }: { view: TripView; onChange: (view: TripView) => void }) {
+  const options: { key: TripView; label: string; icon: typeof LayoutGrid }[] = [
+    { key: "board", label: "Board", icon: KanbanSquare },
+    { key: "tiles", label: "Tiles", icon: LayoutGrid },
+  ];
+  return (
+    <div role="group" aria-label="Trip view" className="inline-flex rounded-full border border-border bg-white p-0.5">
+      {options.map((o) => {
+        const Icon = o.icon;
+        return (
+          <button
+            key={o.key}
+            type="button"
+            aria-pressed={view === o.key}
+            onClick={() => onChange(o.key)}
+            className={clsx("inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold", view === o.key ? "bg-neutral-900 text-white" : "text-neutral-700 hover:bg-surface")}
+          >
+            <Icon className="h-4 w-4" /> {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function TripPageInner({ tripId }: { tripId: string }) {
   const { trip, error, setTrip } = useTripDetail(tripId);
   const { removeTrip } = useTravelStore();
   const router = useRouter();
   const send = useSendMessage();
   const [section, setSection] = useState<TripSection | null>(null);
+  const initialView = useSyncExternalStore(noSubscribe, readInitialView, () => "tiles" as TripView);
+  const [chosenView, setChosenView] = useState<TripView | null>(null);
+  const view = chosenView ?? initialView;
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [hoveredKey, setHoveredKey] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [question, setQuestion] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
   // Sections and map live in a side column on wide screens and under the chats otherwise (rendered once).
   const wide = useMediaQuery("(min-width: 1280px)");
+
+  const changeView = (next: TripView) => {
+    setChosenView(next);
+    try {
+      window.localStorage.setItem(VIEW_KEY, next);
+    } catch {
+      // ignore
+    }
+  };
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -124,16 +182,24 @@ function TripPageInner({ tripId }: { tripId: string }) {
     router.push("/trips");
   };
 
-  const sections = (
-    <TripSections
-      trip={trip}
-      canEdit={canEdit}
-      isOwner={isOwner}
-      section={section}
-      onSection={setSection}
-      onTrip={setTrip}
-      onSelectPlace={setSelectedKey}
-    />
+  const panel =
+    view === "board" ? (
+      <TripBoard trip={trip} canEdit={canEdit} onTrip={setTrip} onSelectPlace={setSelectedKey} hoveredKey={hoveredKey} onHover={setHoveredKey} />
+    ) : (
+      <TripSections
+        trip={trip}
+        canEdit={canEdit}
+        isOwner={isOwner}
+        section={section}
+        onSection={setSection}
+        onTrip={setTrip}
+        onSelectPlace={setSelectedKey}
+        onOpenBoard={() => changeView("board")}
+      />
+    );
+
+  const map = (className?: string) => (
+    <TripMap trip={trip} selectedKey={selectedKey} onSelect={setSelectedKey} hoveredKey={hoveredKey} onHover={setHoveredKey} className={className} />
   );
 
   return (
@@ -271,8 +337,10 @@ function TripPageInner({ tripId }: { tripId: string }) {
 
           {!wide ? (
             <div className="mt-8 grid gap-6">
-              {sections}
-              <TripMap trip={trip} selectedKey={selectedKey} onSelect={setSelectedKey} className="relative h-[360px] overflow-hidden rounded-3xl" />
+              <ViewToggle view={view} onChange={changeView} />
+              {view === "board" ? map("relative h-[360px] overflow-hidden rounded-3xl") : null}
+              {panel}
+              {view === "tiles" ? map("relative h-[360px] overflow-hidden rounded-3xl") : null}
             </div>
           ) : null}
         </div>
@@ -280,10 +348,12 @@ function TripPageInner({ tripId }: { tripId: string }) {
 
       {wide ? (
         <aside className="flex w-[46%] min-w-[440px] max-w-[900px] shrink-0 flex-col border-l border-border/60 bg-white">
-          <div className="xp-scroll min-h-0 flex-1 overflow-y-auto p-5">{sections}</div>
-          <div className="h-[44%] min-h-[300px] shrink-0 border-t border-border/60">
-            <TripMap trip={trip} selectedKey={selectedKey} onSelect={setSelectedKey} />
+          <div className="flex items-center justify-between border-b border-border/60 px-5 py-3">
+            <ViewToggle view={view} onChange={changeView} />
+            {view === "board" ? <span className="text-[12px] text-muted">Drag stops between days; hover to find them on the map</span> : null}
           </div>
+          <div className="xp-scroll min-h-0 flex-1 overflow-y-auto p-5">{panel}</div>
+          <div className="h-[44%] min-h-[300px] shrink-0 border-t border-border/60">{map()}</div>
         </aside>
       ) : null}
 

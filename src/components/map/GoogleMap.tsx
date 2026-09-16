@@ -9,14 +9,31 @@ export type MapStatus = "loading" | "ready" | "error";
 
 export interface MapPin extends ResolvedPlace {
   key: string;
+  /** Number shown inside the pin (itinerary stops). */
+  badge?: string;
+  /** Pin color; defaults to the teal category pin. */
+  color?: string;
+  /** Group name for the accessible pin list, e.g. "Day 2". */
+  group?: string;
+}
+
+/** A line drawn through points in order (one per visible itinerary day). */
+export interface MapRoute {
+  key: string;
+  color: string;
+  path: { lat: number; lng: number }[];
 }
 
 interface MarkerHandle {
   marker: google.maps.marker.AdvancedMarkerElement;
   element: HTMLElement;
+  /** Badge, color and label the element was built with; a change rebuilds it. */
+  signature: string;
 }
 
 export const FOCUS_PIN_KEY = "__focus__";
+
+const pinSignature = (p: MapPin, label: boolean) => `${p.badge ?? ""}|${p.color ?? ""}|${label ? p.name : ""}`;
 
 /** Imperative reconciliation of Google marker objects against the wanted set. */
 function syncMarkers(
@@ -31,12 +48,13 @@ function syncMarkers(
   onHover: (key: string | null) => void,
 ) {
   const { AdvancedMarkerElement } = google.maps.marker;
-  const wanted = new Map<string, { place: ResolvedPlace; focus: boolean }>();
-  if (focus) wanted.set(FOCUS_PIN_KEY, { place: focus, focus: true });
-  for (const p of pins) wanted.set(p.key, { place: p, focus: false });
+  const wanted = new Map<string, { place: MapPin; focus: boolean; signature: string }>();
+  if (focus) wanted.set(FOCUS_PIN_KEY, { place: { ...focus, key: FOCUS_PIN_KEY }, focus: true, signature: "focus" });
+  for (const p of pins) wanted.set(p.key, { place: p, focus: false, signature: pinSignature(p, labels) });
 
   for (const [key, handle] of handles) {
-    if (!wanted.has(key)) {
+    const want = wanted.get(key);
+    if (!want || want.signature !== handle.signature) {
       handle.marker.map = null;
       handles.delete(key);
     }
@@ -46,7 +64,9 @@ function syncMarkers(
     if (!handle) {
       const element = buildMarkerElement(item.place.kind, item.place.name, {
         focus: item.focus,
-        label: labels && !item.focus ? item.place.name : undefined,
+        label: labels && !item.focus && !item.place.badge ? item.place.name : undefined,
+        badge: item.place.badge,
+        color: item.place.color,
       });
       const marker = new AdvancedMarkerElement({
         map,
@@ -57,13 +77,13 @@ function syncMarkers(
       marker.addListener("click", () => onSelect(key));
       element.addEventListener("mouseenter", () => onHover(key));
       element.addEventListener("mouseleave", () => onHover(null));
-      handle = { marker, element };
+      handle = { marker, element, signature: item.signature };
       handles.set(key, handle);
     } else {
       handle.marker.position = { lat: item.place.lat, lng: item.place.lng };
     }
     setMarkerState(handle.element, { selected: selectedKey === key, hovered: hoveredKey === key });
-    handle.marker.zIndex = selectedKey === key ? 100 : hoveredKey === key ? 50 : item.focus ? 1 : 10;
+    handle.marker.zIndex = selectedKey === key ? 100 : hoveredKey === key ? 50 : item.focus ? 1 : item.place.badge ? 20 : 10;
   }
 }
 
@@ -72,6 +92,40 @@ function clearMarkers(handles: Map<string, MarkerHandle>) {
     marker.map = null;
   });
   handles.clear();
+}
+
+function syncRoutes(map: google.maps.Map, lines: Map<string, google.maps.Polyline>, routes: MapRoute[]) {
+  const wanted = new Map(routes.map((r) => [r.key, r]));
+  for (const [key, line] of lines) {
+    if (!wanted.has(key)) {
+      line.setMap(null);
+      lines.delete(key);
+    }
+  }
+  for (const [key, route] of wanted) {
+    const existing = lines.get(key);
+    if (existing) {
+      existing.setPath(route.path);
+      existing.setOptions({ strokeColor: route.color });
+    } else {
+      lines.set(
+        key,
+        new google.maps.Polyline({
+          map,
+          path: route.path,
+          strokeColor: route.color,
+          strokeOpacity: 0.75,
+          strokeWeight: 3,
+          clickable: false,
+        }),
+      );
+    }
+  }
+}
+
+function clearRoutes(lines: Map<string, google.maps.Polyline>) {
+  lines.forEach((line) => line.setMap(null));
+  lines.clear();
 }
 
 function fitToPlaces(map: google.maps.Map, focus: ResolvedPlace | null, pins: MapPin[]) {
@@ -104,6 +158,7 @@ function fitToPlaces(map: google.maps.Map, focus: ResolvedPlace | null, pins: Ma
 export interface GoogleMapProps {
   focus?: ResolvedPlace | null;
   pins: MapPin[];
+  routes?: MapRoute[];
   selectedKey?: string | null;
   hoveredKey?: string | null;
   onSelect?: (key: string) => void;
@@ -118,14 +173,18 @@ export interface GoogleMapProps {
   onStatusChange?: (status: MapStatus, error: string | null) => void;
 }
 
+const NO_ROUTES: MapRoute[] = [];
+
 /**
  * Reusable Google Map with advanced markers: a black destination pin plus teal
- * category pins that stay in sync with `pins`, fitting the view as they change.
- * Renders a list fallback when the Maps script cannot load.
+ * category pins (or numbered, per-day colored pins for itinerary stops) that
+ * stay in sync with `pins`, optional route lines, fitting the view as they
+ * change. Renders a list fallback when the Maps script cannot load.
  */
 export function GoogleMap({
   focus = null,
   pins,
+  routes = NO_ROUTES,
   selectedKey = null,
   hoveredKey = null,
   onSelect,
@@ -139,6 +198,7 @@ export function GoogleMap({
   const mapEl = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<Map<string, MarkerHandle>>(new Map());
+  const routesRef = useRef<Map<string, google.maps.Polyline>>(new Map());
   const [status, setStatus] = useState<MapStatus>(googleMapsBrowserKey() ? "loading" : "error");
   const [error, setError] = useState<string | null>(
     googleMapsBrowserKey() ? null : "Add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to .env.local to show the live map.",
@@ -185,10 +245,12 @@ export function GoogleMap({
         setStatus("error");
       });
     const handles = markersRef.current;
+    const lines = routesRef.current;
     return () => {
       cancelled = true;
       stopAuthWatch();
       clearMarkers(handles);
+      clearRoutes(lines);
       mapRef.current = null;
     };
   }, []);
@@ -208,6 +270,12 @@ export function GoogleMap({
       (key) => hoverRef.current?.(key),
     );
   }, [status, focus, pins, selectedKey, hoveredKey, labels]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (status !== "ready" || !map) return;
+    syncRoutes(map, routesRef.current, routes);
+  }, [status, routes]);
 
   const fitSignature = `${focus?.id ?? ""}|${pins.map((p) => p.key).join(",")}`;
   useEffect(() => {
@@ -237,6 +305,13 @@ export function GoogleMap({
     <div className={className ?? "relative h-full w-full overflow-hidden bg-[#e9e6df]"}>
       <div ref={mapEl} className="absolute inset-0" />
       {status !== "ready" ? <MapFallback status={status} error={error} focus={focus} pins={pins} /> : null}
+      <ul className="sr-only" aria-label="Places on the map" data-testid="map-pin-list">
+        {pins.map((p) => (
+          <li key={p.key} data-pin-key={p.key}>
+            {[p.badge ? `${p.badge}.` : "", p.name, p.group ? `· ${p.group}` : ""].filter(Boolean).join(" ")}
+          </li>
+        ))}
+      </ul>
       {children}
     </div>
   );
@@ -262,7 +337,16 @@ function MapFallback({ status, error, focus, pins }: { status: MapStatus; error:
                 <ul className="mt-3 grid gap-1.5">
                   {pins.slice(0, 12).map((p) => (
                     <li key={p.key} className="flex items-center gap-2 text-[13px]">
-                      <span className="text-neutral-500" dangerouslySetInnerHTML={{ __html: iconSvg(p.kind, 14) }} />
+                      {p.badge ? (
+                        <span
+                          className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white"
+                          style={{ background: p.color ?? "#7fd8c8" }}
+                        >
+                          {p.badge}
+                        </span>
+                      ) : (
+                        <span className="text-neutral-500" dangerouslySetInnerHTML={{ __html: iconSvg(p.kind, 14) }} />
+                      )}
                       {p.name}
                     </li>
                   ))}

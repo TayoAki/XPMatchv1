@@ -44,7 +44,7 @@ test("trips: create, members, ideas, itinerary, trip chat, sharing", async ({ pa
     await page.getByRole("button", { name: /^Trip preferences/ }).click();
     await page.getByLabel("Trip preferences").fill("Slow mornings, vegetarian dinners, one big sight per day.");
     await page.getByRole("button", { name: "Save preferences" }).click();
-    await expect(page.getByText("Saved", { exact: true })).toBeVisible();
+    await expect(page.getByRole("main").getByText("Saved", { exact: true })).toBeVisible();
   });
 
   await test.step("itinerary: write and save a day", async () => {
