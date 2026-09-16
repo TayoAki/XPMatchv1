@@ -1,0 +1,84 @@
+"use client";
+
+import { useEffect, useMemo, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { CopilotChat, UseAgentUpdate, useAgent, useCopilotKit } from "@copilotkit/react-core/v2";
+import type { Message } from "@ag-ui/core";
+import { AlertTriangle } from "lucide-react";
+import { newId, useTravelStore } from "@/lib/store";
+import { useAppConfig } from "@/lib/app-config";
+import { useUiState } from "@/components/providers/UiState";
+import { WelcomeHero } from "@/components/chat/WelcomeHero";
+
+function messageText(m: Message): string {
+  const content = (m as { content?: unknown }).content;
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content
+      .map((p) => (p && typeof p === "object" && "text" in p ? String((p as { text: unknown }).text) : ""))
+      .join(" ")
+      .trim();
+  }
+  return "";
+}
+
+export function TravelChat({ threadId, initialPrompt }: { threadId?: string; initialPrompt?: string }) {
+  const { upsertChat } = useTravelStore();
+  const { openAssistant, openPlanner } = useUiState();
+  const { copilotkit } = useCopilotKit();
+  const { agent, isReady } = useAgent({ updates: [UseAgentUpdate.OnMessagesChanged, UseAgentUpdate.OnRunStatusChanged] });
+  const config = useAppConfig();
+  const router = useRouter();
+  const sentRef = useRef(false);
+
+  // Keep the local chat list in sync: first user message becomes the title.
+  const messageCount = agent.messages.length;
+  useEffect(() => {
+    if (!agent.threadId || messageCount === 0) return;
+    const firstUser = agent.messages.find((m) => m.role === "user");
+    if (!firstUser) return;
+    const title = messageText(firstUser).slice(0, 70) || "New chat";
+    upsertChat({ id: agent.threadId, title });
+  }, [agent, agent.threadId, messageCount, upsertChat]);
+
+  // A prompt carried over from another page is sent once the chat is ready.
+  useEffect(() => {
+    if (!initialPrompt || sentRef.current || !isReady) return;
+    sentRef.current = true;
+    router.replace("/", { scroll: false });
+    agent.addMessage({ id: newId(), role: "user", content: initialPrompt });
+    copilotkit.runAgent({ agent }).catch((err) => console.error("XPMatch: runAgent failed", err));
+  }, [initialPrompt, isReady, agent, copilotkit, router]);
+
+  const toolsMenu = useMemo(
+    () => [
+      { label: "Set trip details (where, when, who, budget)", action: () => openPlanner("where") },
+      { label: "Update my assistant", action: () => openAssistant() },
+    ],
+    [openPlanner, openAssistant],
+  );
+
+  return (
+    <div className="xp-chat flex h-full min-h-0 flex-col">
+      {config?.mode === "demo" ? (
+        <div className="flex items-center gap-2 border-b border-amber-200 bg-amber-50 px-4 py-2 text-[13px] text-amber-900">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <span>
+            Demo mode: no model API key configured, so answers are canned examples. Add <code className="rounded bg-amber-100 px-1">ANTHROPIC_API_KEY</code> to <code className="rounded bg-amber-100 px-1">.env.local</code> for live, personalized recommendations.
+          </span>
+        </div>
+      ) : null}
+      <CopilotChat
+        className="min-h-0 flex-1"
+        threadId={threadId}
+        labels={{
+          chatInputPlaceholder: "Ask XPMatch",
+          chatDisclaimerText: "XPMatch can make mistakes. Double-check prices, hours and availability before booking.",
+          welcomeMessageText: "Where to today?",
+        }}
+        welcomeScreen={WelcomeHero}
+        input={{ toolsMenu, autoFocus: true }}
+      />
+    </div>
+  );
+}

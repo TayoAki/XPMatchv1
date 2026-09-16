@@ -1,0 +1,59 @@
+"use client";
+
+import { MapPin } from "lucide-react";
+import { ToolCallStatus } from "@copilotkit/core";
+import type { ShowRestaurantsArgs, Streaming } from "@/lib/travel/schemas";
+import { googleMapsSearchUrl, openTableSearchUrl } from "@/lib/travel/links";
+import { PlaceImage } from "@/components/ui/PlaceImage";
+import { Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Tag, Text } from "./shared";
+
+export function RestaurantCards({ args, status }: { args: Streaming<ShowRestaurantsArgs>; status: ToolCallStatus }) {
+  const items = (args.restaurants ?? []).filter((r) => r && r.name);
+  const dest = args.destination ?? "";
+  return (
+    <div>
+      <SectionHeader title={dest ? `Where to eat in ${dest}` : "Where to eat"} status={status} />
+      <CardGrid>
+        {items.map((r, i) => {
+          const query = `${r.name} ${dest}`.trim();
+          return (
+            <CardShell key={`${r.name}-${i}`}>
+              <div className="flex gap-3 p-3">
+                <PlaceImage queries={[r.neighborhood ? `${r.neighborhood}, ${dest}` : "", dest]} alt={r.name ?? "Restaurant"} className="h-24 w-24 shrink-0 rounded-xl" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="text-[15px] font-semibold">{r.name}</div>
+                    <SaveButton kind="restaurant" title={r.name} subtitle={[r.cuisine, dest].filter(Boolean).join(" · ")} destination={dest} url={googleMapsSearchUrl(query)} className="bg-surface shadow-none" />
+                  </div>
+                  <div className="text-[13px] text-muted">
+                    <Text value={[r.cuisine, r.neighborhood, r.priceTier].filter(Boolean).join(" · ")} />
+                  </div>
+                  <div className="mt-1 text-[13px]">
+                    <span className="font-medium">Must try: </span>
+                    <Text value={r.mustTry} />
+                  </div>
+                </div>
+              </div>
+              <Body>
+                <p className="text-[13px] text-neutral-700">
+                  <Text value={r.whyItFits} lines={2} />
+                </p>
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {r.bestFor ? <Tag>Best for {r.bestFor}</Tag> : null}
+                  {r.reservationRecommended === true ? <Tag tone="warn">Book ahead</Tag> : null}
+                  {r.reservationRecommended === false ? <Tag tone="accent">Walk-ins OK</Tag> : null}
+                </div>
+              </Body>
+              <Footer>
+                <ExtLink primary href={googleMapsSearchUrl(query)}>
+                  <MapPin className="h-3.5 w-3.5" /> Map & hours
+                </ExtLink>
+                {r.reservationRecommended ? <ExtLink href={openTableSearchUrl(query)}>Reserve</ExtLink> : null}
+              </Footer>
+            </CardShell>
+          );
+        })}
+      </CardGrid>
+    </div>
+  );
+}
