@@ -59,47 +59,50 @@ function Outro() {
   );
 }
 
-/** The recording inside a window frame, with the chapter title above and its caption below. */
+/** The recording inside a window frame: chapter title and progress dots in the title bar, the caption below. */
 function Walkthrough() {
   const frame = useCurrentFrame();
+  const { width: canvasWidth } = useVideoConfig();
   const seconds = frame / FPS;
   const list = chapters();
   const index = Math.max(0, list.findIndex((c, i) => seconds >= c.at && (i === list.length - 1 || seconds < list[i + 1].at)));
   const current = list[index];
   const since = current ? seconds - current.at : 0;
   const captionIn = interpolate(since, [0, 0.35], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) });
+  const dotGrow = interpolate(since, [0, 0.25], [10, 32], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   const fadeIn = interpolate(frame, [0, 12], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 
-  // Fit the recording into the window: 1440×900 → 1600×1000 leaves room for the title bar and caption.
-  const targetWidth = 1600;
-  const scale = targetWidth / TIMELINE.width;
-  const videoHeight = TIMELINE.height * scale;
+  // The 1440×900 recording at 97% plus a 40 px title bar ends at y≈949, which leaves room for a two-line caption inside 1080.
+  const scale = 0.97;
+  const bar = 40;
+  const top = 36;
+  const videoWidth = Math.round(TIMELINE.width * scale);
+  const videoHeight = Math.round(TIMELINE.height * scale);
+  const left = Math.round((canvasWidth - videoWidth) / 2);
 
   return (
     <AbsoluteFill style={{ background: PAPER, opacity: fadeIn }}>
-      <div style={{ position: "absolute", top: 34, left: 160, right: 160, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <Wordmark size={34} />
-        <div style={{ display: "flex", gap: 8 }}>
-          {list.map((c, i) => (
-            <div key={c.key} style={{ width: i === index ? 34 : 12, height: 12, borderRadius: 999, background: i <= index ? INK : "#d9d6cf", transition: "width 0.2s" }} />
-          ))}
-        </div>
-      </div>
-      <div style={{ position: "absolute", top: 84, left: 160, width: targetWidth, height: videoHeight + 44, borderRadius: 22, background: "#fff", boxShadow: "0 30px 80px rgba(0,0,0,0.18)", overflow: "hidden", border: "1px solid #e4e2dd" }}>
-        <div style={{ height: 44, display: "flex", alignItems: "center", gap: 8, padding: "0 18px", background: "#f2f0ec", borderBottom: "1px solid #e4e2dd" }}>
+      <div style={{ position: "absolute", top, left, width: videoWidth, height: videoHeight + bar, borderRadius: 20, background: "#fff", boxShadow: "0 30px 80px rgba(0,0,0,0.18)", overflow: "hidden", border: "1px solid #e4e2dd" }}>
+        <div style={{ height: bar, display: "flex", alignItems: "center", gap: 8, padding: "0 18px", background: "#f2f0ec", borderBottom: "1px solid #e4e2dd" }}>
           {["#ff5f57", "#febc2e", "#28c840"].map((c) => (
             <div key={c} style={{ width: 12, height: 12, borderRadius: 999, background: c }} />
           ))}
           <div style={{ marginLeft: 16, fontFamily: FONT, fontSize: 16, color: MUTED }}>{current ? current.title : "XPMatch"}</div>
+          <div style={{ flex: 1 }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            {list.map((c, i) => (
+              <div key={c.key} style={{ width: i === index ? dotGrow : 10, height: 10, borderRadius: 999, background: i <= index ? INK : "#d9d6cf" }} />
+            ))}
+          </div>
         </div>
         <div style={{ width: TIMELINE.width, height: TIMELINE.height, transform: `scale(${scale})`, transformOrigin: "top left" }}>
           <OffthreadVideo src={staticFile("walkthrough.webm")} muted style={{ width: TIMELINE.width, height: TIMELINE.height }} />
         </div>
       </div>
       {current ? (
-        <div style={{ position: "absolute", left: 160, right: 160, bottom: 30, opacity: captionIn, transform: `translateY(${(1 - captionIn) * 10}px)` }}>
-          <div style={{ fontFamily: FONT, fontSize: 30, fontWeight: 700, color: INK }}>{current.title}</div>
-          <div style={{ fontFamily: FONT, fontSize: 24, color: MUTED, marginTop: 4, lineHeight: 1.35 }}>{current.caption}</div>
+        <div style={{ position: "absolute", left, width: videoWidth, top: top + bar + videoHeight + 22, opacity: captionIn, transform: `translateY(${(1 - captionIn) * 10}px)` }}>
+          <div style={{ fontFamily: FONT, fontSize: 26, fontWeight: 700, color: INK, lineHeight: 1.2 }}>{current.title}</div>
+          <div style={{ fontFamily: FONT, fontSize: 21, color: MUTED, marginTop: 4, lineHeight: 1.35 }}>{current.caption}</div>
         </div>
       ) : null}
     </AbsoluteFill>
