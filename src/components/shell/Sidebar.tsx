@@ -20,7 +20,7 @@ import { useTravelStore, firstName } from "@/lib/store";
 import { useUiState } from "@/components/providers/UiState";
 
 const NAV = [
-  { href: "/chats", label: "Chats", icon: MessageCircle, badge: "chats" as const },
+  { href: "/", label: "Chats", icon: MessageCircle, badge: "chats" as const },
   { href: "/trips", label: "Trips", icon: Briefcase },
   { href: "/explore", label: "Explore", icon: Search },
   { href: "/saved", label: "Saved", icon: Heart },
@@ -61,8 +61,7 @@ export function Sidebar() {
         {NAV.map((item) => {
           const active =
             pathname === item.href ||
-            pathname.startsWith(`${item.href}/`) ||
-            (item.href === "/chats" && pathname === "/") ||
+            (item.href !== "/" && pathname.startsWith(`${item.href}/`)) ||
             (item.href === "/inspiration" && pathname.startsWith("/guides"));
           const Icon = item.icon;
           const badge = item.badge === "chats" ? chats.length : item.badge === "updates" ? unread : 0;

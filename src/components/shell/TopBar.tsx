@@ -7,6 +7,7 @@ import { ChevronDown, Luggage } from "lucide-react";
 import { useTravelStore, formatDateRange } from "@/lib/store";
 import { useMapView } from "@/lib/map-store";
 import { useUiState, type PlannerTab } from "@/components/providers/UiState";
+import { useChatRailOpen } from "@/lib/ui-prefs";
 
 const BUDGET_LABEL: Record<string, string> = {
   budget: "Budget",
@@ -22,6 +23,7 @@ export function TopBar() {
   const activeChat = chats.find((c) => c.id === threadId);
   const chatLabel = activeChat ? (activeChat.title.length > 34 ? `${activeChat.title.slice(0, 34)}…` : activeChat.title) : "New chat";
   const [menuOpen, setMenuOpen] = useState(false);
+  const [, setRailOpen] = useChatRailOpen();
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -86,8 +88,12 @@ export function TopBar() {
                   </Link>
                 ))}
                 <Link
-                  href="/chats"
-                  onClick={() => setMenuOpen(false)}
+                  href="/"
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setRailOpen(true);
+                  }}
                   className="block rounded-lg px-3 py-2 text-sm text-muted hover:bg-surface"
                 >
                   All chats
