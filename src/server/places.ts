@@ -315,13 +315,14 @@ export async function getPlaceDetails(id: string): Promise<PlaceDetails | null> 
 export type NearbyCategory = "for-you" | "restaurants" | "experiences" | "stays";
 export const NEARBY_CATEGORIES: NearbyCategory[] = ["for-you", "restaurants", "experiences", "stays"];
 
+// Primary types only: a supermarket with a bakery counter must not show up under Restaurants.
 const NEARBY_TYPES: Record<Exclude<NearbyCategory, "for-you">, { types: string[]; kind: PlaceKind }> = {
-  restaurants: { types: ["restaurant", "cafe", "bakery", "bar"], kind: "restaurant" },
+  restaurants: { types: ["restaurant", "cafe", "bar", "coffee_shop", "brunch_restaurant", "fine_dining_restaurant", "wine_bar"], kind: "restaurant" },
   experiences: {
-    types: ["tourist_attraction", "museum", "park", "art_gallery", "historical_landmark", "amusement_park", "zoo", "aquarium", "performing_arts_theater", "hiking_area"],
+    types: ["tourist_attraction", "museum", "park", "art_gallery", "historical_landmark", "amusement_park", "zoo", "aquarium", "performing_arts_theater", "hiking_area", "botanical_garden", "national_park"],
     kind: "attraction",
   },
-  stays: { types: ["lodging"], kind: "hotel" },
+  stays: { types: ["hotel", "motel", "resort_hotel", "bed_and_breakfast", "inn", "hostel", "extended_stay_hotel", "guest_house", "lodging"], kind: "hotel" },
 };
 
 // Same fields as search minus the editorial summary (keeps Explore on a cheaper SKU).
@@ -338,7 +339,7 @@ async function googleNearby(center: LatLng, types: string[], kind: PlaceKind, li
     {
       method: "POST",
       body: JSON.stringify({
-        includedTypes: types,
+        includedPrimaryTypes: types,
         maxResultCount: Math.min(Math.max(limit, 1), 20),
         rankPreference: "POPULARITY",
         languageCode: "en",

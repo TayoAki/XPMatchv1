@@ -161,6 +161,14 @@ function set(patch: Partial<TravelStoreState> | ((prev: TravelStoreState) => Par
 
 const sameTitle = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
 
+/**
+ * Finds the saved item matching a place: by Google place id when both sides
+ * know it (same-named places stay distinct), otherwise by kind + title.
+ */
+export function findSaved(saved: SavedItem[], probe: { kind: SavedKind; title: string; refId?: string }): SavedItem | undefined {
+  return saved.find((s) => s.kind === probe.kind && (probe.refId && s.refId ? s.refId === probe.refId : sameTitle(s.title, probe.title)));
+}
+
 function report(action: string, err: unknown) {
   console.error(`XPMatch: ${action} failed`, err);
 }
@@ -217,14 +225,14 @@ export const travelActions = {
     set((prev) => ({ planner: { ...prev.planner, ...patch } }));
   },
 
-  isSaved(kind: SavedKind, title: string): boolean {
-    return readSnapshot().saved.some((s) => s.kind === kind && sameTitle(s.title, title));
+  isSaved(kind: SavedKind, title: string, refId?: string): boolean {
+    return !!findSaved(readSnapshot().saved, { kind, title, refId });
   },
 
   /** Adds or removes an item; returns true when the item is now saved. */
   toggleSaved(item: Omit<SavedItem, "id" | "savedAt">): boolean {
     const prev = readSnapshot();
-    const existing = prev.saved.find((s) => s.kind === item.kind && sameTitle(s.title, item.title));
+    const existing = findSaved(prev.saved, { kind: item.kind, title: item.title, refId: item.refId ?? item.place?.id });
     if (existing) {
       set({ saved: prev.saved.filter((s) => s.id !== existing.id) });
       api(`/api/saved/${encodeURIComponent(existing.id)}`, { method: "DELETE" }).catch((err) => {
@@ -234,7 +242,7 @@ export const travelActions = {
       return false;
     }
     const tempId = `temp-${newId()}`;
-    const optimistic: SavedItem = { ...item, id: tempId, savedAt: new Date().toISOString() };
+    const optimistic: SavedItem = { ...item, refId: item.refId ?? item.place?.id, id: tempId, savedAt: new Date().toISOString() };
     set({ saved: [optimistic, ...prev.saved] });
     api<SavedItem>("/api/saved", { method: "POST", json: item })
       .then((created) => set((s) => ({ saved: s.saved.map((x) => (x.id === tempId ? created : x)) })))

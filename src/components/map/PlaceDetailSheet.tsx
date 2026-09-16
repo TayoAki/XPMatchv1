@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import clsx from "clsx";
 import { ExternalLink, Heart, PanelLeftClose, Plus, Sparkles, Star, X } from "lucide-react";
-import { useTravelStore } from "@/lib/store";
+import { findSaved, useTravelStore } from "@/lib/store";
 import { fetchPlaceDetails } from "@/lib/places/client";
 import { googleMapsSearchUrl, wikipediaSummaryUrl } from "@/lib/travel/links";
 import type { PlaceDetails, PlaceKind, ResolvedPlace } from "@/lib/places/types";
@@ -93,7 +93,7 @@ export function PlaceDetailSheet({
 
   const data: ResolvedPlace = details ?? place;
   const photos = (details?.photos?.length ? details.photos : place.photos).slice(0, 5);
-  const isSaved = saved.some((s) => s.kind === place.kind && s.title.toLowerCase() === place.name.toLowerCase());
+  const isSaved = !!findSaved(saved, { kind: place.kind, title: place.name, refId: place.source === "google" ? place.id : undefined });
   const isDestination = place.kind === "destination";
   const mapsUrl = data.googleMapsUri ?? googleMapsSearchUrl(`${place.name}${place.locality ? `, ${place.locality}` : ""}`);
 
@@ -104,6 +104,8 @@ export function PlaceDetailSheet({
       subtitle: data.locality ?? data.address,
       destination: focusName ?? (isDestination ? place.name : undefined),
       url: mapsUrl,
+      place: data,
+      refId: place.source === "google" ? place.id : undefined,
     });
 
   const addToTrip = () => openAddToTrip({ place: data, tripId: tripScope ?? undefined });

@@ -8,7 +8,7 @@ import { api } from "@/lib/api";
 import type { ResolvedPlace } from "@/lib/places/types";
 import type { Guide } from "@/lib/types";
 import { resolvePlaces } from "@/lib/places/client";
-import { useTravelStore } from "@/lib/store";
+import { findSaved, useTravelStore } from "@/lib/store";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { EmptyState } from "@/components/PageFrame";
 import { Button } from "@/components/ui/Button";
@@ -64,7 +64,7 @@ function NearbyCard({
 }) {
   const { saved, toggleSaved } = useTravelStore();
   const { openAddToTrip } = useUiState();
-  const isSaved = saved.some((s) => s.kind === place.kind && s.title.toLowerCase() === place.name.toLowerCase());
+  const isSaved = !!findSaved(saved, { kind: place.kind, title: place.name, refId: place.id });
   return (
     <article
       className={clsx("group overflow-hidden rounded-3xl border bg-white transition-shadow", selected ? "border-neutral-900 shadow-md" : "border-border")}

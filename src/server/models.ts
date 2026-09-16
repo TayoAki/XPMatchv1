@@ -102,10 +102,16 @@ export async function insertSaved(
   userId: string,
   item: Omit<SavedItem, "id" | "savedAt">,
 ): Promise<SavedItem> {
-  const existing = await queryOne<SavedRow>(
-    "SELECT id, kind, ref_id, title, subtitle, destination, url, place, created_at FROM saved_items WHERE user_id = $1 AND kind = $2 AND lower(title) = lower($3)",
-    [userId, item.kind, item.title],
-  );
+  const refId = item.refId ?? item.place?.id ?? null;
+  const existing = refId
+    ? await queryOne<SavedRow>(
+        "SELECT id, kind, ref_id, title, subtitle, destination, url, place, created_at FROM saved_items WHERE user_id = $1 AND kind = $2 AND ref_id = $3",
+        [userId, item.kind, refId],
+      )
+    : await queryOne<SavedRow>(
+        "SELECT id, kind, ref_id, title, subtitle, destination, url, place, created_at FROM saved_items WHERE user_id = $1 AND kind = $2 AND ref_id IS NULL AND lower(title) = lower($3)",
+        [userId, item.kind, item.title],
+      );
   if (existing) return mapSaved(existing);
   const row = await queryOne<SavedRow>(
     `INSERT INTO saved_items (user_id, kind, ref_id, title, subtitle, destination, url, place)
@@ -114,7 +120,7 @@ export async function insertSaved(
     [
       userId,
       item.kind,
-      item.refId ?? null,
+      refId,
       item.title,
       item.subtitle ?? null,
       item.destination ?? null,

@@ -4,7 +4,7 @@ import type { HTMLAttributes, ReactNode } from "react";
 import clsx from "clsx";
 import { ExternalLink, Heart, MapPin, Plus } from "lucide-react";
 import { ToolCallStatus } from "@copilotkit/core";
-import { useTravelStore, type SavedKind } from "@/lib/store";
+import { findSaved, useTravelStore, type SavedKind } from "@/lib/store";
 import type { ResolvedPlace } from "@/lib/places/types";
 import { useUiState } from "@/components/providers/UiState";
 import { useTripScope } from "@/components/trips/TripScope";
@@ -160,7 +160,7 @@ export function SaveButton({
 }) {
   const { saved, toggleSaved } = useTravelStore();
   if (!title) return null;
-  const active = saved.some((s) => s.kind === kind && s.title.toLowerCase() === title.toLowerCase());
+  const active = !!findSaved(saved, { kind, title, refId: place?.id });
   return (
     <button
       type="button"

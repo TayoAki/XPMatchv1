@@ -22,7 +22,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { formatDateRange, useTravelStore, type BudgetTier } from "@/lib/store";
+import { findSaved, formatDateRange, useTravelStore, type BudgetTier } from "@/lib/store";
 import type { ItineraryDay, TripDetail, TripItem, TripItemKind, TripMember } from "@/lib/types";
 import type { PlaceKind } from "@/lib/places/types";
 import { resolvePlaces } from "@/lib/places/client";
@@ -265,7 +265,7 @@ function IdeaRow({
   const { saved, toggleSaved, removeTripItem } = useTravelStore();
   const place = item.place;
   const kind = place?.kind ?? "attraction";
-  const isSaved = saved.some((s) => s.kind === kind && s.title.toLowerCase() === item.title.toLowerCase());
+  const isSaved = !!findSaved(saved, { kind, title: item.title, refId: place?.id });
   const addedBy = trip.members.find((m) => m.userId === item.addedBy)?.name;
   const meta = [place?.category, place?.locality].filter(Boolean).join(" · ");
   return (
@@ -287,7 +287,7 @@ function IdeaRow({
           <div className="flex shrink-0 items-center">
             <IconButton
               label={isSaved ? `Remove ${item.title} from saved` : `Save ${item.title}`}
-              onClick={() => toggleSaved({ kind, title: item.title, subtitle: place?.locality, destination: trip.destination, url: item.url, place })}
+              onClick={() => toggleSaved({ kind, title: item.title, subtitle: place?.locality, destination: trip.destination, url: item.url, place, refId: place?.id })}
             >
               <Heart className={clsx("h-4 w-4", isSaved && "fill-red-500 text-red-500")} />
             </IconButton>

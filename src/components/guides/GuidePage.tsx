@@ -7,7 +7,7 @@ import clsx from "clsx";
 import { ArrowLeft, Heart, MapPin, Pencil, Plus, Sparkles, Star, Trash2 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import type { GuideDetail, GuideItem } from "@/lib/types";
-import { useTravelStore } from "@/lib/store";
+import { findSaved, useTravelStore } from "@/lib/store";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { EmptyState } from "@/components/PageFrame";
 import { Button } from "@/components/ui/Button";
@@ -33,7 +33,7 @@ function PlaceRow({ item, index, destination, onShow }: { item: GuideItem; index
   const { saved, toggleSaved } = useTravelStore();
   const { openAddToTrip } = useUiState();
   const place = item.place;
-  const isSaved = saved.some((s) => s.kind === place.kind && s.title.toLowerCase() === place.name.toLowerCase());
+  const isSaved = !!findSaved(saved, { kind: place.kind, title: place.name, refId: place.id });
   const meta = [place.category, place.locality].filter(Boolean).join(" · ");
   return (
     <li className="flex gap-4 rounded-3xl border border-border bg-white p-4">
