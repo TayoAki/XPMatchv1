@@ -14,7 +14,11 @@ export function iconSvg(kind: PlaceKind, size = 16): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${PATHS[kind]}</svg>`;
 }
 
-export function buildMarkerElement(kind: PlaceKind, name: string, options: { focus?: boolean } = {}): HTMLElement {
+export function buildMarkerElement(
+  kind: PlaceKind,
+  name: string,
+  options: { focus?: boolean; label?: string } = {},
+): HTMLElement {
   const el = document.createElement("div");
   el.className = options.focus ? "xp-marker xp-marker--focus" : "xp-marker xp-marker--poi";
   el.setAttribute("role", "button");
@@ -23,10 +27,11 @@ export function buildMarkerElement(kind: PlaceKind, name: string, options: { foc
   pin.className = "xp-marker-pin";
   pin.innerHTML = iconSvg(options.focus ? "destination" : kind, options.focus ? 18 : 16);
   el.appendChild(pin);
-  if (options.focus) {
+  const labelText = options.focus ? name : options.label;
+  if (labelText) {
     const label = document.createElement("div");
     label.className = "xp-marker-label";
-    label.textContent = name;
+    label.textContent = labelText;
     el.appendChild(label);
   }
   return el;

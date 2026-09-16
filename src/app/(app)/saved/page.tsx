@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/Button";
 import { useTravelStore, type SavedKind } from "@/lib/store";
 import { useSendMessage } from "@/components/chat/useSendMessage";
 
-const ORDER: SavedKind[] = ["destination", "hotel", "flight", "restaurant", "attraction"];
+const ORDER: SavedKind[] = ["guide", "destination", "hotel", "flight", "restaurant", "attraction"];
 const LABEL: Record<SavedKind, string> = {
+  guide: "Guides",
   destination: "Destinations",
   hotel: "Stays",
   flight: "Flights",

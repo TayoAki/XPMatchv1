@@ -6,7 +6,7 @@ import type { ShowAttractionsArgs, Streaming } from "@/lib/travel/schemas";
 import { getYourGuideSearchUrl, googleMapsSearchUrl } from "@/lib/travel/links";
 import { PlaceImage } from "@/components/ui/PlaceImage";
 import { usePlacePin, useRegisterPlaces } from "@/components/map/useRegisterPlaces";
-import { Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Tag, Text, ViewOnMapButton } from "./shared";
+import { AddToTripButton, Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Tag, Text, ViewOnMapButton } from "./shared";
 
 export function AttractionCards({ args, status, toolCallId }: { args: Streaming<ShowAttractionsArgs>; status: ToolCallStatus; toolCallId: string }) {
   const items = (args.attractions ?? []).filter((a) => a && a.name);
@@ -78,6 +78,7 @@ function AttractionCard({
                 </ExtLink>
                 <ExtLink href={getYourGuideSearchUrl(query)}>Tickets & tours</ExtLink>
                 <ViewOnMapButton pin={pin} />
+                <AddToTripButton place={pin.place} />
               </Footer>
             </CardShell>
   );

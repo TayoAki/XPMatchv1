@@ -7,7 +7,7 @@ import { bookingSearchUrl, googleHotelsUrl, googleMapsSearchUrl } from "@/lib/tr
 import { formatDateRange } from "@/lib/store";
 import { PlaceImage } from "@/components/ui/PlaceImage";
 import { usePlacePin, useRegisterPlaces } from "@/components/map/useRegisterPlaces";
-import { Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Stars, Tag, Text, ViewOnMapButton, usd } from "./shared";
+import { AddToTripButton, Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Stars, Tag, Text, ViewOnMapButton, usd } from "./shared";
 
 export function HotelCards({ args, status, toolCallId }: { args: Streaming<ShowHotelsArgs>; status: ToolCallStatus; toolCallId: string }) {
   const items = (args.hotels ?? []).filter((h) => h && h.name);
@@ -99,6 +99,7 @@ function HotelCard({
                 </ExtLink>
                 <ExtLink href={googleHotelsUrl(query)}>Google Hotels</ExtLink>
                 <ViewOnMapButton pin={pin} />
+                <AddToTripButton place={pin.place} />
                 {!pin.place ? (
                   <ExtLink href={googleMapsSearchUrl(query)}>
                     <MapPin className="h-3.5 w-3.5" /> Map

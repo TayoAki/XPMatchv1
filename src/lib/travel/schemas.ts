@@ -157,3 +157,32 @@ export type Streaming<T> = T extends (infer U)[]
   : T extends object
     ? { [K in keyof T]?: Streaming<T[K]> }
     : T;
+
+/** Edits to the trip currently in context (all fields optional; itinerary and preferences replace the existing values). */
+export const updateTripPlanSchema = z.object({
+  title: z.string().optional().describe("New trip title"),
+  destination: z.string().optional().describe("New destination, 'City, Country'"),
+  startDate: z.string().optional().describe("YYYY-MM-DD"),
+  endDate: z.string().optional().describe("YYYY-MM-DD"),
+  travelers: z.number().int().optional(),
+  budgetTier: z.string().optional().describe("budget | mid-range | premium | luxury"),
+  summary: z.string().optional().describe("2-3 sentence overview of the plan"),
+  itinerary: z.array(itineraryDaySchema).max(14).optional().describe("Complete day-by-day plan; replaces the current itinerary"),
+  preferences: z.string().optional().describe("Trip-specific preferences to remember, e.g. 'no early mornings, vegetarian'; replaces the current notes"),
+});
+
+export const addTripIdeasSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        name: z.string().describe("Place name as it appears on Google Maps"),
+        kind: z.enum(["hotel", "restaurant", "attraction", "destination"]).describe("What kind of place this is"),
+        note: z.string().optional().describe("One line on why it belongs in this trip"),
+      }),
+    )
+    .min(1)
+    .max(8),
+});
+
+export type UpdateTripPlanArgs = z.infer<typeof updateTripPlanSchema>;
+export type AddTripIdeasArgs = z.infer<typeof addTripIdeasSchema>;

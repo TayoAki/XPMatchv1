@@ -2,8 +2,17 @@
 
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import type { ResolvedPlace } from "@/lib/places/types";
 
 export type PlannerTab = "where" | "when" | "who" | "budget";
+
+/** A place the traveler wants to add to one of their trips (opens the trip picker). */
+export interface AddToTripRequest {
+  place: ResolvedPlace;
+  /** Preselected trip, e.g. the trip whose page or chat is open. */
+  tripId?: string;
+  note?: string;
+}
 
 interface UiStateValue {
   assistantOpen: boolean;
@@ -13,6 +22,9 @@ interface UiStateValue {
   plannerTab: PlannerTab;
   openPlanner: (tab?: PlannerTab) => void;
   closePlanner: () => void;
+  addToTrip: AddToTripRequest | null;
+  openAddToTrip: (request: AddToTripRequest) => void;
+  closeAddToTrip: () => void;
   newChatNonce: number;
   startNewChat: () => void;
 }
@@ -23,6 +35,7 @@ export function UiStateProvider({ children }: { children: ReactNode }) {
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [plannerOpen, setPlannerOpen] = useState(false);
   const [plannerTab, setPlannerTab] = useState<PlannerTab>("where");
+  const [addToTrip, setAddToTrip] = useState<AddToTripRequest | null>(null);
   const [newChatNonce, setNewChatNonce] = useState(0);
   const router = useRouter();
 
@@ -33,6 +46,8 @@ export function UiStateProvider({ children }: { children: ReactNode }) {
     setPlannerOpen(true);
   }, []);
   const closePlanner = useCallback(() => setPlannerOpen(false), []);
+  const openAddToTrip = useCallback((request: AddToTripRequest) => setAddToTrip(request), []);
+  const closeAddToTrip = useCallback(() => setAddToTrip(null), []);
   const startNewChat = useCallback(() => {
     setNewChatNonce((n) => n + 1);
     router.push("/");
@@ -47,10 +62,13 @@ export function UiStateProvider({ children }: { children: ReactNode }) {
       plannerTab,
       openPlanner,
       closePlanner,
+      addToTrip,
+      openAddToTrip,
+      closeAddToTrip,
       newChatNonce,
       startNewChat,
     }),
-    [assistantOpen, openAssistant, closeAssistant, plannerOpen, plannerTab, openPlanner, closePlanner, newChatNonce, startNewChat],
+    [assistantOpen, openAssistant, closeAssistant, plannerOpen, plannerTab, openPlanner, closePlanner, addToTrip, openAddToTrip, closeAddToTrip, newChatNonce, startNewChat],
   );
 
   return <UiStateContext.Provider value={value}>{children}</UiStateContext.Provider>;

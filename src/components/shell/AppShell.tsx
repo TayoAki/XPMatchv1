@@ -5,6 +5,7 @@ import { Sidebar } from "@/components/shell/Sidebar";
 import { TopBar } from "@/components/shell/TopBar";
 import { AssistantSettingsDialog } from "@/components/profile/AssistantSettingsDialog";
 import { TripPlannerDialog } from "@/components/profile/TripPlannerDialog";
+import { AddToTripDialog } from "@/components/trips/AddToTripDialog";
 import { useTravelStore } from "@/lib/store";
 import { useUiState } from "@/components/providers/UiState";
 
@@ -26,6 +27,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
       <AssistantSettingsDialog />
       <TripPlannerDialog />
+      <AddToTripDialog />
     </div>
   );
 }

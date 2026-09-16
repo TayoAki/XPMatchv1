@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowRight, Luggage } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Chip, Field, TextInput } from "@/components/ui/Field";
@@ -31,18 +32,42 @@ export function TripPlannerDialog() {
 }
 
 function TripPlannerForm() {
-  const { planner, updatePlanner } = useTravelStore();
+  const { planner, updatePlanner, addTrip } = useTravelStore();
   const { plannerTab, closePlanner } = useUiState();
   const send = useSendMessage();
+  const router = useRouter();
   const [draft, setDraft] = useState<TripPlanner>(() => planner);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const set = <K extends keyof TripPlanner>(key: K, value: TripPlanner[K]) => setDraft((d) => ({ ...d, [key]: value }));
+  const where = draft.where.trim();
 
-  const saveOnly = () => {
-    updatePlanner(draft);
-    closePlanner();
+  /** Creates the trip right away and opens its page. */
+  const createTrip = async () => {
+    if (!where) return;
+    setBusy(true);
+    setError(null);
+    try {
+      updatePlanner(draft);
+      const trip = await addTrip({
+        title: `Trip to ${where}`,
+        destination: where,
+        startDate: draft.startDate || undefined,
+        endDate: draft.endDate || undefined,
+        travelers: draft.travelers,
+        budgetTier: draft.budgetTier || undefined,
+      });
+      closePlanner();
+      router.push(`/trips/${trip.id}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not create the trip");
+    } finally {
+      setBusy(false);
+    }
   };
 
+  /** Keeps the details in the header and lets the assistant build the plan in chat. */
   const startPlanning = () => {
     updatePlanner(draft);
     closePlanner();
@@ -54,15 +79,18 @@ function TripPlannerForm() {
       open
       onClose={closePlanner}
       title="Create a trip"
-      description="Set the basics and XPMatch will build the plan with you in chat."
+      description="Set the basics, then create the trip or let XPMatch plan it with you in chat."
       footer={
-        <div className="flex items-center justify-end gap-2">
-          <Button variant="outline" onClick={saveOnly}>
-            Save details
-          </Button>
-          <Button onClick={startPlanning} disabled={!draft.where.trim()}>
-            Start planning <ArrowRight className="h-4 w-4" />
-          </Button>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[13px] text-red-600">{error}</span>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={createTrip} disabled={!where || busy}>
+              <Luggage className="h-4 w-4" /> {busy ? "Creating…" : "Create trip"}
+            </Button>
+            <Button onClick={startPlanning} disabled={!where || busy}>
+              Start planning <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       }
     >

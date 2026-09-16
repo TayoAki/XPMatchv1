@@ -6,8 +6,10 @@ hotels, flights, restaurants and things to do — rendered as rich cards with bo
 that can save confirmed plans as trips.
 
 Built with **Next.js 16**, **React 19**, **Tailwind CSS 4** and the **CopilotKit v2 SDK**
-(`@copilotkit/react-core/v2` + `@copilotkit/runtime/v2`), with **Claude** (`claude-opus-5`) as the
-default model through the AI SDK.
+(`@copilotkit/react-core/v2` + `@copilotkit/runtime/v2`). The model is any tool-capable model
+reachable through the AI SDK: **OpenRouter** (cheap models such as `openai/gpt-4o-mini`) or Claude
+directly. Accounts, trips, saved places and community guides live in **Postgres** (embedded PGlite
+in development), and the app deploys to **Railway** with the included Dockerfile.
 
 ## Features
 
@@ -20,8 +22,17 @@ default model through the AI SDK.
 - **Actionable, not just descriptive** — every card links out to live inventory: Google Flights,
   Booking.com / Google Hotels, Google Maps, OpenTable and GetYourGuide, pre-filled with the
   recommended place, dates and travelers. Prices are labeled as estimates.
-- **Human-in-the-loop trips** — `create_trip` proposes a day-by-day itinerary the traveler confirms
-  in chat; confirmed trips land on the Trips page.
+- **Accounts and per-user data** — email + password sign-up, sessions in HttpOnly cookies, and a
+  profile, saved places, trips, chat list and notifications stored per user on the server.
+- **Trips like Mindtrip** — `create_trip` proposes a day-by-day itinerary the traveler confirms in
+  chat, the planner's "Create trip" makes one directly, and every trip has its own page: title and
+  chips, a proactive nudge, "Ask anything else" (opens a chat attached to the trip), the trip's
+  chats, and tiles for **Ideas**, **Itinerary**, **Bookings**, **Media**, **Trip preferences**,
+  **Calendar** and **Members**, next to a map of everything pinned to the trip. Members are added by
+  email and notified under Updates; inside a trip chat the assistant can `update_trip_plan` and
+  `add_trip_ideas`.
+- **Add to trip** — every card and place sheet has an "Add to trip" picker (existing trip or a new
+  one); ideas show up on the trip page and its map.
 - **Save anything** — heart any card; saved items feed back into the agent's context.
 - **Live map with pinned recommendations** — as soon as the chat is about a place (the model calls
   `focus_map`, fixing typos like "roam" → Rome), the right panel becomes a Google Map centered on
@@ -44,15 +55,22 @@ default model through the AI SDK.
 
 ```bash
 npm install
-cp .env.example .env.local   # add ANTHROPIC_API_KEY (or OPENAI_API_KEY / GOOGLE_API_KEY)
-npm run dev                  # http://localhost:3000
+cp .env.example .env.local   # add OPENROUTER_API_KEY (or ANTHROPIC_API_KEY) and the Google keys
+npm run dev                  # http://localhost:3000 → sign up, then chat
 ```
 
-Without a key the app starts in demo mode. Model selection lives in `src/server/agent.ts`:
+No database setup is needed locally: without `DATABASE_URL` the app uses **PGlite** (embedded
+Postgres, data in `.data/pglite`). Set `DATABASE_URL` to use a real Postgres; the schema is created
+by idempotent migrations on first use (`src/server/schema.ts`).
+
+Without a model key the app starts in demo mode. Model selection lives in `src/server/agent.ts`:
 
 | Variable | Purpose |
 | --- | --- |
-| `ANTHROPIC_API_KEY` | Enables Claude (`anthropic/claude-opus-5` by default). |
+| `OPENROUTER_API_KEY` | Preferred when set: routes the agent through OpenRouter (`openai/gpt-4o-mini` by default). |
+| `OPENROUTER_MODEL` | Any tool-capable OpenRouter model id, e.g. `google/gemini-2.5-flash-lite`, `anthropic/claude-haiku-4.5`. |
+| `OPENROUTER_SITE_URL`, `OPENROUTER_APP_NAME` | Optional attribution headers OpenRouter uses for app rankings. |
+| `ANTHROPIC_API_KEY` | Enables Claude directly (`anthropic/claude-opus-5` by default). |
 | `OPENAI_API_KEY`, `GOOGLE_API_KEY` | Used when no Anthropic key is present (`openai/gpt-5`, `google/gemini-2.5-pro`). |
 | `COPILOT_MODEL` | Force a `provider/model` (any model the AI SDK knows) or `demo`. |
 | `COPILOT_EFFORT` | Claude effort level for 4.6+/5 models (`low` … `max`, default `medium`). |
@@ -60,9 +78,24 @@ Without a key the app starts in demo mode. Model selection lives in `src/server/
 | `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Browser key for the Maps JavaScript API (restrict to your referrers). |
 | `GOOGLE_MAPS_API_KEY` | Server key for the Places API (New): geocoding, ratings, photos, reviews. |
 | `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID` | Optional Map ID for custom styling; defaults to `DEMO_MAP_ID`. |
+| `DATABASE_URL` | Postgres connection string (Railway provides it). Unset → embedded PGlite in `.data/pglite`. |
+| `PGSSL` | `true` to force TLS to Postgres when the URL has no `sslmode=require`. |
+| `PGLITE_DIR` | Where PGlite stores its files locally (default `.data/pglite`). |
+| `COPILOTKIT_TELEMETRY_DISABLED` | `true` to turn off CopilotKit's anonymous runtime telemetry. |
 
 Note: CopilotKit generates follow-up suggestions with a forced tool call, which Claude Fable 5.1
 rejects; keep `COPILOT_MODEL` on the Opus/Sonnet families.
+
+### Using OpenRouter (cheap models)
+
+Set `OPENROUTER_API_KEY` and the agent talks to OpenRouter's OpenAI-compatible Chat Completions
+endpoint through the AI SDK (`@ai-sdk/openai-compatible`). Pick the model with
+`OPENROUTER_MODEL` (or `COPILOT_MODEL=openrouter/<id>`). The app relies on streaming **tool
+calls**, so choose a model that lists `tools` in its supported parameters on
+[openrouter.ai/models](https://openrouter.ai/models). Good low-cost options: `openai/gpt-4o-mini`
+(default), `google/gemini-2.5-flash-lite`, `google/gemini-2.5-flash`, `openai/gpt-4.1-mini`,
+`anthropic/claude-haiku-4.5`. Very small or `:free` models often ignore the tool protocol and will
+answer in plain text instead of rendering cards.
 
 ### Google Maps setup
 
@@ -78,6 +111,23 @@ rejects; keep `COPILOT_MODEL` on the Opus/Sonnet families.
 Without the keys the map panel still appears, using estimated pins from a small built-in
 gazetteer, and says what is missing.
 
+## Deploying to Railway
+
+The repo ships a multi-stage `Dockerfile` (Next.js standalone output) and a `railway.json` with the
+`/api/health` healthcheck, so a Railway service built from this GitHub repo works out of the box:
+
+1. Create a project with a **Postgres** service and an app service connected to this repository
+   (deploy branch of your choice).
+2. Set the app service variables: `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `OPENROUTER_API_KEY`,
+   `OPENROUTER_MODEL`, `GOOGLE_MAPS_API_KEY`, `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` (inlined at build
+   time — Railway passes service variables to the Docker build), `COPILOTKIT_TELEMETRY_DISABLED=true`.
+3. Generate a domain. Restrict the browser Google key to that domain and the server key to the
+   Places API.
+4. Smoke test: sign up → chat about a city → map pins → create a trip → add a member.
+
+Sessions use `Secure` cookies in production, so the app must be served over HTTPS (Railway domains
+are).
+
 ## How it is wired
 
 ```
@@ -87,7 +137,13 @@ src/server/demo-model.ts                     Offline model speaking the same too
 src/lib/travel/prompt.ts                     Static system prompt (traveler facts arrive as context)
 src/lib/travel/schemas.ts                    Zod schemas for every generative-UI tool
 src/lib/travel/links.ts                      Deep-link builders (Flights, Booking, Maps, OpenTable…)
-src/lib/store.tsx                            Local-first store (profile, planner, saved, trips, chats)
+src/lib/store.tsx                            Client store hydrated from /api/me/state, writes through to the API
+src/server/db.ts + src/server/schema.ts      Postgres / PGlite adapter and idempotent migrations
+src/server/auth.ts + src/app/api/auth/*      Password hashing, hashed session tokens, signup/login/logout
+src/proxy.ts                                 Redirects signed-out visitors to /login (APIs get 401)
+src/server/models.ts + src/app/api/*         Profile, saved items, trips, members, items, chats, notifications
+src/components/trips/*                       Trips list + calendar, trip page (sections, map, members), Add to trip
+src/components/chat/TripChatScope.tsx        Trip context + update_trip_plan / add_trip_ideas inside a trip chat
 src/components/chat/TravelCopilot.tsx        useAgentContext / useFrontendTool / useHumanInTheLoop /
                                              useConfigureSuggestions registration
 src/components/chat/TravelChat.tsx           <CopilotChat> with the welcome hero and input slots
@@ -101,8 +157,9 @@ src/server/places.ts + src/app/api/places/*  Places API (New) resolution, detail
 src/components/shell/*                       Sidebar, top bar, app shell
 ```
 
-Chat history is held by the runtime's in-memory runner for the lifetime of the server process;
-profile, trips, saved items and the chat list persist in the browser (`localStorage`).
+Chat transcripts are held by the runtime's in-memory runner for the lifetime of the server process;
+the chat list, profile, trips, saved items and notifications persist in the database per user. Only
+the planner bar values and small UI preferences stay in the browser.
 
 ## Scripts
 

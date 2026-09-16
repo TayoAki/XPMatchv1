@@ -9,6 +9,8 @@ import { googleMapsSearchUrl, wikipediaSummaryUrl } from "@/lib/travel/links";
 import type { PlaceDetails, PlaceKind, ResolvedPlace } from "@/lib/places/types";
 import { PlaceImage } from "@/components/ui/PlaceImage";
 import { useSendMessage } from "@/components/chat/useSendMessage";
+import { useUiState } from "@/components/providers/UiState";
+import { useTripScope } from "@/components/trips/TripScope";
 import { iconSvg } from "./markerIcons";
 
 type Tab = "overview" | "reviews" | "location";
@@ -59,6 +61,8 @@ export function PlaceDetailSheet({
 }) {
   const { saved, toggleSaved } = useTravelStore();
   const send = useSendMessage();
+  const { openAddToTrip } = useUiState();
+  const tripScope = useTripScope();
   const [detailsState, setDetailsState] = useState<{ id: string; data: PlaceDetails | null } | null>(null);
   const [wikiState, setWikiState] = useState<{ id: string; text: string } | null>(null);
   const [tab, setTab] = useState<Tab>("overview");
@@ -102,13 +106,7 @@ export function PlaceDetailSheet({
       url: mapsUrl,
     });
 
-  const addToTrip = () => {
-    void send(
-      isDestination
-        ? `Create a trip to ${place.name} for me.`
-        : `Add ${place.name} to my trip plan${focusName ? ` for ${focusName}` : ""}.`,
-    );
-  };
+  const addToTrip = () => openAddToTrip({ place: data, tripId: tripScope ?? undefined });
 
   const suggestion = isDestination
     ? { label: "Recommend hotels", prompt: `Recommend hotels in ${place.name} for me.` }

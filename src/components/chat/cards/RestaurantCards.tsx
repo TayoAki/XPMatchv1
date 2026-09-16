@@ -6,7 +6,7 @@ import type { ShowRestaurantsArgs, Streaming } from "@/lib/travel/schemas";
 import { googleMapsSearchUrl, openTableSearchUrl } from "@/lib/travel/links";
 import { PlaceImage } from "@/components/ui/PlaceImage";
 import { usePlacePin, useRegisterPlaces } from "@/components/map/useRegisterPlaces";
-import { Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Tag, Text, ViewOnMapButton } from "./shared";
+import { AddToTripButton, Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Tag, Text, ViewOnMapButton } from "./shared";
 
 export function RestaurantCards({ args, status, toolCallId }: { args: Streaming<ShowRestaurantsArgs>; status: ToolCallStatus; toolCallId: string }) {
   const items = (args.restaurants ?? []).filter((r) => r && r.name);
@@ -77,6 +77,7 @@ function RestaurantCard({
                 </ExtLink>
                 {r.reservationRecommended ? <ExtLink href={openTableSearchUrl(query)}>Reserve</ExtLink> : null}
                 <ViewOnMapButton pin={pin} />
+                <AddToTripButton place={pin.place} />
               </Footer>
             </CardShell>
   );

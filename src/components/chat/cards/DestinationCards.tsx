@@ -7,7 +7,7 @@ import { googleMapsSearchUrl } from "@/lib/travel/links";
 import { PlaceImage } from "@/components/ui/PlaceImage";
 import { useSendMessage } from "@/components/chat/useSendMessage";
 import { usePlacePin, useRegisterPlaces } from "@/components/map/useRegisterPlaces";
-import { ActionButton, Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Tag, Text, ViewOnMapButton, usd } from "./shared";
+import { AddToTripButton, ActionButton, Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Tag, Text, ViewOnMapButton, usd } from "./shared";
 
 export function DestinationCards({ args, status, toolCallId }: { args: Streaming<ShowDestinationsArgs>; status: ToolCallStatus; toolCallId: string }) {
   const items = (args.destinations ?? []).filter((d) => d && d.name);
@@ -75,6 +75,7 @@ function DestinationCard({
               <Footer>
                 <ActionButton onClick={() => send(`Plan a trip to ${label} for me.`)}>Plan a trip</ActionButton>
                 <ViewOnMapButton pin={pin} />
+                <AddToTripButton place={pin.place} />
                 {d.name && !pin.place ? (
                   <ExtLink href={googleMapsSearchUrl(label)}>
                     <MapPin className="h-3.5 w-3.5" /> Map

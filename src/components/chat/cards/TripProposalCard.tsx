@@ -42,22 +42,28 @@ export function TripProposalCard({ args, status, result, respond }: TripProposal
   const save = async () => {
     if (!respond || !args.title || !args.destination) return;
     setBusy(true);
-    const trip = addTrip({
-      title: args.title,
-      destination: args.destination,
-      startDate: args.startDate,
-      endDate: args.endDate,
-      travelers: args.travelers,
-      budgetTier: args.budgetTier,
-      summary: args.summary,
-      itinerary: days.map((d) => ({
-        day: d.day ?? 0,
-        title: d.title ?? `Day ${d.day}`,
-        items: (d.items ?? []).filter((i): i is string => typeof i === "string"),
-      })),
-    });
-    await respond({ created: true, tripId: trip.id, note: "Trip saved to the traveler's Trips page. Confirm in one short sentence and offer a next step." });
-    setBusy(false);
+    try {
+      const trip = await addTrip({
+        title: args.title,
+        destination: args.destination,
+        startDate: args.startDate,
+        endDate: args.endDate,
+        travelers: args.travelers,
+        budgetTier: args.budgetTier,
+        summary: args.summary,
+        itinerary: days.map((d) => ({
+          day: d.day ?? 0,
+          title: d.title ?? `Day ${d.day}`,
+          items: (d.items ?? []).filter((i): i is string => typeof i === "string"),
+        })),
+      });
+      await respond({ created: true, tripId: trip.id, note: "Trip saved to the traveler's Trips page. Confirm in one short sentence and offer a next step." });
+    } catch (err) {
+      console.error("XPMatch: saving trip failed", err);
+      await respond({ created: false, note: "Saving the trip failed on the server. Apologize briefly and offer to try again." });
+    } finally {
+      setBusy(false);
+    }
   };
 
   const decline = async () => {

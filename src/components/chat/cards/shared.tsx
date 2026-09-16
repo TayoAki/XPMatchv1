@@ -2,9 +2,12 @@
 
 import type { HTMLAttributes, ReactNode } from "react";
 import clsx from "clsx";
-import { ExternalLink, Heart, MapPin } from "lucide-react";
+import { ExternalLink, Heart, MapPin, Plus } from "lucide-react";
 import { ToolCallStatus } from "@copilotkit/core";
 import { useTravelStore, type SavedKind } from "@/lib/store";
+import type { ResolvedPlace } from "@/lib/places/types";
+import { useUiState } from "@/components/providers/UiState";
+import { useTripScope } from "@/components/trips/TripScope";
 
 export function CardGrid({ children, className }: { children: ReactNode; className?: string }) {
   return <div className={clsx("mt-2 grid gap-3 sm:grid-cols-2", className)}>{children}</div>;
@@ -44,6 +47,22 @@ export function ViewOnMapButton({ pin }: { pin: { place?: unknown; open: () => v
   );
 }
 
+/** Opens the trip picker for a resolved place (hidden until the pin is known). */
+export function AddToTripButton({ place }: { place?: ResolvedPlace }) {
+  const { openAddToTrip } = useUiState();
+  const tripId = useTripScope();
+  if (!place) return null;
+  return (
+    <button
+      type="button"
+      onClick={() => openAddToTrip({ place, tripId: tripId ?? undefined })}
+      className="inline-flex h-8 items-center gap-1.5 rounded-full bg-surface px-3 text-[13px] font-medium transition-colors hover:bg-surface-2"
+    >
+      <Plus className="h-3.5 w-3.5" /> Add to trip
+    </button>
+  );
+}
+
 export function SectionHeader({
   title,
   subtitle,
@@ -66,7 +85,8 @@ export function SectionHeader({
 }
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={clsx("xp-skeleton rounded-md", className)} aria-hidden="true" />;
+  // A span (not a div) so skeletons are valid inside <p> while text streams in.
+  return <span className={clsx("xp-skeleton block rounded-md", className)} aria-hidden="true" />;
 }
 
 export function Text({ value, className, lines = 1 }: { value?: string; className?: string; lines?: number }) {

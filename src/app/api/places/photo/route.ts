@@ -1,9 +1,11 @@
 import { resolvePhotoUri } from "@/server/places";
+import { getSessionUser } from "@/server/auth";
 
 export const dynamic = "force-dynamic";
 
 /** Redirects a Places photo reference to its image so the API key never reaches the browser. */
 export async function GET(request: Request) {
+  if (!(await getSessionUser())) return new Response("Please sign in", { status: 401 });
   const url = new URL(request.url);
   const name = url.searchParams.get("name") ?? "";
   const width = Number(url.searchParams.get("w") ?? "800");

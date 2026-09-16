@@ -1,5 +1,6 @@
 import type { PlaceKind, ResolveRequest, ResolveResponse } from "@/lib/places/types";
 import { placesProvider, resolveDestination, resolvePointOfInterest } from "@/server/places";
+import { getSessionUser } from "@/server/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,7 @@ const KINDS: PlaceKind[] = ["destination", "hotel", "restaurant", "attraction"];
  * (and ratings/photos when Google Places is configured).
  */
 export async function POST(request: Request) {
+  if (!(await getSessionUser())) return Response.json({ error: "Please sign in" }, { status: 401 });
   let body: ResolveRequest;
   try {
     body = (await request.json()) as ResolveRequest;

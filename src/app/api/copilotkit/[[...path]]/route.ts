@@ -4,6 +4,7 @@ import {
   createCopilotRuntimeHandler,
 } from "@copilotkit/runtime/v2";
 import { createTravelAgent } from "@/server/agent";
+import { getSessionUser } from "@/server/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,9 @@ const handler = createCopilotRuntimeHandler({
   basePath: "/api/copilotkit",
 });
 
-const handle = (request: Request) => handler(request);
+const handle = async (request: Request) => {
+  if (!(await getSessionUser())) return Response.json({ error: "Please sign in" }, { status: 401 });
+  return handler(request);
+};
 
 export { handle as GET, handle as POST, handle as PUT, handle as PATCH, handle as DELETE, handle as OPTIONS };

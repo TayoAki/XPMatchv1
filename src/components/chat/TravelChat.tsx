@@ -10,6 +10,7 @@ import { mapActions } from "@/lib/map-store";
 import { useAppConfig } from "@/lib/app-config";
 import { useUiState } from "@/components/providers/UiState";
 import { WelcomeHero } from "@/components/chat/WelcomeHero";
+import { TripChatScope } from "@/components/chat/TripChatScope";
 
 function messageText(m: Message): string {
   const content = (m as { content?: unknown }).content;
@@ -23,7 +24,7 @@ function messageText(m: Message): string {
   return "";
 }
 
-export function TravelChat({ threadId, initialPrompt }: { threadId?: string; initialPrompt?: string }) {
+export function TravelChat({ threadId, initialPrompt, tripId }: { threadId?: string; initialPrompt?: string; tripId?: string }) {
   const { chats, upsertChat } = useTravelStore();
   const { openAssistant, openPlanner } = useUiState();
   const { copilotkit } = useCopilotKit();
@@ -51,17 +52,18 @@ export function TravelChat({ threadId, initialPrompt }: { threadId?: string; ini
       upsertChat({ id: agent.threadId });
       return;
     }
-    upsertChat({ id: agent.threadId, title: messageText(firstUser).slice(0, 70) || "New chat" });
-  }, [agent, agent.threadId, messageCount, knownChat, upsertChat]);
+    upsertChat({ id: agent.threadId, title: messageText(firstUser).slice(0, 70) || "New chat", tripId });
+  }, [agent, agent.threadId, messageCount, knownChat, upsertChat, tripId]);
 
   // A prompt carried over from another page is sent once the chat is ready.
   useEffect(() => {
     if (!initialPrompt || sentRef.current || !isReady) return;
     sentRef.current = true;
-    router.replace("/", { scroll: false });
+    // Drop the prompt from the URL but keep the trip so the chat stays attached to it.
+    router.replace(tripId ? `/?trip=${encodeURIComponent(tripId)}` : "/", { scroll: false });
     agent.addMessage({ id: newId(), role: "user", content: initialPrompt });
     copilotkit.runAgent({ agent }).catch((err) => console.error("XPMatch: runAgent failed", err));
-  }, [initialPrompt, isReady, agent, copilotkit, router]);
+  }, [initialPrompt, isReady, agent, copilotkit, router, tripId]);
 
   const toolsMenu = useMemo(
     () => [
@@ -81,12 +83,15 @@ export function TravelChat({ threadId, initialPrompt }: { threadId?: string; ini
           </span>
         </div>
       ) : null}
+      {tripId ? <TripChatScope tripId={tripId} threadId={agent.threadId} /> : null}
       <CopilotChat
         className="min-h-0 flex-1"
         threadId={threadId}
         labels={{
           chatInputPlaceholder: "Ask XPMatch",
-          chatDisclaimerText: "XPMatch can make mistakes. Double-check prices, hours and availability before booking.",
+          chatDisclaimerText: `XPMatch can make mistakes. Double-check prices, hours and availability before booking.${
+            config?.mode === "live" && config.model && config.model !== "unknown" ? ` · Model: ${config.model}` : ""
+          }`,
           welcomeMessageText: "Where to today?",
         }}
         welcomeScreen={WelcomeHero}

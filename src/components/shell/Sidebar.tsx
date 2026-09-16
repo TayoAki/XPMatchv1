@@ -40,14 +40,15 @@ function handleFor(name: string): string {
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { chats, updates, profile, resetAll } = useTravelStore();
+  const { chats, updates, profile, user, logout } = useTravelStore();
   const { openAssistant, startNewChat } = useUiState();
   const [promoDismissed, setPromoDismissed] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const unread = updates.filter((u) => !u.read).length;
-  const name = profile.name.trim() || "Traveler";
-  const initial = (firstName(profile) || "T").charAt(0).toUpperCase();
+  const name = profile.name.trim() || user?.name || "Traveler";
+  const initial = (firstName(profile) || user?.name || "T").charAt(0).toUpperCase();
+  const handle = user ? `@${user.handle}` : handleFor(profile.name);
 
   return (
     <aside className="hidden w-[236px] shrink-0 flex-col border-r border-border bg-white px-3 pb-3 pt-4 md:flex">
@@ -58,7 +59,7 @@ export function Sidebar() {
 
       <nav className="mt-6 flex flex-col gap-0.5">
         {NAV.map((item) => {
-          const active = pathname === item.href || (item.href === "/chats" && pathname === "/");
+          const active = pathname === item.href || pathname.startsWith(`${item.href}/`) || (item.href === "/chats" && pathname === "/");
           const Icon = item.icon;
           const badge = item.badge === "chats" ? chats.length : item.badge === "updates" ? unread : 0;
           return (
@@ -122,7 +123,7 @@ export function Sidebar() {
         </div>
         <div className="min-w-0 flex-1">
           <div className="truncate text-[14px] font-semibold">{name}</div>
-          <div className="truncate text-xs text-muted">{handleFor(profile.name)}</div>
+          <div className="truncate text-xs text-muted">{handle}</div>
         </div>
         <button
           type="button"
@@ -148,11 +149,11 @@ export function Sidebar() {
               type="button"
               className="w-full rounded-lg px-3 py-2 text-left text-sm text-red-600 hover:bg-surface"
               onClick={() => {
-                if (window.confirm("Reset all local data (profile, chats, trips, saved items)?")) resetAll();
                 setMenuOpen(false);
+                void logout();
               }}
             >
-              Reset local data
+              Log out
             </button>
           </div>
         ) : null}

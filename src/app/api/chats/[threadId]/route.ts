@@ -1,0 +1,26 @@
+import { z } from "zod";
+import { queryAll } from "@/server/db";
+import { json, parseBody, requireUser, resolveParams, route } from "@/server/http";
+import { upsertChat } from "@/server/models";
+
+const schema = z.object({
+  title: z.string().trim().min(1).max(120).default("New chat"),
+  tripId: z.string().uuid().optional().nullable(),
+});
+
+type Ctx = { params: Promise<{ threadId: string }> };
+
+export const PUT = route(async (request, ctx: Ctx) => {
+  const user = await requireUser(request);
+  const { threadId } = await resolveParams(ctx);
+  const body = await parseBody(request, schema);
+  const chat = await upsertChat(user.id, threadId.slice(0, 200), body.title, body.tripId ?? null);
+  return json(chat);
+});
+
+export const DELETE = route(async (request, ctx: Ctx) => {
+  const user = await requireUser(request);
+  const { threadId } = await resolveParams(ctx);
+  await queryAll("DELETE FROM chats WHERE thread_id = $1 AND user_id = $2", [threadId, user.id]);
+  return json({ ok: true });
+});

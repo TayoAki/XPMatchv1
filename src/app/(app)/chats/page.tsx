@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { MessageCircle, Trash2 } from "lucide-react";
+import { Briefcase, MessageCircle, Trash2 } from "lucide-react";
 import { PageFrame, EmptyState } from "@/components/PageFrame";
 import { Button } from "@/components/ui/Button";
 import { useTravelStore } from "@/lib/store";
 import { useUiState } from "@/components/providers/UiState";
 
 export default function ChatsPage() {
-  const { chats, removeChat } = useTravelStore();
+  const { chats, removeChat, trips } = useTravelStore();
   const { startNewChat } = useUiState();
   return (
     <PageFrame
@@ -29,6 +29,11 @@ export default function ChatsPage() {
                 <div className="truncate text-[15px] font-medium hover:underline">{c.title}</div>
                 <div className="text-[12px] text-muted">Updated {new Date(c.updatedAt).toLocaleString()}</div>
               </Link>
+              {c.tripId ? (
+                <Link href={`/trips/${c.tripId}`} className="inline-flex h-7 items-center gap-1 rounded-full bg-surface px-2.5 text-[12px] font-medium hover:bg-surface-2">
+                  <Briefcase className="h-3 w-3" /> {trips.find((t) => t.id === c.tripId)?.title ?? "Trip"}
+                </Link>
+              ) : null}
               <button type="button" onClick={() => removeChat(c.id)} aria-label={`Remove ${c.title}`} className="rounded-full p-2 text-neutral-500 hover:bg-surface hover:text-red-600">
                 <Trash2 className="h-4 w-4" />
               </button>

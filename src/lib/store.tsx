@@ -1,80 +1,76 @@
 "use client";
 
 import { useMemo, useSyncExternalStore } from "react";
+import { api, ApiError } from "@/lib/api";
+import type { ResolvedPlace } from "@/lib/places/types";
+import {
+  DEFAULT_PLANNER,
+  DEFAULT_PROFILE,
+  type ChatSummary,
+  type SavedItem,
+  type SavedKind,
+  type SessionUser,
+  type TravelerProfile,
+  type Trip,
+  type TripDetail,
+  type TripItemKind,
+  type TripPlanner,
+  type UpdateItem,
+  type UserState,
+} from "@/lib/types";
 
-export type BudgetTier = "budget" | "mid-range" | "premium" | "luxury";
-export type Pace = "relaxed" | "balanced" | "packed";
-export type Companions = "solo" | "partner" | "family" | "friends" | "mixed";
+export type {
+  BudgetTier,
+  ChatSummary,
+  Companions,
+  ItineraryDay,
+  Pace,
+  SavedItem,
+  SavedKind,
+  SessionUser,
+  TravelerProfile,
+  Trip,
+  TripDetail,
+  TripItem,
+  TripItemKind,
+  TripMember,
+  TripPlanner,
+  UpdateItem,
+} from "@/lib/types";
+export { DEFAULT_PLANNER, DEFAULT_PROFILE } from "@/lib/types";
 
-export interface TravelerProfile {
-  name: string;
-  homeCity: string;
-  homeAirport: string;
-  travelStyles: string[];
-  pace: Pace;
-  budgetTier: BudgetTier;
-  companions: Companions;
-  dietary: string;
-  accommodation: string;
-  notes: string;
-  onboarded: boolean;
-}
+/** Fields of a trip that members can edit. `null` clears a date. */
+export type TripPatch = Partial<Pick<Trip, "title" | "destination" | "itinerary" | "preferences">> & {
+  startDate?: string | null;
+  endDate?: string | null;
+  travelers?: number | null;
+  budgetTier?: string | null;
+  summary?: string | null;
+};
 
-export interface TripPlanner {
-  where: string;
-  startDate: string;
-  endDate: string;
-  travelers: number;
-  budgetTier: BudgetTier | "";
-}
-
-export type SavedKind = "destination" | "hotel" | "flight" | "restaurant" | "attraction";
-
-export interface SavedItem {
-  id: string;
-  kind: SavedKind;
+export interface NewTripItem {
+  kind: TripItemKind;
   title: string;
-  subtitle?: string;
-  destination?: string;
+  note?: string;
   url?: string;
-  savedAt: string;
+  place?: ResolvedPlace;
 }
 
-export interface ItineraryDay {
-  day: number;
-  title: string;
-  items: string[];
+/** The list view only needs the summary fields of a trip. */
+function toTripSummary(detail: TripDetail): Trip {
+  const { id, ownerId, role, title, destination, place, startDate, endDate, travelers, budgetTier, summary, itinerary, preferences, memberCount, createdAt, updatedAt } = detail;
+  return { id, ownerId, role, title, destination, place, startDate, endDate, travelers, budgetTier, summary, itinerary, preferences, memberCount, createdAt, updatedAt };
 }
 
-export interface Trip {
-  id: string;
-  title: string;
-  destination: string;
-  startDate?: string;
-  endDate?: string;
-  travelers?: number;
-  budgetTier?: string;
-  summary?: string;
-  itinerary: ItineraryDay[];
-  createdAt: string;
-}
-
-export interface ChatSummary {
-  id: string;
-  title: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface UpdateItem {
-  id: string;
-  kind: "trip" | "profile" | "saved" | "system";
-  text: string;
-  at: string;
-  read: boolean;
-}
+/**
+ * Client store for the signed-in user's data. Server state (profile, saved
+ * items, trips, chats, updates) is hydrated from /api/me/state and every
+ * mutation writes through to the API optimistically. Only the trip planner
+ * values and small UI preferences stay in localStorage.
+ */
 
 export interface TravelStoreState {
+  user: SessionUser | null;
   profile: TravelerProfile;
   planner: TripPlanner;
   saved: SavedItem[];
@@ -82,31 +78,18 @@ export interface TravelStoreState {
   chats: ChatSummary[];
   updates: UpdateItem[];
   proactiveDismissedAt: string | null;
+  hydrated: boolean;
 }
 
-export const DEFAULT_PROFILE: TravelerProfile = {
-  name: "",
-  homeCity: "",
-  homeAirport: "",
-  travelStyles: [],
-  pace: "balanced",
-  budgetTier: "mid-range",
-  companions: "partner",
-  dietary: "",
-  accommodation: "",
-  notes: "",
-  onboarded: false,
-};
+const LOCAL_KEY = "xpmatch:local:v2";
 
-export const DEFAULT_PLANNER: TripPlanner = {
-  where: "",
-  startDate: "",
-  endDate: "",
-  travelers: 2,
-  budgetTier: "",
-};
+export function newId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
 
 const DEFAULT_STATE: TravelStoreState = {
+  user: null,
   profile: DEFAULT_PROFILE,
   planner: DEFAULT_PLANNER,
   saved: [],
@@ -114,186 +97,278 @@ const DEFAULT_STATE: TravelStoreState = {
   chats: [],
   updates: [],
   proactiveDismissedAt: null,
+  hydrated: false,
 };
 
-const STORAGE_KEY = "xpmatch:store:v1";
+let state: TravelStoreState = DEFAULT_STATE;
+let localLoaded = false;
+const listeners = new Set<() => void>();
 
-export function newId(): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-}
-
-function loadState(): TravelStoreState {
-  if (typeof window === "undefined") return DEFAULT_STATE;
+function loadLocal(): Pick<TravelStoreState, "planner" | "proactiveDismissedAt"> {
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULT_STATE;
-    const parsed = JSON.parse(raw) as Partial<TravelStoreState>;
+    const raw = window.localStorage.getItem(LOCAL_KEY);
+    if (!raw) return { planner: DEFAULT_PLANNER, proactiveDismissedAt: null };
+    const parsed = JSON.parse(raw) as Partial<Pick<TravelStoreState, "planner" | "proactiveDismissedAt">>;
     return {
-      ...DEFAULT_STATE,
-      ...parsed,
-      profile: { ...DEFAULT_PROFILE, ...(parsed.profile ?? {}) },
       planner: { ...DEFAULT_PLANNER, ...(parsed.planner ?? {}) },
-      saved: parsed.saved ?? [],
-      trips: parsed.trips ?? [],
-      chats: parsed.chats ?? [],
-      updates: parsed.updates ?? [],
+      proactiveDismissedAt: parsed.proactiveDismissedAt ?? null,
     };
   } catch {
-    return DEFAULT_STATE;
+    return { planner: DEFAULT_PLANNER, proactiveDismissedAt: null };
   }
 }
 
-/* ------------------------------------------------------------------ */
-/* External store: a single in-memory state mirrored to localStorage.  */
-/* Components subscribe with useSyncExternalStore, which keeps server  */
-/* rendering and hydration consistent (server snapshot = defaults).    */
-/* ------------------------------------------------------------------ */
-
-let currentState: TravelStoreState = DEFAULT_STATE;
-let loaded = false;
-const listeners = new Set<() => void>();
-let storageListenerAttached = false;
+function persistLocal() {
+  try {
+    window.localStorage.setItem(
+      LOCAL_KEY,
+      JSON.stringify({ planner: state.planner, proactiveDismissedAt: state.proactiveDismissedAt }),
+    );
+  } catch {
+    // Storage may be unavailable; the app keeps working in memory.
+  }
+}
 
 function readSnapshot(): TravelStoreState {
-  if (!loaded && typeof window !== "undefined") {
-    currentState = loadState();
-    loaded = true;
+  if (!localLoaded && typeof window !== "undefined") {
+    localLoaded = true;
+    state = { ...state, ...loadLocal() };
   }
-  return currentState;
+  return state;
 }
 
-function getServerSnapshot(): TravelStoreState {
-  return DEFAULT_STATE;
-}
+const getServerSnapshot = () => DEFAULT_STATE;
 
-function notify() {
+function emit() {
   listeners.forEach((l) => l());
 }
 
-function subscribe(listener: () => void): () => void {
+function subscribe(listener: () => void) {
   listeners.add(listener);
-  if (!storageListenerAttached && typeof window !== "undefined") {
-    storageListenerAttached = true;
-    window.addEventListener("storage", (e) => {
-      if (e.key === STORAGE_KEY) {
-        currentState = loadState();
-        notify();
-      }
-    });
-  }
   return () => {
     listeners.delete(listener);
   };
 }
 
-function commit(updater: (prev: TravelStoreState) => TravelStoreState) {
-  currentState = updater(readSnapshot());
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(currentState));
-  } catch {
-    // Storage can be unavailable (private mode, quota). The app keeps working in memory.
-  }
-  notify();
-}
-
-function withUpdate(prev: TravelStoreState, update: Omit<UpdateItem, "id" | "at" | "read">): UpdateItem[] {
-  return [{ id: newId(), at: new Date().toISOString(), read: false, ...update }, ...prev.updates].slice(0, 50);
+function set(patch: Partial<TravelStoreState> | ((prev: TravelStoreState) => Partial<TravelStoreState>)) {
+  const prev = readSnapshot();
+  const next = typeof patch === "function" ? patch(prev) : patch;
+  state = { ...prev, ...next };
+  if ("planner" in next || "proactiveDismissedAt" in next) persistLocal();
+  emit();
 }
 
 const sameTitle = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
 
+function report(action: string, err: unknown) {
+  console.error(`XPMatch: ${action} failed`, err);
+}
+
+let hydration: Promise<void> | null = null;
+
 export const travelActions = {
-  getPlanner(): TripPlanner {
-    return readSnapshot().planner;
+  getState: () => readSnapshot(),
+  getPlanner: () => readSnapshot().planner,
+
+  /** Loads the signed-in user's data. Resolves even when signed out (user stays null). */
+  hydrate(force = false): Promise<void> {
+    if (hydration && !force) return hydration;
+    hydration = (async () => {
+      try {
+        const data = await api<UserState>("/api/me/state");
+        set({
+          user: data.user,
+          profile: { ...DEFAULT_PROFILE, ...data.profile, name: data.profile.name || data.user.name },
+          saved: data.saved,
+          trips: data.trips,
+          chats: data.chats,
+          updates: data.updates,
+          hydrated: true,
+        });
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          set({ ...DEFAULT_STATE, planner: readSnapshot().planner, hydrated: true });
+          if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+            const next = encodeURIComponent(window.location.pathname + window.location.search);
+            // Full navigation on purpose: it resets all client state for the next user.
+            window.location.assign(new URL(`/login?next=${next}`, window.location.origin).href);
+          }
+          return;
+        }
+        report("loading your data", err);
+        set({ hydrated: true });
+      }
+    })();
+    return hydration;
   },
+
   updateProfile(patch: Partial<TravelerProfile>) {
-    commit((prev) => ({
-      ...prev,
-      profile: { ...prev.profile, ...patch },
-      updates: withUpdate(prev, { kind: "profile", text: "Your travel preferences were updated." }),
-    }));
+    const prev = readSnapshot();
+    const profile = { ...prev.profile, ...patch };
+    set({
+      profile,
+      user: prev.user && patch.name?.trim() ? { ...prev.user, name: patch.name.trim() } : prev.user,
+    });
+    api("/api/me/profile", { method: "PUT", json: profile }).catch((err) => report("saving preferences", err));
   },
+
   updatePlanner(patch: Partial<TripPlanner>) {
-    commit((prev) => ({ ...prev, planner: { ...prev.planner, ...patch } }));
+    set((prev) => ({ planner: { ...prev.planner, ...patch } }));
   },
+
   isSaved(kind: SavedKind, title: string): boolean {
     return readSnapshot().saved.some((s) => s.kind === kind && sameTitle(s.title, title));
   },
+
   /** Adds or removes an item; returns true when the item is now saved. */
   toggleSaved(item: Omit<SavedItem, "id" | "savedAt">): boolean {
-    const already = travelActions.isSaved(item.kind, item.title);
-    commit((prev) =>
-      already
-        ? { ...prev, saved: prev.saved.filter((s) => !(s.kind === item.kind && sameTitle(s.title, item.title))) }
-        : {
-            ...prev,
-            saved: [{ ...item, id: newId(), savedAt: new Date().toISOString() }, ...prev.saved],
-            updates: withUpdate(prev, { kind: "saved", text: `Saved ${item.title} to your collection.` }),
-          },
-    );
-    return !already;
+    const prev = readSnapshot();
+    const existing = prev.saved.find((s) => s.kind === item.kind && sameTitle(s.title, item.title));
+    if (existing) {
+      set({ saved: prev.saved.filter((s) => s.id !== existing.id) });
+      api(`/api/saved/${encodeURIComponent(existing.id)}`, { method: "DELETE" }).catch((err) => {
+        report("removing a saved item", err);
+        set((s) => ({ saved: [existing, ...s.saved] }));
+      });
+      return false;
+    }
+    const tempId = `temp-${newId()}`;
+    const optimistic: SavedItem = { ...item, id: tempId, savedAt: new Date().toISOString() };
+    set({ saved: [optimistic, ...prev.saved] });
+    api<SavedItem>("/api/saved", { method: "POST", json: item })
+      .then((created) => set((s) => ({ saved: s.saved.map((x) => (x.id === tempId ? created : x)) })))
+      .catch((err) => {
+        report("saving an item", err);
+        set((s) => ({ saved: s.saved.filter((x) => x.id !== tempId) }));
+      });
+    return true;
   },
+
   removeSaved(id: string) {
-    commit((prev) => ({ ...prev, saved: prev.saved.filter((s) => s.id !== id) }));
-  },
-  addTrip(trip: Omit<Trip, "id" | "createdAt">): Trip {
-    const created: Trip = { ...trip, id: newId(), createdAt: new Date().toISOString() };
-    commit((prev) => ({
-      ...prev,
-      trips: [created, ...prev.trips],
-      updates: withUpdate(prev, { kind: "trip", text: `Trip created: ${created.title}.` }),
-    }));
-    return created;
-  },
-  removeTrip(id: string) {
-    commit((prev) => ({ ...prev, trips: prev.trips.filter((t) => t.id !== id) }));
-  },
-  upsertChat(chat: { id: string; title?: string }) {
-    commit((prev) => {
-      const now = new Date().toISOString();
-      const existing = prev.chats.find((c) => c.id === chat.id);
-      if (existing) {
-        const next = prev.chats.map((c) => (c.id === chat.id ? { ...c, title: chat.title ?? c.title, updatedAt: now } : c));
-        next.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-        return { ...prev, chats: next };
-      }
-      return {
-        ...prev,
-        chats: [{ id: chat.id, title: chat.title ?? "New chat", createdAt: now, updatedAt: now }, ...prev.chats],
-      };
+    const prev = readSnapshot();
+    const item = prev.saved.find((s) => s.id === id);
+    set({ saved: prev.saved.filter((s) => s.id !== id) });
+    api(`/api/saved/${encodeURIComponent(id)}`, { method: "DELETE" }).catch((err) => {
+      report("removing a saved item", err);
+      if (item) set((s) => ({ saved: [item, ...s.saved] }));
     });
   },
+
+  async addTrip(
+    trip: Pick<Trip, "title" | "destination"> &
+      Partial<Pick<Trip, "startDate" | "endDate" | "travelers" | "budgetTier" | "summary" | "itinerary" | "place">>,
+  ): Promise<Trip> {
+    const created = await api<Trip>("/api/trips", { method: "POST", json: trip });
+    set((prev) => ({ trips: [created, ...prev.trips.filter((t) => t.id !== created.id)] }));
+    return created;
+  },
+
+  replaceTrip(trip: Trip) {
+    set((prev) => ({ trips: prev.trips.some((t) => t.id === trip.id) ? prev.trips.map((t) => (t.id === trip.id ? trip : t)) : [trip, ...prev.trips] }));
+  },
+
+  removeTrip(id: string) {
+    const prev = readSnapshot();
+    const trip = prev.trips.find((t) => t.id === id);
+    set({ trips: prev.trips.filter((t) => t.id !== id) });
+    api(`/api/trips/${encodeURIComponent(id)}`, { method: "DELETE" }).catch((err) => {
+      report("deleting a trip", err);
+      if (trip) set((s) => ({ trips: [trip, ...s.trips] }));
+    });
+  },
+
+  /** Edits trip fields on the server; resolves with the full trip detail. */
+  async patchTrip(id: string, patch: TripPatch): Promise<TripDetail> {
+    const detail = await api<TripDetail>(`/api/trips/${encodeURIComponent(id)}`, { method: "PATCH", json: patch });
+    travelActions.replaceTrip(toTripSummary(detail));
+    return detail;
+  },
+
+  async addTripItem(id: string, item: NewTripItem): Promise<TripDetail> {
+    const detail = await api<TripDetail>(`/api/trips/${encodeURIComponent(id)}/items`, { method: "POST", json: item });
+    travelActions.replaceTrip(toTripSummary(detail));
+    return detail;
+  },
+
+  async removeTripItem(id: string, itemId: string): Promise<TripDetail> {
+    const detail = await api<TripDetail>(`/api/trips/${encodeURIComponent(id)}/items/${encodeURIComponent(itemId)}`, { method: "DELETE" });
+    travelActions.replaceTrip(toTripSummary(detail));
+    return detail;
+  },
+
+  async addTripMember(id: string, email: string, role: "editor" | "viewer" = "editor"): Promise<TripDetail> {
+    const detail = await api<TripDetail>(`/api/trips/${encodeURIComponent(id)}/members`, { method: "POST", json: { email, role } });
+    travelActions.replaceTrip(toTripSummary(detail));
+    return detail;
+  },
+
+  /** Removes a member. Resolves with null when the signed-in user left the trip. */
+  async removeTripMember(id: string, userId: string): Promise<TripDetail | null> {
+    const detail = await api<TripDetail | null>(`/api/trips/${encodeURIComponent(id)}/members/${encodeURIComponent(userId)}`, { method: "DELETE" });
+    if (detail) travelActions.replaceTrip(toTripSummary(detail));
+    else set((prev) => ({ trips: prev.trips.filter((t) => t.id !== id) }));
+    return detail;
+  },
+
+  upsertChat(chat: { id: string; title?: string; tripId?: string }) {
+    const prev = readSnapshot();
+    if (!prev.user) return;
+    const now = new Date().toISOString();
+    const existing = prev.chats.find((c) => c.id === chat.id);
+    if (existing && (chat.title === undefined || chat.title === existing.title) && chat.tripId === undefined) {
+      // Only a "touch": bump ordering locally, no request needed.
+      set({ chats: [{ ...existing, updatedAt: now }, ...prev.chats.filter((c) => c.id !== chat.id)] });
+      return;
+    }
+    const next: ChatSummary = {
+      id: chat.id,
+      title: chat.title ?? existing?.title ?? "New chat",
+      tripId: chat.tripId ?? existing?.tripId,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    };
+    set({ chats: [next, ...prev.chats.filter((c) => c.id !== chat.id)] });
+    api(`/api/chats/${encodeURIComponent(chat.id)}`, { method: "PUT", json: { title: next.title, tripId: next.tripId } }).catch(
+      (err) => report("saving the chat", err),
+    );
+  },
+
   removeChat(id: string) {
-    commit((prev) => ({ ...prev, chats: prev.chats.filter((c) => c.id !== id) }));
+    set((prev) => ({ chats: prev.chats.filter((c) => c.id !== id) }));
+    api(`/api/chats/${encodeURIComponent(id)}`, { method: "DELETE" }).catch((err) => report("removing the chat", err));
   },
-  addUpdate(update: Omit<UpdateItem, "id" | "at" | "read">) {
-    commit((prev) => ({ ...prev, updates: withUpdate(prev, update) }));
-  },
+
   markUpdatesRead() {
-    commit((prev) => ({ ...prev, updates: prev.updates.map((u) => ({ ...u, read: true })) }));
+    const prev = readSnapshot();
+    if (!prev.updates.some((u) => !u.read)) return;
+    set({ updates: prev.updates.map((u) => ({ ...u, read: true })) });
+    api("/api/notifications/read", { method: "POST", json: {} }).catch((err) => report("marking updates read", err));
   },
+
   dismissProactive() {
-    commit((prev) => ({ ...prev, proactiveDismissedAt: new Date().toISOString() }));
+    set({ proactiveDismissedAt: new Date().toISOString() });
   },
-  resetAll() {
-    commit(() => DEFAULT_STATE);
+
+  async logout() {
+    try {
+      await api("/api/auth/logout", { method: "POST", json: {} });
+    } catch (err) {
+      report("logging out", err);
+    }
+    hydration = null;
+    state = { ...DEFAULT_STATE, hydrated: true };
+    emit();
+    if (typeof window !== "undefined") window.location.assign(new URL("/login", window.location.origin).href);
   },
 };
 
 export type TravelActions = typeof travelActions;
 
-export interface TravelStoreValue extends TravelStoreState, TravelActions {
-  hydrated: boolean;
-}
-
-const alwaysTrue = () => true;
-const alwaysFalse = () => false;
+export interface TravelStoreValue extends TravelStoreState, TravelActions {}
 
 export function useTravelStore(): TravelStoreValue {
-  const state = useSyncExternalStore(subscribe, readSnapshot, getServerSnapshot);
-  const hydrated = useSyncExternalStore(subscribe, alwaysTrue, alwaysFalse);
-  return useMemo(() => ({ ...state, ...travelActions, hydrated }), [state, hydrated]);
+  const snapshot = useSyncExternalStore(subscribe, readSnapshot, getServerSnapshot);
+  return useMemo(() => ({ ...snapshot, ...travelActions }), [snapshot]);
 }
 
 /** Small date helpers shared by the UI. */

@@ -1,8 +1,10 @@
 import { getPlaceDetails } from "@/server/places";
+import { getSessionUser } from "@/server/auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
+  if (!(await getSessionUser())) return Response.json({ error: "Please sign in" }, { status: 401 });
   const { id } = await context.params;
   if (!id || id.length > 200) return Response.json({ error: "Invalid id" }, { status: 400 });
   try {
