@@ -33,7 +33,17 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   `add_trip_ideas`.
 - **Add to trip** — every card and place sheet has an "Add to trip" picker (existing trip or a new
   one); ideas show up on the trip page and its map.
-- **Save anything** — heart any card; saved items feed back into the agent's context.
+- **Save anything** — heart any card, place sheet or Explore result; the Saved page has **Places**
+  (grouped by type, with Add to trip) and **Guides** tabs, and saved items feed the agent's context.
+- **Community guides** — **Create** has a guide editor (title, destination, description, tags, an
+  ordered list of places resolved through Google Places with a note each, draft or publish).
+  **Inspiration** lists published guides with search; a guide page shows the places, their map,
+  Save guide, "Plan a trip from this guide" and author-only edit/delete. Saving someone's guide
+  notifies them under **Updates**.
+- **Explore near you** — Mindtrip-style: location header (home city, current location or any place),
+  search, tabs **For you | Restaurants | Experiences | Stays | Guides**, photo cards with rating,
+  category, locality and price, Save and Add to trip, and a labeled map synced with the cards
+  (Google Places Nearby Search / Text Search, cached server-side).
 - **Live map with pinned recommendations** — as soon as the chat is about a place (the model calls
   `focus_map`, fixing typos like "roam" → Rome), the right panel becomes a Google Map centered on
   it. Every hotel, restaurant and attraction card is resolved through the Places API and pinned;
@@ -144,6 +154,10 @@ src/proxy.ts                                 Redirects signed-out visitors to /l
 src/server/models.ts + src/app/api/*         Profile, saved items, trips, members, items, chats, notifications
 src/components/trips/*                       Trips list + calendar, trip page (sections, map, members), Add to trip
 src/components/chat/TripChatScope.tsx        Trip context + update_trip_plan / add_trip_ideas inside a trip chat
+src/server/guides.ts + src/app/api/guides/*  Community guides: list/search/nearby, create, edit, delete, save
+src/components/guides/*                      Guide card, editor (Create page), guide page
+src/components/explore/ExploreClient.tsx     Explore near you (Nearby Search via /api/places/nearby) with map
+src/components/map/PlacesMap.tsx             Shared labeled map + place sheet used by trips, guides and Explore
 src/components/chat/TravelCopilot.tsx        useAgentContext / useFrontendTool / useHumanInTheLoop /
                                              useConfigureSuggestions registration
 src/components/chat/TravelChat.tsx           <CopilotChat> with the welcome hero and input slots

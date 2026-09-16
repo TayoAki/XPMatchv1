@@ -157,3 +157,18 @@ Each step is committed separately; the app stays runnable in demo mode throughou
 - **Scope**: the six tabs are each small CRUD surfaces once auth and the DB exist; the guide editor and
   Explore are the two larger pieces and are built last, before deployment.
 Verdict: sound; proceed in the order above.
+
+## 7. Status (2026-09-16)
+
+| Step | State |
+| --- | --- |
+| 1. DB adapter, auth, profile/state APIs, store write-through | Done |
+| 2. Trips (list, calendar, detail page, members, Add to trip, trip chats) | Done |
+| 3. Saved (Places / Guides tabs) + Updates links | Done |
+| 4. Guides (Create editor, Inspiration, guide page, save + notification) | Done |
+| 5. Explore near you (Nearby Search + shared map) | Done |
+| 6. Railway (Dockerfile, Postgres, variables, domain) | Deployed at https://xpmatch-production.up.railway.app (branch `claude/modest-tesla-smhnnb`) |
+| 7. README | Done |
+
+Follow-ups worth doing next: password reset email, OAuth sign-in, database-backed chat transcripts
+(CopilotKit runner persistence), guide comments/likes, receipts on the Trips page, mobile layout.
