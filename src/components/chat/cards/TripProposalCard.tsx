@@ -57,7 +57,8 @@ function ProposalStop({ stop, index, toolCallId, destination }: { stop: StreamSt
   const match = useMatch(candidate);
   const [failed, setFailed] = useState(false);
   const kind = (stop.kind ?? place?.kind) as PlaceKind | undefined;
-  const Icon = kind ? KIND_ICON[kind] : StickyNote;
+  // While the arguments stream, `kind` can be a partial string; never hand React an undefined component.
+  const Icon = (kind ? KIND_ICON[kind] : undefined) ?? StickyNote;
   const photo = place?.photos?.[0];
   const meta = [place?.category, place?.priceLevel].filter(Boolean).join(" · ");
   return (
