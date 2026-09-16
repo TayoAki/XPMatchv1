@@ -215,6 +215,7 @@ export function TripBoard({ trip, canEdit, onTrip, onSelectPlace, hoveredKey, on
               saving={saving}
               mode={mode}
               reservations={dated.filter((b) => reservationDate(b.details?.startsAt) === dayIso(trip.startDate, i))}
+              destination={trip.destination}
               hoveredKey={hoveredKey}
               onHover={onHover}
               onSelectPlace={onSelectPlace}

@@ -167,6 +167,18 @@ export const updateTravelerProfileSchema = z.object({
   dietary: z.string().optional(),
   accommodation: z.string().optional().describe("Preferred stay type, e.g. boutique hotels"),
   notes: z.string().optional().describe("Anything else worth remembering"),
+  interests: z.array(z.string()).optional().describe("Things-to-do interests, replaces the list: Museums & art, History & architecture, Food tours & markets, Nightlife, Live music, Nature & hiking, Beaches, Wellness & spa, Shopping, Photography spots, Sports & adventure, Family activities, Local neighborhoods, Coffee culture, Wine & craft beer, Street food"),
+  stayTypes: z.array(z.string()).optional().describe("Replaces the list: Boutique hotel, Design hotel, Luxury resort, Budget hotel, Apartment, Hostel, B&B / guesthouse, Business hotel"),
+  stayMustHaves: z.array(z.string()).optional().describe("Replaces the list: Pool, Gym, Breakfast included, Kitchen, Central location, Quiet room, Workspace, Free cancellation, Walkable area, Near transit, Parking"),
+  cuisines: z.array(z.string()).optional().describe("Replaces the list: Italian, Japanese, Mexican, Thai, Indian, French, Middle Eastern, Korean, Chinese, Seafood, Steakhouse, Plant-based, Street food, Fine dining, Cafés & bakeries"),
+  dietaryTags: z.array(z.string()).optional().describe("Replaces the list: Vegetarian, Vegan, Gluten-free, Halal, Kosher, No shellfish, Nut allergy"),
+  foodAdventure: z.enum(["safe", "mix", "adventurous"]).optional(),
+  dayRhythm: z.enum(["early", "balanced", "late"]).optional().describe("early riser / in between / night owl"),
+  walking: z.enum(["lots", "moderate", "little"]).optional().describe("How much walking they enjoy in a day"),
+  transport: z.enum(["walk-transit", "rideshare", "car", "mixed"]).optional(),
+  flightPreference: z.enum(["nonstop", "cheapest", "comfort", "flexible"]).optional(),
+  nextDestination: z.string().optional().describe("Where they are dreaming of going next"),
+  nextWhen: z.string().optional().describe("Roughly when, e.g. 'October' or 'spring 2027'"),
 });
 
 export const focusMapSchema = z.object({

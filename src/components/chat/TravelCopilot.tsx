@@ -60,6 +60,7 @@ import type { ImportRecord } from "@/lib/import/types";
 import { ReservationToolCard } from "@/components/reservations/ReservationToolCard";
 import { reservationSummary, type Reservation } from "@/lib/reservations/types";
 import { tasteForContext } from "@/lib/feedback/taste";
+import { recQuality } from "@/lib/recs/types";
 import type { ResolvedPlace } from "@/lib/places/types";
 import { api } from "@/lib/api";
 
@@ -190,13 +191,13 @@ export function preferencesForContext(preferences: LearnedPreference[], tripId?:
 }
 
 export function TravelCopilot() {
-  const { profile, planner, saved, trips, preferences, feedback, taste } = useTravelStore();
+  const { profile, planner, saved, trips, preferences, feedback, taste, recFeedback } = useTravelStore();
   const config = useAppConfig();
   const demo = config?.mode === "demo";
   const mapView = useMapView();
 
   useAgentContext({
-    description: "Traveler profile: who the recommendations are for",
+    description: "Traveler profile: who the recommendations are for (interests, stay types, cuisines and logistics come from the in-depth onboarding; match them explicitly in whyItFits)",
     value: {
       name: profile.name || "unknown",
       homeCity: profile.homeCity || "unknown",
@@ -206,10 +207,37 @@ export function TravelCopilot() {
       budgetTier: profile.budgetTier,
       usuallyTravelsWith: profile.companions,
       dietary: profile.dietary || "none stated",
+      dietaryTags: profile.dietaryTags,
       accommodationPreference: profile.accommodation || "none stated",
+      interests: profile.interests,
+      stayTypes: profile.stayTypes,
+      stayMustHaves: profile.stayMustHaves,
+      cuisines: profile.cuisines,
+      foodAdventure: profile.foodAdventure,
+      dayRhythm: profile.dayRhythm,
+      walking: profile.walking,
+      gettingAround: profile.transport,
+      flights: profile.flightPreference,
+      nextDestination: profile.nextDestination || "none stated",
+      nextWhen: profile.nextWhen || "",
       notes: profile.notes || "",
       learnFromChat: profile.learnFromChat,
     },
+  });
+
+  const recContext = useMemo(() => {
+    const q = recQuality(recFeedback);
+    return {
+      judged: q.total,
+      hitRate: q.hitRate === null ? "no judgments yet" : `${q.hitRate}%`,
+      recentMisses: q.recentMisses.map((m) => `${m.name} (${m.kind}${m.reason ? `, ${m.reason.toLowerCase()}` : ""})`),
+      commonMissReasons: q.reasons.slice(0, 3).map((r) => `${r.reason} ×${r.count}`),
+    };
+  }, [recFeedback]);
+  useAgentContext({
+    description:
+      "Recommendation feedback: thumbs the traveler gave on earlier picks. Never re-recommend a recent miss; when a miss reason repeats (e.g. too pricey), correct for it in every new pick.",
+    value: recContext,
   });
 
   const learned = useMemo(() => preferencesForContext(preferences), [preferences]);
@@ -299,7 +327,7 @@ export function TravelCopilot() {
           if (!place) return;
           if (threadId) {
             mapActions.setFocus(threadId, place);
-            travelActions.upsertChat({ id: threadId, title: `Exploring ${place.name}` });
+            travelActions.upsertChat({ id: threadId, title: `Exploring ${place.name}`, destination: place.name, place });
           }
           if (travelActions.getPlanner().where !== place.name) travelActions.updatePlanner({ where: place.name });
         });

@@ -4,12 +4,13 @@ import { useState } from "react";
 import clsx from "clsx";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Bed, Clock, GripVertical, Landmark, MapPin, Pencil, Star, StickyNote, Utensils } from "lucide-react";
+import { Bed, ChevronDown, Clock, GripVertical, Landmark, MapPin, Pencil, Star, StickyNote, Utensils } from "lucide-react";
 import type { ItineraryStop } from "@/lib/types";
 import { stopPinKey } from "@/lib/itinerary";
 import { Button } from "@/components/ui/Button";
 import { TextArea, TextInput } from "@/components/ui/Field";
 import { ReactionControl } from "@/components/feedback/ReactionControl";
+import { StopDetails } from "./StopDetails";
 
 export type StopMove = `day:${number}` | "ideas" | "remove";
 
@@ -23,6 +24,8 @@ export interface StopCardProps {
   hovered: boolean;
   /** True while the itinerary is being saved (new places are looked up during the save). */
   pending: boolean;
+  /** The trip's destination, for links and the assistant's questions. */
+  destination?: string;
   onHover?: (key: string | null) => void;
   onSelectPlace: (key: string) => void;
   onMove: (stopId: string, to: StopMove) => void;
@@ -57,9 +60,10 @@ function formatDuration(min: number): string {
 }
 
 /** One numbered stop of a day: sortable by its handle, editable inline, with a Move menu that needs no dragging. */
-export function StopCard({ stop, index, color, dayIndex, dayCount, canEdit, hovered, pending, onHover, onSelectPlace, onMove, onUpdate }: StopCardProps) {
+export function StopCard({ stop, index, color, dayIndex, dayCount, canEdit, hovered, pending, destination, onHover, onSelectPlace, onMove, onUpdate }: StopCardProps) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: stop.id, disabled: !canEdit });
   const [editing, setEditing] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [draft, setDraft] = useState({ startTime: stop.startTime ?? "", durationMin: stop.durationMin ? String(stop.durationMin) : "", note: stop.note });
   const key = stopPinKey(stop);
   const place = stop.place;
@@ -143,6 +147,18 @@ export function StopCard({ stop, index, color, dayIndex, dayCount, canEdit, hove
           <div className="flex shrink-0 items-center gap-0.5">
             {place ? <ReactionControl name={stop.title} kind={place.kind} place={place} source="trip" size="sm" className="mr-1" /> : null}
             {place ? (
+              <button
+                type="button"
+                aria-label={`Details for ${stop.title}`}
+                aria-expanded={detailsOpen}
+                title="Photos, hours, links and match"
+                onClick={() => setDetailsOpen((v) => !v)}
+                className={clsx("rounded-full p-1.5 text-neutral-500 hover:bg-surface hover:text-foreground", detailsOpen && "bg-surface text-foreground")}
+              >
+                <ChevronDown className={clsx("h-4 w-4 transition-transform", detailsOpen && "rotate-180")} />
+              </button>
+            ) : null}
+            {place ? (
               <button type="button" aria-label={`Show ${stop.title} on the map`} title="Show on the map" onClick={() => onSelectPlace(key)} className="rounded-full p-1.5 text-neutral-500 hover:bg-surface hover:text-foreground">
                 <MapPin className="h-4 w-4" />
               </button>
@@ -177,6 +193,7 @@ export function StopCard({ stop, index, color, dayIndex, dayCount, canEdit, hove
           </div>
         </div>
         {!editing && stop.note ? <p className="mt-1 text-[13px] text-neutral-700">{stop.note}</p> : null}
+        {detailsOpen && place ? <StopDetails stop={stop} place={place} destination={destination} /> : null}
         {editing ? (
           <div className="mt-2 grid gap-2 rounded-xl bg-surface/70 p-2">
             <div className="flex gap-2">

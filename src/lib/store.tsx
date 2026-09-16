@@ -5,6 +5,8 @@ import { api, ApiError } from "@/lib/api";
 import type { PlaceKind, ResolvedPlace } from "@/lib/places/types";
 import { feedbackKey, type FeedbackSource, type FeedbackVerdict, type PlaceFeedback, type TasteProfile } from "@/lib/feedback/types";
 import type { Reservation } from "@/lib/reservations/types";
+import type { RecContext, RecFeedback, RecVerdict } from "@/lib/recs/types";
+import { recKey } from "@/lib/match";
 import {
   DEFAULT_PLANNER,
   DEFAULT_PROFILE,
@@ -94,6 +96,20 @@ export interface NewFeedback {
   score?: number | null;
 }
 
+/** Thumbs up / down on a recommendation, with the match factors that were shown. */
+export interface NewRecFeedback {
+  placeId?: string;
+  name: string;
+  kind: PlaceKind;
+  destination?: string;
+  place?: ResolvedPlace | null;
+  context: RecContext;
+  verdict: RecVerdict;
+  score?: number | null;
+  factors: string[];
+  reason?: string | null;
+}
+
 /** The list view only needs the summary fields of a trip. */
 function toTripSummary(detail: TripDetail): Trip {
   const { id, ownerId, role, title, destination, place, startDate, endDate, travelers, budgetTier, summary, itinerary, preferences, memberCount, createdAt, updatedAt } = detail;
@@ -118,6 +134,7 @@ export interface TravelStoreState {
   preferences: LearnedPreference[];
   feedback: PlaceFeedback[];
   taste: TasteProfile | null;
+  recFeedback: RecFeedback[];
   proactiveDismissedAt: string | null;
   hydrated: boolean;
 }
@@ -140,6 +157,7 @@ const DEFAULT_STATE: TravelStoreState = {
   preferences: [],
   feedback: [],
   taste: null,
+  recFeedback: [],
   proactiveDismissedAt: null,
   hydrated: false,
 };
@@ -238,6 +256,7 @@ export const travelActions = {
           preferences: data.preferences ?? [],
           feedback: data.feedback ?? [],
           taste: data.taste ?? null,
+          recFeedback: data.recFeedback ?? [],
           hydrated: true,
         });
       } catch (err) {
@@ -370,6 +389,53 @@ export const travelActions = {
         report("removing a reaction", err);
         set((s) => ({ feedback: [item, ...s.feedback] }));
       });
+  },
+
+  /** Thumbs up / down on a recommendation (optimistic); the same place gets one row that later thumbs replace. */
+  async recordRecFeedback(input: NewRecFeedback): Promise<RecFeedback> {
+    const prev = readSnapshot();
+    const placeId = input.placeId ?? recKey(input.name, input.place);
+    const existing = prev.recFeedback.find((f) => f.placeId === placeId);
+    const now = new Date().toISOString();
+    const optimistic: RecFeedback = {
+      id: existing?.id ?? `temp-${newId()}`,
+      placeId,
+      kind: input.kind,
+      name: input.name,
+      destination: input.destination ?? existing?.destination,
+      context: input.context,
+      verdict: input.verdict,
+      score: input.score ?? undefined,
+      factors: input.factors,
+      reason: input.reason ?? undefined,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    };
+    set({ recFeedback: [optimistic, ...prev.recFeedback.filter((f) => f.placeId !== placeId)] });
+    try {
+      const res = await api<{ recFeedback: RecFeedback }>("/api/me/recs", {
+        method: "POST",
+        json: { placeId, name: input.name, kind: input.kind, destination: input.destination, context: input.context, verdict: input.verdict, score: input.score ?? null, factors: input.factors, reason: input.reason ?? null },
+      });
+      set((s) => ({ recFeedback: [res.recFeedback, ...s.recFeedback.filter((f) => f.placeId !== placeId)] }));
+      return res.recFeedback;
+    } catch (err) {
+      report("saving your thumbs", err);
+      set((s) => ({ recFeedback: existing ? s.recFeedback.map((f) => (f.placeId === placeId ? existing : f)) : s.recFeedback.filter((f) => f.placeId !== placeId) }));
+      throw err;
+    }
+  },
+
+  removeRecFeedback(id: string) {
+    const prev = readSnapshot();
+    const item = prev.recFeedback.find((f) => f.id === id);
+    if (!item) return;
+    set({ recFeedback: prev.recFeedback.filter((f) => f.id !== id) });
+    if (id.startsWith("temp-")) return;
+    api(`/api/me/recs/${encodeURIComponent(id)}`, { method: "DELETE" }).catch((err) => {
+      report("removing your thumbs", err);
+      set((s) => ({ recFeedback: [item, ...s.recFeedback] }));
+    });
   },
 
   isSaved(kind: SavedKind, title: string, refId?: string): boolean {
@@ -505,12 +571,12 @@ export const travelActions = {
     return detail;
   },
 
-  upsertChat(chat: { id: string; title?: string; tripId?: string }) {
+  upsertChat(chat: { id: string; title?: string; tripId?: string; destination?: string; place?: ResolvedPlace }) {
     const prev = readSnapshot();
     if (!prev.user) return;
     const now = new Date().toISOString();
     const existing = prev.chats.find((c) => c.id === chat.id);
-    if (existing && (chat.title === undefined || chat.title === existing.title) && chat.tripId === undefined) {
+    if (existing && (chat.title === undefined || chat.title === existing.title) && chat.tripId === undefined && chat.destination === undefined) {
       // Only a "touch": bump ordering locally, no request needed.
       set({ chats: [{ ...existing, updatedAt: now }, ...prev.chats.filter((c) => c.id !== chat.id)] });
       return;
@@ -519,13 +585,16 @@ export const travelActions = {
       id: chat.id,
       title: chat.title ?? existing?.title ?? "New chat",
       tripId: chat.tripId ?? existing?.tripId,
+      destination: chat.destination ?? existing?.destination,
+      place: chat.place ?? existing?.place,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
     };
     set({ chats: [next, ...prev.chats.filter((c) => c.id !== chat.id)] });
-    api(`/api/chats/${encodeURIComponent(chat.id)}`, { method: "PUT", json: { title: next.title, tripId: next.tripId } }).catch(
-      (err) => report("saving the chat", err),
-    );
+    api(`/api/chats/${encodeURIComponent(chat.id)}`, {
+      method: "PUT",
+      json: { title: next.title, tripId: next.tripId, destination: chat.destination, place: chat.place },
+    }).catch((err) => report("saving the chat", err));
   },
 
   removeChat(id: string) {

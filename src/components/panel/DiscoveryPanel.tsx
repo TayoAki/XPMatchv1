@@ -1,14 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
-import { ChevronDown, Luggage, Map, Sparkles, X } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Luggage, Map, Sparkles, X } from "lucide-react";
 import { useTravelStore, formatDateRange, type Trip } from "@/lib/store";
 import { INSPIRATION } from "@/lib/travel/inspiration";
-import { googleMapsSearchUrl } from "@/lib/travel/links";
 import { PlaceImage } from "@/components/ui/PlaceImage";
 import { useSendMessage } from "@/components/chat/useSendMessage";
-import { useUiState } from "@/components/providers/UiState";
+import { HomePicks, focusOptions } from "./HomePicks";
 
 /** The proactive card comes back six hours after being dismissed. */
 function isProactiveVisible(dismissedAt: string | null): boolean {
@@ -27,9 +26,39 @@ function relativeTripPhrase(trip: Trip): string {
   return `${trip.destination} in ${start.toLocaleDateString("en-US", { month: "long" })}`;
 }
 
+interface JumpItem {
+  key: string;
+  kind: string;
+  title: string;
+  subtitle?: string;
+  /** Google photo of the trip's or chat's destination, when resolved. */
+  photo?: string;
+  queries: string[];
+  onClick: () => void;
+  href?: string;
+}
+
+/** Cover for a "Jump back in" card: the resolved place's Google photo first, the Wikipedia lookup as a fallback. */
+function JumpCover({ item, children }: { item: JumpItem; children: React.ReactNode }) {
+  const [failed, setFailed] = useState(false);
+  if (item.photo && !failed) {
+    return (
+      <div className="relative h-[208px] w-[264px] shrink-0 overflow-hidden rounded-2xl bg-neutral-200">
+        {/* eslint-disable-next-line @next/next/no-img-element -- proxied Places photo */}
+        <img src={item.photo} alt={item.title} onError={() => setFailed(true)} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
+        {children}
+      </div>
+    );
+  }
+  return (
+    <PlaceImage queries={item.queries} alt={item.title} className="h-[208px] w-[264px] shrink-0 rounded-2xl">
+      {children}
+    </PlaceImage>
+  );
+}
+
 export function DiscoveryPanel({ showMapButton = false, onShowMap }: { showMapButton?: boolean; onShowMap?: () => void }) {
   const { profile, planner, trips, chats, saved, proactiveDismissedAt, dismissProactive } = useTravelStore();
-  const { openAssistant } = useUiState();
   const send = useSendMessage();
 
   const homeCity = profile.homeCity.trim();
@@ -39,29 +68,43 @@ export function DiscoveryPanel({ showMapButton = false, onShowMap }: { showMapBu
       .filter((t) => !t.endDate || t.endDate >= today)
       .sort((a, b) => (a.startDate ?? "9999").localeCompare(b.startDate ?? "9999"))[0];
     if (upcoming) return { destination: upcoming.destination, phrase: relativeTripPhrase(upcoming) };
+    if (profile.nextDestination.trim()) return { destination: profile.nextDestination.trim(), phrase: `${profile.nextDestination.trim()}${profile.nextWhen.trim() ? ` in ${profile.nextWhen.trim()}` : ""}` };
     if (planner.where.trim()) {
       const dates = formatDateRange(planner.startDate, planner.endDate);
       return { destination: planner.where.trim(), phrase: `${planner.where.trim()}${dates ? ` ${dates}` : ""}` };
     }
     return null;
-  }, [trips, planner]);
+  }, [trips, planner, profile.nextDestination, profile.nextWhen]);
 
   const showProactive = isProactiveVisible(proactiveDismissedAt);
 
   const jumpBackIn = useMemo(() => {
-    const items: { key: string; kind: string; title: string; subtitle?: string; queries: string[]; onClick: () => void; href?: string }[] = [];
+    const items: JumpItem[] = [];
+    const tripPhoto = (t: Trip | undefined): string | undefined => t?.place?.photos?.[0];
     for (const t of trips.slice(0, 3)) {
       items.push({
         key: `trip-${t.id}`,
         kind: "Trip",
         title: t.title,
         subtitle: [t.destination, formatDateRange(t.startDate, t.endDate)].filter(Boolean).join(" · "),
+        photo: tripPhoto(t),
         queries: [t.destination],
         onClick: () => send(`Let's keep working on my trip "${t.title}" to ${t.destination}. What should we sort out next?`),
       });
     }
     for (const c of chats.slice(0, 3)) {
-      items.push({ key: `chat-${c.id}`, kind: "Chat", title: c.title, queries: [], onClick: () => undefined, href: `/?thread=${encodeURIComponent(c.id)}` });
+      const trip = c.tripId ? trips.find((t) => t.id === c.tripId) : undefined;
+      const destination = c.destination ?? trip?.destination;
+      items.push({
+        key: `chat-${c.id}`,
+        kind: "Chat",
+        title: c.title,
+        subtitle: destination,
+        photo: c.place?.photos?.[0] ?? tripPhoto(trip),
+        queries: destination ? [destination] : [],
+        onClick: () => undefined,
+        href: `/?thread=${encodeURIComponent(c.id)}`,
+      });
     }
     for (const s of saved.filter((x) => x.kind === "destination").slice(0, 2)) {
       items.push({
@@ -69,6 +112,7 @@ export function DiscoveryPanel({ showMapButton = false, onShowMap }: { showMapBu
         kind: "Saved",
         title: s.title,
         subtitle: s.subtitle,
+        photo: s.place?.photos?.[0],
         queries: [s.title],
         onClick: () => send(`Tell me more about ${s.title} and when I should go.`),
       });
@@ -76,15 +120,10 @@ export function DiscoveryPanel({ showMapButton = false, onShowMap }: { showMapBu
     return items.slice(0, 6);
   }, [trips, chats, saved, send]);
 
-  const forYou = useMemo(() => {
-    const place = homeCity || "my area";
-    const style = (profile.travelStyles[0] ?? "food & drink").toLowerCase();
-    return [
-      { title: `Weekend escapes from ${place}`, gradient: "from-sky-200 via-cyan-200 to-blue-400", prompt: `Suggest 3 weekend getaways within a short drive or flight of ${place} that fit my profile.` },
-      { title: `Best ${style} spots near ${place}`, gradient: "from-amber-200 via-orange-200 to-rose-400", prompt: `What are the best ${style} spots near ${place} right now? Show them as cards.` },
-      { title: `A perfect day in ${place}`, gradient: "from-emerald-200 via-teal-200 to-cyan-400", prompt: `Plan a perfect day in ${place} for me this weekend.` },
-    ];
-  }, [homeCity, profile.travelStyles]);
+  const picks = useMemo(
+    () => focusOptions({ trips, nextDestination: profile.nextDestination, nextWhen: profile.nextWhen, plannerWhere: planner.where, homeCity }),
+    [trips, profile.nextDestination, profile.nextWhen, planner.where, homeCity],
+  );
 
   return (
     <div className="xp-scroll relative h-full overflow-y-auto px-6 py-4">
@@ -141,7 +180,7 @@ export function DiscoveryPanel({ showMapButton = false, onShowMap }: { showMapBu
         </div>
       ) : null}
 
-      <section className="mt-8">
+      <section className="mt-8" data-testid="jump-back-in">
         <h2 className="text-[19px] font-semibold tracking-tight">Jump back in</h2>
         <div className="xp-no-scrollbar mt-3 flex gap-4 overflow-x-auto pb-1">
           {jumpBackIn.length === 0 ? (
@@ -151,21 +190,21 @@ export function DiscoveryPanel({ showMapButton = false, onShowMap }: { showMapBu
           ) : null}
           {jumpBackIn.map((item) => {
             const card = (
-              <PlaceImage queries={item.queries} alt={item.title} className="h-[208px] w-[264px] shrink-0 rounded-2xl">
+              <JumpCover item={item}>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
                 <div className="absolute inset-x-4 bottom-4 text-left text-white">
                   <span className="rounded-md bg-white/25 px-2 py-0.5 text-[11px] font-semibold backdrop-blur">{item.kind}</span>
                   <div className="mt-1.5 line-clamp-2 text-[15px] font-semibold leading-snug">{item.title}</div>
                   {item.subtitle ? <div className="mt-0.5 truncate text-[12px] opacity-90">{item.subtitle}</div> : null}
                 </div>
-              </PlaceImage>
+              </JumpCover>
             );
             return item.href ? (
-              <Link key={item.key} href={item.href} className="shrink-0">
+              <Link key={item.key} href={item.href} className="shrink-0" data-testid="jump-card">
                 {card}
               </Link>
             ) : (
-              <button key={item.key} type="button" onClick={item.onClick} className="shrink-0 text-left">
+              <button key={item.key} type="button" onClick={item.onClick} className="shrink-0 text-left" data-testid="jump-card">
                 {card}
               </button>
             );
@@ -173,44 +212,7 @@ export function DiscoveryPanel({ showMapButton = false, onShowMap }: { showMapBu
         </div>
       </section>
 
-      <section className="mt-8">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h2 className="text-[19px] font-semibold tracking-tight">For you in</h2>
-            <button type="button" onClick={openAssistant} className="flex items-center gap-1 text-[19px] font-semibold tracking-tight hover:underline">
-              <span aria-hidden="true">📍</span>
-              {homeCity || "your city"}
-              <ChevronDown className="h-4 w-4" />
-            </button>
-            {homeCity ? (
-              <a
-                href={googleMapsSearchUrl(homeCity)}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="ml-2 inline-flex h-8 items-center gap-1.5 rounded-full border border-border px-3 text-[13px] font-medium hover:bg-surface"
-              >
-                <Map className="h-4 w-4" /> Map
-              </a>
-            ) : null}
-          </div>
-          <Link href="/explore" className="text-[13px] font-medium text-neutral-700 hover:underline">
-            Explore
-          </Link>
-        </div>
-        <div className="mt-3 grid grid-cols-3 gap-4">
-          {forYou.map((idea) => (
-            <button
-              key={idea.title}
-              type="button"
-              onClick={() => send(idea.prompt)}
-              className={`flex h-[208px] flex-col justify-end rounded-2xl bg-gradient-to-br ${idea.gradient} p-4 text-left transition-transform hover:scale-[1.01]`}
-            >
-              <div className="text-[15px] font-semibold leading-snug text-neutral-900">{idea.title}</div>
-              <div className="mt-1 text-[12px] text-neutral-800/80">Ask XPMatch →</div>
-            </button>
-          ))}
-        </div>
-      </section>
+      <HomePicks options={picks.options} initialKey={picks.initialKey} />
 
       <section className="mt-8 pb-6">
         <div className="flex items-center justify-between">

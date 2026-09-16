@@ -6,10 +6,7 @@ test("smart filters, heads-ups, comparison, remembered preferences and Explore p
   const preferences = async () => (await (await page.request.get("/api/me/preferences")).json()) as { preferences: { statement: string; polarity: string; tripId?: string }[] };
 
   await test.step("onboarding stores a dealbreaker", async () => {
-    await signup(page, {
-      email: uniqueEmail("tayo"),
-      beforeSave: (p) => p.getByTestId("dealbreaker-chips").getByRole("button", { name: "Street noise at night" }).click(),
-    });
+    await signup(page, { email: uniqueEmail("tayo"), dealbreakers: ["Street noise at night"] });
     await eventually(preferences, (r) => r.preferences.some((p) => p.polarity === "dealbreaker" && p.statement === "Street noise at night"));
   });
 

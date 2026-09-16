@@ -44,6 +44,8 @@ const appEnv = {
   ROUTES_BASE_URL: `http://localhost:${placesPort}`,
   // The import fixture site runs on localhost, which the import guard otherwise refuses.
   IMPORT_ALLOW_LOOPBACK: "1",
+  // The onboarding spec signs in as this admin to read bug reports and recommendation quality.
+  ADMIN_EMAILS: "admin@example.com",
   COPILOTKIT_TELEMETRY_DISABLED: "true",
   NEXT_TELEMETRY_DISABLED: "1",
   PORT: String(appPort),

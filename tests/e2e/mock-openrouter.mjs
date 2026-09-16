@@ -223,7 +223,44 @@ const server = http.createServer((req, res) => {
       if (toolName === "record_feedback") return streamReply(res, { text: "Noted — I'll steer away from that next time." });
       if (toolName === "import_inspiration") return streamReply(res, { text: "Those are on the cards above. Want them in a trip?" });
       if (toolName === "import_reservation") return streamReply(res, { text: "Got it — the bookings are on the cards above. Add them to a trip?" });
+      if (toolName === "create_trip") return streamReply(res, { text: "Saved — the trip is in your Trips with the board ready. Want hotels next?" });
       return streamReply(res, { text: "Done — those are on the cards above. Want stays or things to do next?" });
+    }
+    if (/plan (?:a|my) trip to rome|itinerary for rome/.test(text) && tools.includes("create_trip")) {
+      return streamReply(res, {
+        text: "Here is a plan that fits you.",
+        toolCall: {
+          name: "create_trip",
+          args: {
+            title: "Long weekend in Rome",
+            destination: "Rome, Italy",
+            startDate: "2026-10-10",
+            endDate: "2026-10-12",
+            travelers: 2,
+            budgetTier: "mid-range",
+            summary: "Ancient Rome first, then Trastevere for the food; museums at opening to beat the crowds.",
+            itinerary: [
+              {
+                day: 1,
+                title: "Ancient Rome",
+                stops: [
+                  { name: "Colosseum", kind: "attraction", note: "book the arena floor", startTime: "09:00", durationMin: 120 },
+                  { name: "Roscioli Salumeria con Cucina", kind: "restaurant", note: "book ahead", startTime: "13:00", durationMin: 90 },
+                  { name: "Pantheon", kind: "attraction", startTime: "16:00", durationMin: 45 },
+                ],
+              },
+              {
+                day: 2,
+                title: "Green Rome and Trastevere",
+                stops: [
+                  { name: "Villa Borghese", kind: "attraction", note: "rent a bike", startTime: "10:00", durationMin: 150 },
+                  { name: "Trattoria Da Enzo al 29", kind: "restaurant", note: "cacio e pepe", startTime: "19:30" },
+                ],
+              },
+            ],
+          },
+        },
+      });
     }
     if (/confirmation|booking reference|itinerary receipt/.test(text) && tools.includes("import_reservation")) {
       return streamReply(res, { text: "Let me read that confirmation.", toolCall: { name: "import_reservation", args: { text: textOf(lastUser?.content) } } });

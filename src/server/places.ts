@@ -391,6 +391,12 @@ async function googleTextMany(query: string, kind: PlaceKind, center: LatLng, li
   return (data.places ?? []).map((p) => toResolved(p, kind)).filter(present);
 }
 
+/** Several places for a free-text query near a point (the home picks build profile-driven queries with it). */
+export async function searchTextPlaces(query: string, kind: PlaceKind, center: LatLng, limit = 8, filters: NearbyFilters = {}): Promise<ResolvedPlace[]> {
+  if (!placesApiKey()) return [];
+  return googleTextMany(query, kind, center, limit, filters);
+}
+
 function interleave(a: ResolvedPlace[], b: ResolvedPlace[]): ResolvedPlace[] {
   const out: ResolvedPlace[] = [];
   const seen = new Set<string>();

@@ -40,6 +40,10 @@ Enterprise-class SKUs), which cover early usage entirely.
 | Import a screenshot | 1 vision model call (~$0.01) + 1 Text Search per candidate | ≈ $0.30 |
 | Import a confirmation (pasted text or PDF, typically 1–3 reservations) | 1 model call (~$0.002) + 1 Text Search per hotel, restaurant or venue | ≈ $0.05–0.12 |
 | Import a confirmation screenshot | 1 vision model call (~$0.01) + 1 Text Search per hotel, restaurant or venue | ≈ $0.05–0.13 |
+| Home picks ("For you in Rome", three rows of three) | About 6 Text Searches (Pro tier, no editorial summary) per destination, cached 6 h across every traveler with the same queries; scoring is free | ≈ $0.20 per destination per 6 h |
+| Match score, thumbs, "Why this score" | No external calls | $0 |
+| Board stop Details | 1 Place Details from the shared 30-day cache (usually $0) | $0–0.025 |
+| Bug report with a screenshot | Stored in Postgres (≤ 1.5 MB base64 each) | $0 |
 
 ## Monthly picture
 
@@ -54,7 +58,8 @@ loads.
 | Explore | ~$2.50 |
 | Photos + map loads | ~$0.60 |
 | Routes API (board travel legs, ~20 changes) | ~$0.10 |
-| **Variable COGS** | **≈ $9 per active user** (≈95% Google Places) |
+| Home picks (~3 destinations, mostly cache hits) | ~$0.40 |
+| **Variable COGS** | **≈ $9–10 per active user** (≈95% Google Places) |
 | Fixed hosting | ≈ $5–15 per month total |
 
 At 100 active users that is roughly $900/month of Google Places before free tiers, versus ~$15 of model

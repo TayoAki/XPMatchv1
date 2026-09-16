@@ -9,6 +9,7 @@ import { CardPhoto, AddToTripButton, Body, CardGrid, CardShell, ExtLink, Footer,
 import { CompareToggle } from "./CompareControls";
 import { HiddenPlaceCard, ReactionControl, useReaction } from "@/components/feedback/ReactionControl";
 import { TasteFit } from "@/components/feedback/TasteFit";
+import { MatchLine } from "@/components/recs/MatchLine";
 
 export function RestaurantCards({ args, status, toolCallId }: { args: Streaming<ShowRestaurantsArgs>; status: ToolCallStatus; toolCallId: string }) {
   const items = (args.restaurants ?? []).filter((r) => r && r.name);
@@ -76,6 +77,18 @@ function RestaurantCard({
                 </div>
                 <TasteFit kind="restaurant" name={r.name} category={pin.place?.category ?? r.cuisine} text={[r.whyItFits, r.cuisine, r.bestFor, r.mustTry].filter(Boolean).join(" ")} />
                 <Tradeoffs items={r.tradeoffs} />
+                <MatchLine
+                  name={r.name}
+                  kind="restaurant"
+                  place={pin.place}
+                  destination={dest}
+                  context="chat"
+                  category={r.cuisine}
+                  priceLevel={r.priceTier}
+                  text={[r.whyItFits, r.cuisine, r.bestFor, r.mustTry, r.neighborhood].filter(Boolean).join(" ")}
+                  tradeoffs={r.tradeoffs}
+                  className="pt-1"
+                />
               </Body>
               <Footer>
                 <ExtLink primary href={googleMapsSearchUrl(query)}>

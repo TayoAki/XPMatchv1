@@ -8,22 +8,69 @@ export function uniqueEmail(tag: string): string {
   return `${tag}+${Date.now()}${counter}@example.com`;
 }
 
+/** What to answer in the six-step onboarding wizard; everything is optional. */
+export interface OnboardingAnswers {
+  homeCity?: string;
+  homeAirport?: string;
+  styles?: string[];
+  interests?: string[];
+  stayTypes?: string[];
+  mustHaves?: string[];
+  accommodation?: string;
+  cuisines?: string[];
+  dietaryTags?: string[];
+  dietary?: string;
+  nextDestination?: string;
+  nextWhen?: string;
+  dealbreakers?: string[];
+  notes?: string;
+  /** Runs on the last step, before Save preferences. */
+  beforeSave?: (page: Page) => Promise<void>;
+}
+
+/** Walks the "Let's personalize your assistant" wizard (about you → style → stays → food → logistics → dealbreakers). */
+export async function completeOnboarding(page: Page, answers: OnboardingAnswers = {}) {
+  const dialog = page.getByRole("dialog", { name: /personalize/i });
+  await dialog.waitFor({ timeout: 30_000 });
+  const next = async () => {
+    // exact: the progress bar's "Step 5: Logistics & next trip" also contains "next".
+    await dialog.getByRole("button", { name: "Next", exact: true }).click();
+  };
+  const chips = async (testId: string, labels: string[] | undefined) => {
+    for (const label of labels ?? []) await dialog.getByTestId(testId).getByRole("button", { name: label, exact: true }).click();
+  };
+  await dialog.getByPlaceholder("Austell, GA").fill(answers.homeCity ?? "Austell, GA");
+  if (answers.homeAirport) await dialog.getByPlaceholder("ATL").fill(answers.homeAirport);
+  await next();
+  await chips("style-chips", answers.styles);
+  await chips("interest-chips", answers.interests);
+  await next();
+  await chips("stay-type-chips", answers.stayTypes);
+  await chips("must-have-chips", answers.mustHaves);
+  if (answers.accommodation) await dialog.getByPlaceholder(/Boutique hotels/).fill(answers.accommodation);
+  await next();
+  await chips("cuisine-chips", answers.cuisines);
+  await chips("dietary-chips", answers.dietaryTags);
+  if (answers.dietary) await dialog.getByPlaceholder(/Vegetarian, no shellfish/).fill(answers.dietary);
+  await next();
+  if (answers.nextDestination) await dialog.getByPlaceholder("Rome, Italy").fill(answers.nextDestination);
+  if (answers.nextWhen) await dialog.getByPlaceholder("October").fill(answers.nextWhen);
+  await next();
+  await chips("dealbreaker-chips", answers.dealbreakers);
+  if (answers.notes) await dialog.getByPlaceholder(/rooftop bars/).fill(answers.notes);
+  if (answers.beforeSave) await answers.beforeSave(page);
+  await dialog.getByRole("button", { name: "Save preferences" }).click();
+}
+
 /** Signs a new traveler up through the UI and completes onboarding with a home city. */
-export async function signup(
-  page: Page,
-  options: { name?: string; email: string; homeCity?: string; homeAirport?: string; beforeSave?: (page: Page) => Promise<void> } = { email: "" },
-) {
+export async function signup(page: Page, options: OnboardingAnswers & { name?: string; email: string } = { email: "" }) {
   const name = options.name ?? "Tayo Akigbogun";
   await page.goto("/signup");
   await page.getByPlaceholder("Tayo Akigbogun").fill(name);
   await page.getByPlaceholder("you@example.com").fill(options.email);
   await page.locator('input[type="password"]').fill(PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
-  await page.getByRole("dialog", { name: /personalize/i }).waitFor({ timeout: 30_000 });
-  await page.getByPlaceholder("Austell, GA").fill(options.homeCity ?? "Austell, GA");
-  if (options.homeAirport) await page.getByPlaceholder("ATL").fill(options.homeAirport);
-  if (options.beforeSave) await options.beforeSave(page);
-  await page.getByRole("button", { name: "Save preferences" }).click();
+  await completeOnboarding(page, options);
   await page.getByRole("heading", { name: new RegExp(`Where to today, ${name.split(" ")[0]}\\?`) }).waitFor({ timeout: 15_000 });
 }
 
@@ -33,15 +80,18 @@ export async function signupApi(request: APIRequestContext, input: { name: strin
   expect(res.status(), await res.text()).toBe(201);
 }
 
+/** Creates an account through the API unless it already exists (a fixed email such as the admin's). */
+export async function ensureAccount(request: APIRequestContext, input: { name: string; email: string }, origin: string) {
+  const res = await request.post("/api/auth/signup", { data: { ...input, password: PASSWORD }, headers: { Origin: origin } });
+  expect([201, 409]).toContain(res.status());
+}
+
 export async function login(page: Page, email: string, options: { finishOnboarding?: boolean } = {}) {
   await page.goto("/login");
   await page.getByPlaceholder("you@example.com").fill(email);
   await page.locator('input[type="password"]').fill(PASSWORD);
   await page.getByRole("button", { name: "Sign in" }).click();
-  if (options.finishOnboarding) {
-    await page.getByRole("dialog", { name: /personalize/i }).waitFor({ timeout: 30_000 });
-    await page.getByRole("button", { name: "Save preferences" }).click();
-  }
+  if (options.finishOnboarding) await completeOnboarding(page);
 }
 
 /** Types into the chat and sends once agent discovery has enabled the composer. */

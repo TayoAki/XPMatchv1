@@ -207,4 +207,50 @@ export const MIGRATIONS: Migration[] = [
       `ALTER TABLE trip_items ADD COLUMN IF NOT EXISTS details jsonb`,
     ],
   },
+  {
+    id: "0005_beta_polish",
+    statements: [
+      // The destination a chat's map focused on, so "Jump back in" can show its photo.
+      `ALTER TABLE chats ADD COLUMN IF NOT EXISTS destination text`,
+      `ALTER TABLE chats ADD COLUMN IF NOT EXISTS place jsonb`,
+      // Thumbs up / down on recommendations: did the match score get it right? One row per traveler and place.
+      `CREATE TABLE IF NOT EXISTS rec_feedback (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        place_id text NOT NULL,
+        kind text NOT NULL,
+        name text NOT NULL,
+        destination text,
+        context text NOT NULL DEFAULT 'chat',
+        verdict text NOT NULL,
+        score int,
+        factors text[] NOT NULL DEFAULT '{}',
+        reason text,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        updated_at timestamptz NOT NULL DEFAULT now(),
+        UNIQUE (user_id, place_id)
+      )`,
+      `CREATE INDEX IF NOT EXISTS rec_feedback_user_idx ON rec_feedback(user_id, updated_at DESC)`,
+      // Bug reports from testers, with an optional downscaled screenshot (base64) and the page context.
+      `CREATE TABLE IF NOT EXISTS bug_reports (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid REFERENCES users(id) ON DELETE SET NULL,
+        reporter_email text NOT NULL DEFAULT '',
+        title text NOT NULL,
+        body text NOT NULL DEFAULT '',
+        expected text NOT NULL DEFAULT '',
+        severity text NOT NULL DEFAULT 'broken',
+        page text NOT NULL DEFAULT '',
+        thread_id text,
+        user_agent text NOT NULL DEFAULT '',
+        app_version text NOT NULL DEFAULT '',
+        screenshot_type text,
+        screenshot_data text,
+        status text NOT NULL DEFAULT 'open',
+        created_at timestamptz NOT NULL DEFAULT now(),
+        updated_at timestamptz NOT NULL DEFAULT now()
+      )`,
+      `CREATE INDEX IF NOT EXISTS bug_reports_created_idx ON bug_reports(created_at DESC)`,
+    ],
+  },
 ];

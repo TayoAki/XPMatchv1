@@ -61,6 +61,19 @@ verification) is skipped by decision, so nothing is scheduled after Wave 3.
 | 3 | Routes API travel legs on the Board with Walk / Drive / Transit (remembered per browser), "via Google" vs "est." labels, Directions by mode, one request per day per change cached for a day, straight-line estimate as fallback | Budget lines, live traffic |
 | 9 | — | Flight price tracking (Wave 4, skipped) |
 
+## Beta polish: shipped
+
+Asked for before inviting testers (`docs/BETA_POLISH_PLAN.md`): "Jump back in" cards with real photos
+(trip covers, the chat's focused destination remembered on the chat, saved places); a six-step in-depth
+onboarding whose answers drive **home picks** ("For you in Rome": three things to do, three stays, three
+places to eat from profile-driven Places searches); a deterministic **match score** with "Why this score"
+and **thumbs up / down** on every recommendation (chat cards, Explore, home picks, board stop details),
+stored per place, calibrating the factors per traveler and fed to the assistant as recommendation
+feedback; **itinerary detail** (board stops expand into the full card, the trip proposal resolves and pins
+its stops before saving, the Itinerary tile shows the same facts); and **bug reports** from a sidebar icon
+with screenshots, plus `/admin` (accounts in `ADMIN_EMAILS`) with the reports and the recommendation hit
+rate.
+
 ## Where the research says we can beat the originals
 
 The competitor teardowns in `docs/COMPETITIVE_RESEARCH.md` expose four gaps none of the nine currently

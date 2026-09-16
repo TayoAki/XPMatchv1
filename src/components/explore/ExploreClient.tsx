@@ -19,6 +19,7 @@ import { PlacesMap } from "@/components/map/PlacesMap";
 import type { MapPin as Pin } from "@/components/map/GoogleMap";
 import { GuideCard } from "@/components/guides/GuideCard";
 import { useUiState } from "@/components/providers/UiState";
+import { MatchLine } from "@/components/recs/MatchLine";
 
 type Category = "for-you" | "restaurants" | "experiences" | "stays";
 type Tab = Category | "guides";
@@ -103,6 +104,7 @@ function NearbyCard({
         <div className="mt-1 text-[13px] text-neutral-700">{place.category ?? (place.kind === "hotel" ? "Stay" : place.kind === "restaurant" ? "Restaurant" : "Experience")}</div>
         <div className="text-[13px] text-muted">{place.locality ?? place.address}</div>
         {place.priceLevel ? <div className="mt-1 text-[13px] text-neutral-700">{place.priceLevel}</div> : null}
+        <MatchLine name={place.name} kind={place.kind} place={place} destination={areaName} context="explore" size="sm" className="mt-2" />
       </div>
     </article>
   );

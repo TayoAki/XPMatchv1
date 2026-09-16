@@ -145,33 +145,51 @@ interface ChatRow extends Row {
   thread_id: string;
   title: string;
   trip_id: string | null;
+  destination: string | null;
+  place: unknown;
   created_at: unknown;
   updated_at: unknown;
 }
 
-const mapChat = (r: ChatRow): ChatSummary => ({
-  id: r.thread_id,
-  title: r.title,
-  tripId: r.trip_id ?? undefined,
-  createdAt: iso(r.created_at),
-  updatedAt: iso(r.updated_at),
-});
+const CHAT_FIELDS = "thread_id, title, trip_id, destination, place, created_at, updated_at";
+
+const mapChat = (r: ChatRow): ChatSummary => {
+  const out: ChatSummary = {
+    id: r.thread_id,
+    title: r.title,
+    tripId: r.trip_id ?? undefined,
+    createdAt: iso(r.created_at),
+    updatedAt: iso(r.updated_at),
+  };
+  if (r.destination) out.destination = r.destination;
+  const place = jsonb<ResolvedPlace>(r.place);
+  if (place) out.place = place;
+  return out;
+};
 
 export async function loadChats(userId: string): Promise<ChatSummary[]> {
-  const rows = await queryAll<ChatRow>(
-    "SELECT thread_id, title, trip_id, created_at, updated_at FROM chats WHERE user_id = $1 ORDER BY updated_at DESC LIMIT 200",
-    [userId],
-  );
+  const rows = await queryAll<ChatRow>(`SELECT ${CHAT_FIELDS} FROM chats WHERE user_id = $1 ORDER BY updated_at DESC LIMIT 200`, [userId]);
   return rows.map(mapChat);
 }
 
-export async function upsertChat(userId: string, threadId: string, title: string, tripId?: string | null): Promise<ChatSummary> {
+export interface ChatExtras {
+  /** The destination the chat's map focused on (kept once set; a later focus replaces it). */
+  destination?: string | null;
+  place?: ResolvedPlace | null;
+}
+
+export async function upsertChat(userId: string, threadId: string, title: string, tripId?: string | null, extras: ChatExtras = {}): Promise<ChatSummary> {
   const row = await queryOne<ChatRow>(
-    `INSERT INTO chats (thread_id, user_id, title, trip_id) VALUES ($1, $2, $3, $4)
-     ON CONFLICT (thread_id) DO UPDATE SET title = EXCLUDED.title, trip_id = COALESCE(EXCLUDED.trip_id, chats.trip_id), updated_at = now()
+    `INSERT INTO chats (thread_id, user_id, title, trip_id, destination, place) VALUES ($1, $2, $3, $4, $5, $6::jsonb)
+     ON CONFLICT (thread_id) DO UPDATE SET
+       title = EXCLUDED.title,
+       trip_id = COALESCE(EXCLUDED.trip_id, chats.trip_id),
+       destination = COALESCE(EXCLUDED.destination, chats.destination),
+       place = COALESCE(EXCLUDED.place, chats.place),
+       updated_at = now()
      WHERE chats.user_id = $2
-     RETURNING thread_id, title, trip_id, created_at, updated_at`,
-    [threadId, userId, title, tripId ?? null],
+     RETURNING ${CHAT_FIELDS}`,
+    [threadId, userId, title, tripId ?? null, extras.destination?.trim() || null, extras.place ? JSON.stringify(extras.place) : null],
   );
   if (!row) throw new Error("Chat belongs to another user");
   return mapChat(row);
@@ -391,10 +409,7 @@ export async function loadTripDetail(tripId: string, userId: string): Promise<Tr
       "SELECT id, kind, title, note, url, place, details, added_by, created_at FROM trip_items WHERE trip_id = $1 ORDER BY created_at DESC",
       [tripId],
     ),
-    queryAll<ChatRow>(
-      "SELECT thread_id, title, trip_id, created_at, updated_at FROM chats WHERE trip_id = $1 ORDER BY updated_at DESC",
-      [tripId],
-    ),
+    queryAll<ChatRow>(`SELECT ${CHAT_FIELDS} FROM chats WHERE trip_id = $1 ORDER BY updated_at DESC`, [tripId]),
   ]);
   const toMember = (m: MemberRow): TripMember => ({ userId: m.user_id, name: m.name, handle: m.handle, email: m.email, role: m.role as TripMember["role"] });
   const toItem = (i: ItemRow): TripItem => ({

@@ -21,11 +21,15 @@ export function useCardThreadId(): string | null {
 interface RegisterItem {
   name?: string;
   hint?: string;
+  /** Overrides the call's kind for this item (a trip proposal mixes hotels, restaurants and sights). */
+  kind?: PlaceKind;
 }
 
 /**
  * Pins a completed tool call's recommendations on the map. Runs once per tool
- * call (also when a thread is reopened and its cards re-render).
+ * call (also when a thread is reopened and its cards re-render). A
+ * human-in-the-loop card can ask for pins while it is still waiting for the
+ * traveler's answer by listing `Executing` in `readyStatuses`.
  */
 export function useRegisterPlaces(options: {
   toolCallId: string;
@@ -33,19 +37,22 @@ export function useRegisterPlaces(options: {
   kind: PlaceKind;
   destination?: string;
   items: RegisterItem[];
+  readyStatuses?: ToolCallStatus[];
 }) {
   const { toolCallId, status, kind, destination, items } = options;
+  const ready = (options.readyStatuses ?? [ToolCallStatus.Complete]).includes(status);
   const threadId = useCardThreadId();
-  const signature = useMemo(() => items.map((i) => `${i.name ?? ""}|${i.hint ?? ""}`).join("||"), [items]);
+  const signature = useMemo(() => items.map((i) => `${i.name ?? ""}|${i.hint ?? ""}|${i.kind ?? ""}`).join("||"), [items]);
 
   useEffect(() => {
-    if (status !== ToolCallStatus.Complete || !threadId || !toolCallId) return;
+    if (!ready || !threadId || !toolCallId) return;
     if (mapActions.hasRegistered(threadId, toolCallId)) return;
     const valid = items.map((item, index) => ({ ...item, index })).filter((item) => item.name);
     if (valid.length === 0) return;
     mapActions.markRegistered(threadId, toolCallId);
 
     const isDestination = kind === "destination";
+    const kindByKey = new Map(valid.map((item) => [placeKey(toolCallId, item.index), item.kind ?? kind]));
     void resolvePlaces({
       destination: isDestination ? undefined : destination,
       items: valid.map((item) => ({
@@ -53,20 +60,20 @@ export function useRegisterPlaces(options: {
         query: isDestination
           ? [item.name, item.hint].filter(Boolean).join(", ")
           : [item.name, item.hint, destination].filter(Boolean).join(", "),
-        kind,
+        kind: item.kind ?? kind,
       })),
     }).then((res) => {
       if (!res) return;
       const current = mapActions.getState().threads[threadId];
       if (res.destination && !current?.focus) mapActions.setFocus(threadId, res.destination);
       const places: MapPlace[] = res.items.flatMap(({ key, place }) =>
-        place ? [{ ...place, kind, key, toolCallId }] : [],
+        place ? [{ ...place, kind: kindByKey.get(key) ?? kind, key, toolCallId }] : [],
       );
       mapActions.addPlaces(threadId, places);
     });
     // `signature` stands in for `items`, whose array identity changes on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, threadId, toolCallId, kind, destination, signature]);
+  }, [ready, threadId, toolCallId, kind, destination, signature]);
 }
 
 /** Selection and hover helpers for one card ↔ marker pair. */

@@ -7,6 +7,7 @@ import { AssistantSettingsDialog } from "@/components/profile/AssistantSettingsD
 import { TripPlannerDialog } from "@/components/profile/TripPlannerDialog";
 import { AddToTripDialog } from "@/components/trips/AddToTripDialog";
 import { ImportDialog } from "@/components/import/ImportDialog";
+import { BugReportDialog } from "@/components/bugs/BugReportDialog";
 import { useTravelStore } from "@/lib/store";
 import { useUiState } from "@/components/providers/UiState";
 
@@ -30,6 +31,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <TripPlannerDialog />
       <AddToTripDialog />
       <ImportDialog open={importOpen} onClose={closeImport} />
+      <BugReportDialog />
     </div>
   );
 }

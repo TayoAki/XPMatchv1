@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Brain, Sparkles, Trash2 } from "lucide-react";
+import clsx from "clsx";
+import { ArrowLeft, ArrowRight, Brain, Sparkles, Trash2 } from "lucide-react";
 import { YourTaste } from "@/components/feedback/YourTaste";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
-import { Chip, Field, Select, TextArea, TextInput } from "@/components/ui/Field";
-import { TRAVEL_STYLE_OPTIONS } from "@/lib/travel/inspiration";
 import { DEALBREAKER_OPTIONS, DOMAIN_LABEL, useTravelStore, type LearnedPreference, type TravelerProfile } from "@/lib/store";
 import { useUiState } from "@/components/providers/UiState";
+import { SECTIONS, SECTION_COMPONENT, type SectionKey } from "./ProfileSections";
 
 export function AssistantSettingsDialog() {
   const { assistantOpen } = useUiState();
@@ -21,22 +21,23 @@ const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLow
 const POLARITY_LABEL: Record<LearnedPreference["polarity"], string> = { like: "Likes", dislike: "Avoids", dealbreaker: "Dealbreaker" };
 const SOURCE_LABEL: Record<LearnedPreference["source"], string> = { onboarding: "from onboarding", chat: "learned in chat", feedback: "from your feedback" };
 
+/**
+ * First run: a six-step wizard (about you · style & interests · stays · food ·
+ * logistics & next trip · dealbreakers & notes). Afterwards: the same sections
+ * stacked, plus what XPMatch has learned and the taste profile.
+ */
 function AssistantSettingsForm() {
   const { profile, preferences, trips, updateProfile, addPreference, removePreference } = useTravelStore();
   const { closeAssistant } = useUiState();
+  const wizard = !profile.onboarded;
   const [draft, setDraft] = useState<TravelerProfile>(() => profile);
+  const [step, setStep] = useState(0);
   // Dealbreaker chips start from the stored dealbreakers so the dialog is idempotent.
   const [dealbreakers, setDealbreakers] = useState<string[]>(() =>
     DEALBREAKER_OPTIONS.filter((o) => preferences.some((p) => !p.tripId && p.polarity === "dealbreaker" && same(p.statement, o.statement))).map((o) => o.statement),
   );
 
   const set = <K extends keyof TravelerProfile>(key: K, value: TravelerProfile[K]) => setDraft((d) => ({ ...d, [key]: value }));
-
-  const toggleStyle = (style: string) =>
-    set(
-      "travelStyles",
-      draft.travelStyles.includes(style) ? draft.travelStyles.filter((s) => s !== style) : [...draft.travelStyles, style],
-    );
 
   const toggleDealbreaker = (statement: string) =>
     setDealbreakers((list) => (list.includes(statement) ? list.filter((s) => s !== statement) : [...list, statement]));
@@ -57,109 +58,107 @@ function AssistantSettingsForm() {
   };
 
   const skip = () => {
-    updateProfile({ onboarded: true });
+    updateProfile({ ...draft, onboarded: true });
     closeAssistant();
   };
 
   const learned = preferences.filter((p) => !DEALBREAKER_OPTIONS.some((o) => o.statement === p.statement && p.polarity === "dealbreaker" && !p.tripId));
   const tripTitle = (id?: string) => (id ? trips.find((t) => t.id === id)?.title ?? "a trip" : null);
+  const sectionProps = { draft, set, dealbreakers, toggleDealbreaker };
+  const last = SECTIONS.length - 1;
+  const current = SECTIONS[step];
+  const jump = (key: SectionKey) => {
+    document.getElementById(`profile-section-${key}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  if (wizard) {
+    const Section = SECTION_COMPONENT[current.key];
+    return (
+      <Modal
+        open
+        onClose={skip}
+        title="Let's personalize your assistant"
+        description={`Step ${step + 1} of ${SECTIONS.length} · ${current.title}. Everything is optional and editable later under Update my assistant.`}
+        size="lg"
+        footer={
+          <div className="flex items-center justify-between gap-3">
+            <button type="button" onClick={skip} className="text-sm text-muted hover:underline">
+              Skip for now
+            </button>
+            <div className="flex gap-2">
+              {step > 0 ? (
+                <Button variant="outline" onClick={() => setStep((s) => s - 1)}>
+                  <ArrowLeft className="h-4 w-4" /> Back
+                </Button>
+              ) : null}
+              {step < last ? (
+                <Button onClick={() => setStep((s) => s + 1)}>
+                  Next <ArrowRight className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button onClick={save}>Save preferences</Button>
+              )}
+            </div>
+          </div>
+        }
+      >
+        <ol className="mb-5 flex gap-1.5" aria-label="Onboarding steps" data-testid="onboarding-steps">
+          {SECTIONS.map((s, i) => (
+            <li key={s.key} className="flex-1">
+              <button
+                type="button"
+                onClick={() => setStep(i)}
+                aria-current={i === step ? "step" : undefined}
+                aria-label={`Step ${i + 1}: ${s.title}`}
+                className={clsx("block h-1.5 w-full rounded-full", i <= step ? "bg-neutral-900" : "bg-surface-2")}
+              />
+            </li>
+          ))}
+        </ol>
+        <div className="mb-4">
+          <h3 className="text-[16px] font-semibold">{current.title}</h3>
+          <p className="text-[13px] text-muted">{current.blurb}</p>
+        </div>
+        <Section {...sectionProps} />
+      </Modal>
+    );
+  }
 
   return (
     <Modal
       open
-      onClose={profile.onboarded ? closeAssistant : skip}
-      title={profile.onboarded ? "Update my assistant" : "Let's personalize your assistant"}
-      description="XPMatch uses this to tailor destinations, stays, flights and food to you. Saved to your account."
+      onClose={closeAssistant}
+      title="Update my assistant"
+      description="XPMatch uses this to tailor destinations, stays, flights, food and every itinerary to you. Saved to your account."
       size="lg"
       footer={
-        <div className="flex items-center justify-between gap-3">
-          {!profile.onboarded ? (
-            <button type="button" onClick={skip} className="text-sm text-muted hover:underline">
-              Skip for now
-            </button>
-          ) : (
-            <span />
-          )}
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={profile.onboarded ? closeAssistant : skip}>
-              Cancel
-            </Button>
-            <Button onClick={save}>Save preferences</Button>
-          </div>
+        <div className="flex items-center justify-end gap-2">
+          <Button variant="outline" onClick={closeAssistant}>
+            Cancel
+          </Button>
+          <Button onClick={save}>Save preferences</Button>
         </div>
       }
     >
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Your name">
-          <TextInput value={draft.name} onChange={(e) => set("name", e.target.value)} placeholder="Tayo" autoFocus />
-        </Field>
-        <Field label="Home city">
-          <TextInput value={draft.homeCity} onChange={(e) => set("homeCity", e.target.value)} placeholder="Austell, GA" />
-        </Field>
-        <Field label="Home airport" hint="IATA code, used as the default flight origin">
-          <TextInput value={draft.homeAirport} onChange={(e) => set("homeAirport", e.target.value.toUpperCase())} placeholder="ATL" maxLength={4} />
-        </Field>
-        <Field label="Usually travel with">
-          <Select value={draft.companions} onChange={(e) => set("companions", e.target.value as TravelerProfile["companions"])}>
-            <option value="solo">Solo</option>
-            <option value="partner">Partner</option>
-            <option value="family">Family (with kids)</option>
-            <option value="friends">Friends</option>
-            <option value="mixed">It varies</option>
-          </Select>
-        </Field>
-        <Field label="Budget">
-          <Select value={draft.budgetTier} onChange={(e) => set("budgetTier", e.target.value as TravelerProfile["budgetTier"])}>
-            <option value="budget">Budget — hostels, street food, deals</option>
-            <option value="mid-range">Mid-range — 3-4★ hotels, nice dinners</option>
-            <option value="premium">Premium — boutique & 4-5★</option>
-            <option value="luxury">Luxury — the best of everything</option>
-          </Select>
-        </Field>
-        <Field label="Pace">
-          <Select value={draft.pace} onChange={(e) => set("pace", e.target.value as TravelerProfile["pace"])}>
-            <option value="relaxed">Relaxed — a couple of things a day</option>
-            <option value="balanced">Balanced</option>
-            <option value="packed">Packed — see it all</option>
-          </Select>
-        </Field>
-      </div>
-
-      <div className="mt-5">
-        <div className="mb-2 text-[13px] font-medium">Travel style</div>
-        <div className="flex flex-wrap gap-2">
-          {TRAVEL_STYLE_OPTIONS.map((style) => (
-            <Chip key={style} active={draft.travelStyles.includes(style)} onClick={() => toggleStyle(style)}>
-              {style}
-            </Chip>
-          ))}
-        </div>
-      </div>
-
-      <div className="mt-5">
-        <div className="mb-1 text-[13px] font-medium">What ruins a trip for you?</div>
-        <p className="mb-2 text-[12px] text-muted">Dealbreakers. Every recommendation is checked against them and any conflict is called out on the card.</p>
-        <div className="flex flex-wrap gap-2" data-testid="dealbreaker-chips">
-          {DEALBREAKER_OPTIONS.map((o) => (
-            <Chip key={o.statement} active={dealbreakers.includes(o.statement)} onClick={() => toggleDealbreaker(o.statement)}>
-              {o.statement}
-            </Chip>
-          ))}
-        </div>
-      </div>
-
-      <div className="mt-5 grid gap-4 sm:grid-cols-2">
-        <Field label="Dietary needs">
-          <TextInput value={draft.dietary} onChange={(e) => set("dietary", e.target.value)} placeholder="Vegetarian, no shellfish…" />
-        </Field>
-        <Field label="Preferred stays">
-          <TextInput value={draft.accommodation} onChange={(e) => set("accommodation", e.target.value)} placeholder="Boutique hotels, walkable areas" />
-        </Field>
-      </div>
-      <div className="mt-4">
-        <Field label="Anything else the assistant should remember?">
-          <TextArea value={draft.notes} onChange={(e) => set("notes", e.target.value)} placeholder="I love rooftop bars, hate early flights, collecting Marriott points…" />
-        </Field>
+      <nav className="mb-4 flex flex-wrap gap-1.5" aria-label="Profile sections">
+        {SECTIONS.map((s) => (
+          <button key={s.key} type="button" onClick={() => jump(s.key)} className="h-8 rounded-full border border-border bg-white px-3 text-[12px] font-medium hover:bg-surface">
+            {s.title}
+          </button>
+        ))}
+        <button type="button" onClick={() => jump("dealbreakers")} className="hidden" aria-hidden="true" />
+      </nav>
+      <div className="grid gap-8">
+        {SECTIONS.map((s) => {
+          const Section = SECTION_COMPONENT[s.key];
+          return (
+            <section key={s.key} id={`profile-section-${s.key}`} aria-label={s.title}>
+              <h3 className="text-[15px] font-semibold">{s.title}</h3>
+              <p className="mb-3 text-[12px] text-muted">{s.blurb}</p>
+              <Section {...sectionProps} />
+            </section>
+          );
+        })}
       </div>
 
       <div className="mt-6 rounded-2xl border border-border p-4" data-testid="memory-panel">

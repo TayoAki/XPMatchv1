@@ -7,12 +7,14 @@ import clsx from "clsx";
 import {
   Bell,
   Briefcase,
+  Bug,
   ChevronDown,
   Compass,
   Heart,
   MessageCircle,
   MoreHorizontal,
   Search,
+  ShieldCheck,
   Sparkles,
   SquarePlus,
   X,
@@ -44,7 +46,8 @@ function handleFor(name: string): string {
 export function Sidebar() {
   const pathname = usePathname();
   const { chats, updates, profile, user, logout } = useTravelStore();
-  const { openAssistant, startNewChat } = useUiState();
+  const { openAssistant, openBugReport, startNewChat } = useUiState();
+  const nav = user?.admin ? [...NAV, { href: "/admin", label: "Admin", icon: ShieldCheck }] : NAV;
   const [chatsExpanded, setChatsExpanded] = useChatsExpanded();
   const [promoDismissed, setPromoDismissed] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -62,13 +65,13 @@ export function Sidebar() {
       </Link>
 
       <nav className="xp-scroll mt-6 flex min-h-0 flex-col gap-0.5 overflow-y-auto">
-        {NAV.map((item) => {
+        {nav.map((item) => {
           const active =
             pathname === item.href ||
             (item.href !== "/" && pathname.startsWith(`${item.href}/`)) ||
             (item.href === "/inspiration" && pathname.startsWith("/guides"));
           const Icon = item.icon;
-          const badge = item.badge === "chats" ? chats.length : item.badge === "updates" ? unread : 0;
+          const badge = "badge" in item ? (item.badge === "chats" ? chats.length : item.badge === "updates" ? unread : 0) : 0;
           const isChats = item.href === "/";
           return (
             <div key={item.href}>
@@ -142,6 +145,9 @@ export function Sidebar() {
           <div className="truncate text-[14px] font-semibold">{name}</div>
           <div className="truncate text-xs text-muted">{handle}</div>
         </div>
+        <button type="button" onClick={openBugReport} aria-label="Report a bug" title="Report a bug" className="rounded-full p-1.5 text-neutral-600 hover:bg-surface hover:text-foreground">
+          <Bug className="h-5 w-5" />
+        </button>
         <button
           type="button"
           onClick={() => setMenuOpen((v) => !v)}

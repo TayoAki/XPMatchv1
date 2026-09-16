@@ -38,6 +38,8 @@ export interface DayColumnProps {
   mode: DirectionsMode;
   /** Bookings that start on this day (from confirmations), shown above the stops. */
   reservations: TripItem[];
+  /** The trip's destination, passed to each stop's details. */
+  destination?: string;
   hoveredKey: string | null | undefined;
   onHover?: (key: string | null) => void;
   onSelectPlace: (key: string) => void;
@@ -89,6 +91,7 @@ export function DayColumn({
   saving,
   mode,
   reservations,
+  destination,
   hoveredKey,
   onHover,
   onSelectPlace,
@@ -125,6 +128,7 @@ export function DayColumn({
         canEdit={canEdit}
         hovered={hoveredKey === stopPinKey(stop)}
         pending={saving}
+        destination={destination}
         onHover={onHover}
         onSelectPlace={onSelectPlace}
         onMove={onMoveStop}

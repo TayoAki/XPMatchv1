@@ -12,7 +12,7 @@ test("accounts, chat cards, saving, trips and sessions", async ({ page, browser 
   });
 
   await test.step("signup and onboarding save to the server", async () => {
-    await signup(page, { email, homeAirport: "ATL", beforeSave: (p) => p.getByRole("button", { name: "Food & drink", exact: true }).click() });
+    await signup(page, { email, homeAirport: "ATL", styles: ["Food & drink"] });
     await expect(page.getByText("@tayo-akigbogun")).toBeVisible();
   });
 

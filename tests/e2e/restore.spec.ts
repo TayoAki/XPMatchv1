@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
-import { PASSWORD } from "./helpers";
+import { completeOnboarding, PASSWORD } from "./helpers";
 
 /**
  * Transcript persistence: this spec runs its own app instance so it can restart
@@ -75,8 +75,7 @@ test.describe("chat transcripts survive a server restart", () => {
     await page.locator('input[type="password"]').fill(PASSWORD);
     await page.getByRole("button", { name: "Create account" }).click();
     await page.getByRole("dialog", { name: /personalize/i }).waitFor({ timeout: 60_000 });
-    await page.getByPlaceholder("Austell, GA").fill("Austell, GA");
-    await page.getByRole("button", { name: "Save preferences" }).click();
+    await completeOnboarding(page);
     await expect(page.getByRole("heading", { name: /Where to today, Tayo\?/ })).toBeVisible({ timeout: 30_000 });
 
     const input = page.getByPlaceholder("Ask XPMatch");

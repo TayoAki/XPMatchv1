@@ -10,6 +10,7 @@ import { CardPhoto, AddToTripButton, Body, CardGrid, CardShell, ExtLink, Footer,
 import { CompareToggle } from "./CompareControls";
 import { HiddenPlaceCard, ReactionControl, useReaction } from "@/components/feedback/ReactionControl";
 import { TasteFit } from "@/components/feedback/TasteFit";
+import { MatchLine } from "@/components/recs/MatchLine";
 
 export function HotelCards({ args, status, toolCallId }: { args: Streaming<ShowHotelsArgs>; status: ToolCallStatus; toolCallId: string }) {
   const items = (args.hotels ?? []).filter((h) => h && h.name);
@@ -99,6 +100,19 @@ function HotelCard({
                 </div>
                 <TasteFit kind="hotel" name={h.name} category={pin.place?.category ?? h.style} text={[h.whyItFits, h.style, ...(h.amenities ?? [])].filter(Boolean).join(" ")} />
                 <Tradeoffs items={h.tradeoffs} />
+                <MatchLine
+                  name={h.name}
+                  kind="hotel"
+                  place={pin.place}
+                  destination={dest}
+                  context="chat"
+                  category={h.style}
+                  priceLevel={h.priceTier}
+                  rating={h.rating}
+                  text={[h.whyItFits, h.style, h.area, ...(h.amenities ?? [])].filter(Boolean).join(" ")}
+                  tradeoffs={h.tradeoffs}
+                  className="pt-1"
+                />
               </Body>
               <Footer>
                 <ExtLink primary href={bookingSearchUrl({ query, checkIn: args.checkIn, checkOut: args.checkOut, guests: args.guests })}>

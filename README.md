@@ -13,10 +13,23 @@ in development), and the app deploys to **Railway** with the included Dockerfile
 
 ## Features
 
-- **Personalized from message one** — an onboarding dialog ("Update my assistant") captures name,
-  home city/airport, travel styles, pace, budget, companions, dietary needs, notes and "What ruins a
-  trip for you?" dealbreakers. Everything is sent to the agent as context on every run; concrete
-  profile fields heard in conversation go through `update_traveler_profile`.
+- **Personalized from message one** — a six-step onboarding (about you · style & interests · stays ·
+  food · logistics & next trip · dealbreakers & notes) captures name, home city/airport, companions,
+  budget, pace, travel styles, things you love doing, the kind of place you stay in and its
+  must-haves, cuisines, dietary needs, how adventurous you eat, your day rhythm, walking, transport
+  and flight preferences, where you are dreaming of going next, and "What ruins a trip for you?"
+  dealbreakers; the same sections edit in place under Update my assistant. Everything is sent to the
+  agent as context on every run; profile fields heard in conversation go through
+  `update_traveler_profile`.
+- **Home picks with a match score** — "For you in Rome" (the next trip, the dreamed-of destination,
+  the planner's Where or the home city, switchable) lines up three things to do, three stays and
+  three places to eat from Google Places, queried from the deep profile and scored by a deterministic
+  **match model** (budget vs price, interests, stay types, must-haves, cuisines, dietary tags,
+  companions, taste twins, learned preferences and dealbreakers, rating and review count). Every
+  recommendation card in chat, Explore, the home picks and the board's stop details shows the score
+  with a "Why this score" breakdown and **thumbs up / down**; judgments lower repeat offenders,
+  recalibrate the factors that keep misleading that traveler, and reach the agent as recommendation
+  feedback. Admins see the hit rate.
 - **Learns tastes with your say-so** — when you mention a lasting preference in chat, a "Remember
   this?" card offers **Always / For this trip / No thanks** (`remember_preference`, human-in-the-loop).
   "Update my assistant" lists everything learned with delete buttons and a "Learn from our chats"
@@ -41,6 +54,13 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   as the fallback), Directions in the same mode, Optimize order, Move to…, time and note edits, an
   Ideas tray, Add a stop) with drag-and-drop (pointer or keyboard, dnd-kit), numbered per-day pins and
   route lines on the map with Day chips as layers; `schedule_stops` puts a place on a day from chat.
+  Each placed stop expands into the full card (photos, rating, category, price, today's hours, phone,
+  links, match score and thumbs, Ask about it), the trip proposal in chat resolves and pins its stops
+  while the traveler decides, and the Itinerary tile shows the same facts.
+- **Bug reports and an admin page** — a bug icon in the sidebar opens a report (what happened,
+  expected, severity, screenshot downscaled in the browser; page, chat and build attached). Accounts in
+  `ADMIN_EMAILS` get an Update per report and an `/admin` page with the reports and recommendation
+  quality.
 - **Taste profile that learns from reactions** — Rate any place (Loved it / It was fine / Not for me
   with reason chips) on cards, the sheet, trips and Saved; "Not for me" hides the card. Reactions
   feed a per-domain taste profile (Your taste in Update my assistant), repeated reasons become
@@ -146,6 +166,8 @@ Without a model key the app starts in demo mode. Model selection lives in `src/s
 | `PGSSL` | `true` to force TLS to Postgres when the URL has no `sslmode=require`. |
 | `PGLITE_DIR` | Where PGlite stores its files locally (default `.data/pglite`). |
 | `COPILOTKIT_TELEMETRY_DISABLED` | `true` to turn off CopilotKit's anonymous runtime telemetry. |
+| `ADMIN_EMAILS` | Comma-separated account emails that see `/admin` (bug reports, recommendation quality) and get an Update per report. |
+| `APP_VERSION` | Optional build label attached to bug reports (Railway's `RAILWAY_GIT_COMMIT_SHA` is used when unset). |
 
 Note: CopilotKit generates follow-up suggestions with a forced tool call, which Claude Fable 5.1
 rejects; keep `COPILOT_MODEL` on the Opus/Sonnet families.

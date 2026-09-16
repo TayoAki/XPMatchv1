@@ -1,16 +1,24 @@
 import type { PlaceKind, ResolvedPlace } from "@/lib/places/types";
 import type { PlaceFeedback, TasteProfile } from "@/lib/feedback/types";
 import type { Reservation } from "@/lib/reservations/types";
+import type { RecFeedback } from "@/lib/recs/types";
 
 export type BudgetTier = "budget" | "mid-range" | "premium" | "luxury";
 export type Pace = "relaxed" | "balanced" | "packed";
 export type Companions = "solo" | "partner" | "family" | "friends" | "mixed";
+export type FoodAdventure = "safe" | "mix" | "adventurous";
+export type DayRhythm = "early" | "balanced" | "late";
+export type Walking = "lots" | "moderate" | "little";
+export type Transport = "walk-transit" | "rideshare" | "car" | "mixed";
+export type FlightPreference = "nonstop" | "cheapest" | "comfort" | "flexible";
 
 export interface SessionUser {
   id: string;
   email: string;
   name: string;
   handle: string;
+  /** Listed in ADMIN_EMAILS: sees bug reports and recommendation quality under /admin. */
+  admin?: boolean;
 }
 
 export interface TravelerProfile {
@@ -27,6 +35,20 @@ export interface TravelerProfile {
   /** When false the assistant never offers to remember things said in chat. */
   learnFromChat: boolean;
   onboarded: boolean;
+  /** In-depth onboarding (labels from `src/lib/profile/options.ts`). */
+  interests: string[];
+  stayTypes: string[];
+  stayMustHaves: string[];
+  cuisines: string[];
+  dietaryTags: string[];
+  foodAdventure: FoodAdventure;
+  dayRhythm: DayRhythm;
+  walking: Walking;
+  transport: Transport;
+  flightPreference: FlightPreference;
+  /** Where the traveler is dreaming of going next, and roughly when ("October", "spring 2027"). */
+  nextDestination: string;
+  nextWhen: string;
 }
 
 export type PreferenceDomain = "stays" | "food" | "flights" | "activities" | "general";
@@ -169,6 +191,9 @@ export interface ChatSummary {
   id: string;
   title: string;
   tripId?: string;
+  /** The destination the chat's map focused on, for the card photo under "Jump back in". */
+  destination?: string;
+  place?: ResolvedPlace;
   createdAt: string;
   updatedAt: string;
 }
@@ -226,6 +251,8 @@ export interface UserState {
   /** Reactions to places and the taste profile computed from them (Wave 2). */
   feedback?: PlaceFeedback[];
   taste?: TasteProfile | null;
+  /** Thumbs up / down on recommendations (beta polish). */
+  recFeedback?: RecFeedback[];
 }
 
 export const DEFAULT_PROFILE: TravelerProfile = {
@@ -241,6 +268,18 @@ export const DEFAULT_PROFILE: TravelerProfile = {
   notes: "",
   learnFromChat: true,
   onboarded: false,
+  interests: [],
+  stayTypes: [],
+  stayMustHaves: [],
+  cuisines: [],
+  dietaryTags: [],
+  foodAdventure: "mix",
+  dayRhythm: "balanced",
+  walking: "moderate",
+  transport: "mixed",
+  flightPreference: "flexible",
+  nextDestination: "",
+  nextWhen: "",
 };
 
 export const DEFAULT_PLANNER: TripPlanner = {

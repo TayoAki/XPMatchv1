@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
-import { ChevronDown, Luggage } from "lucide-react";
+import { Bug, ChevronDown, Luggage } from "lucide-react";
 import { useTravelStore, formatDateRange } from "@/lib/store";
 import { useMapView } from "@/lib/map-store";
 import { useUiState, type PlannerTab } from "@/components/providers/UiState";
@@ -18,7 +18,7 @@ const BUDGET_LABEL: Record<string, string> = {
 
 export function TopBar() {
   const { planner, chats } = useTravelStore();
-  const { openPlanner, startNewChat } = useUiState();
+  const { openPlanner, openBugReport, startNewChat } = useUiState();
   const { threadId } = useMapView();
   const activeChat = chats.find((c) => c.id === threadId);
   const chatLabel = activeChat ? (activeChat.title.length > 34 ? `${activeChat.title.slice(0, 34)}…` : activeChat.title) : "New chat";
@@ -124,6 +124,9 @@ export function TopBar() {
         </div>
       </div>
 
+      <button type="button" onClick={openBugReport} aria-label="Report a bug" title="Report a bug" className="rounded-full p-2 text-neutral-600 hover:bg-surface hover:text-foreground md:hidden">
+        <Bug className="h-5 w-5" />
+      </button>
       <button
         type="button"
         onClick={() => openPlanner("where")}

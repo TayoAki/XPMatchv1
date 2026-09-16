@@ -2,14 +2,7 @@ import { expect, test } from "@playwright/test";
 import { sendChat, signup, uniqueEmail } from "./helpers";
 
 test("destination sheet tabs, sidebar chats and card photos", async ({ page }) => {
-  await signup(page, {
-    email: uniqueEmail("tayo"),
-    beforeSave: async (p) => {
-      await p.getByPlaceholder(/Vegetarian, no shellfish/).fill("Vegetarian");
-      await p.getByPlaceholder(/Boutique hotels/).fill("Boutique hotels");
-      await p.getByRole("button", { name: "Food & drink", exact: true }).click();
-    },
-  });
+  await signup(page, { email: uniqueEmail("tayo"), dietary: "Vegetarian", accommodation: "Boutique hotels", styles: ["Food & drink"] });
 
   await test.step("focusing on Rome opens the map and the sidebar lists the chat", async () => {
     await sendChat(page, "I want to visit roam");

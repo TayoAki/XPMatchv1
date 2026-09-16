@@ -4,7 +4,7 @@ import { sendChat, signup, uniqueEmail } from "./helpers";
 test("questions answered from reviews in the sheet and in chat", async ({ page }) => {
   await signup(page, {
     email: uniqueEmail("tayo"),
-    beforeSave: (p) => p.getByTestId("dealbreaker-chips").getByRole("button", { name: "Street noise at night" }).click(),
+    dealbreakers: ["Street noise at night"],
   });
 
   await test.step("hotel cards, then the sheet of one hotel", async () => {

@@ -25,7 +25,12 @@ interface FeedbackRow extends Row {
 const SELECT = "SELECT id, place_id, kind, name, destination, place, verdict, reasons, note, trip_id, source, score, created_at, updated_at FROM place_feedback";
 
 /** Postgres array literal, safe for both drivers. */
-const toPgArray = (values: string[]): string => `{${values.map((v) => `"${v.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`).join(",")}}`;
+export const toPgArray = (values: string[]): string => `{${values.map((v) => `"${v.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`).join(",")}}`;
+
+/** A text[] column as either driver returns it (an array, or PGlite's literal form `{"A","B"}`). */
+export function textArrayOf(value: unknown): string[] {
+  return reasonsOf(value as FeedbackRow["reasons"]);
+}
 
 function reasonsOf(value: FeedbackRow["reasons"]): string[] {
   if (Array.isArray(value)) return value.filter((r): r is string => typeof r === "string");

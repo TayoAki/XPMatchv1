@@ -9,13 +9,30 @@ Routes are listed at the end.
 creates the user, a profile row and a session, sets the `xp_session` HttpOnly cookie and lands on the chat.
 A handle (`@tayo-akigbogun`) is derived from the name and shown in the sidebar footer.
 
-**Onboarding** — on the first visit the "Personalize your assistant" dialog opens: name, home city, home
-airport, travel styles, pace, budget tier, companions, dietary needs, accommodation preference, notes, and
-**"What ruins a trip for you?"** chips (street noise, no workspace, stairs, crowds, early starts, long
-transfers, spicy food…) that become dealbreakers. "Save preferences" stores the profile and the
-dealbreakers on the server; "Skip for now" marks onboarding done. Everything here is sent to the assistant
-as context on every message and can be changed later from the sidebar ("Update my assistant") or by simply
-telling the assistant ("I'm vegetarian" → `update_traveler_profile`).
+**Onboarding** — on the first visit the "Let's personalize your assistant" wizard opens: six short steps
+with a progress bar, Back / Next and "Skip for now" on every step.
+1. *About you* — name, home city, home airport, who usually comes along.
+2. *Style & interests* — budget tier, pace, travel styles, and **things you love doing** (museums & art,
+   history & architecture, food tours & markets, nightlife, live music, nature & hiking, beaches, wellness,
+   shopping, photography spots, sports & adventure, family activities, local neighborhoods, coffee culture,
+   wine & craft beer, street food).
+3. *Where you stay* — kind of place (boutique, design, luxury resort, budget hotel, apartment, hostel, B&B,
+   business hotel), must-haves (pool, gym, breakfast, kitchen, central, quiet room, workspace, free
+   cancellation, walkable, near transit, parking) and free text.
+4. *How you eat* — cuisines, dietary needs as chips (vegetarian, vegan, gluten-free, halal, kosher, no
+   shellfish, nut allergy) plus free text, and how adventurous (play it safe / a bit of both / try anything).
+5. *Logistics & next trip* — early riser / in between / night owl, how much walking, getting around
+   (walk & transit / rideshare / rental car / whatever works), flights (nonstop / cheapest / comfort /
+   flexible), and **where you are dreaming of going next** with a rough when.
+6. *Dealbreakers & notes* — **"What ruins a trip for you?"** chips (street noise, no workspace, stairs,
+   crowds, early starts, long transfers, spicy food…) that become dealbreakers, and anything else.
+
+"Save preferences" on the last step stores the profile and the dealbreakers on the server; "Skip for
+now" keeps what was filled so far. Everything is sent to the assistant as context on every message
+(interests, stay types, must-haves, cuisines, dietary tags, rhythm, walking, transport, flights, next
+destination included), drives the home picks and the match score, and can be changed later from
+**Update my assistant** (the same six sections stacked, with a section rail) or by simply telling the
+assistant ("I'm vegetarian" → `update_traveler_profile`, which accepts every field).
 
 **What XPMatch has learned** — the same dialog lists every preference confirmed in chat (statement,
 likes/avoids/dealbreaker, domain, where it came from, and "only for <trip>" when trip-scoped) with a delete
@@ -44,6 +61,15 @@ delete, "Show all", "+ New chat") so no horizontal space is spent on a separate 
    map; hovering a card highlights its pin and vice versa. Under the reasons to like a pick, amber
    **Heads-up** chips name its honest downsides for this traveler ("Busy street, ask for a courtyard room",
    "Well over $250/night"); a pick that conflicts with one of the traveler's dealbreakers says so.
+   Every hotel, restaurant and attraction card then carries a **match score** ("87% match · Good match")
+   computed by the app, never by the model, from the profile (budget vs price, interests, stay types,
+   must-haves, cuisines, dietary tags, companions), the learned preferences (a dealbreaker named in the
+   heads-ups costs 25 points), the taste profile ("Like Da Enzo, which you loved") and the pin's rating;
+   clicking it opens **Why this score** with every reason and its points. Next to it, **Right for you?**
+   thumbs up / down record whether the pick landed; thumbs down asks why (too pricey, wrong vibe, too far,
+   already been, not my thing). Judgments are stored per place, lower the score of a pick the traveler
+   already passed on, dampen factors that keep misleading them (calibration), and reach the assistant as
+   "Recommendation feedback" so it never re-recommends a recent miss and corrects for repeated reasons.
 4. **Understood as (smart filters)** — when the request carries criteria ("a quiet hotel under $250 a night
    with a pool and good vibes"), the assistant first shows a chip strip: dark chips are must-haves, light
    ones preferences, and "Not applied: 'good vibes'" lists what could not be mapped. Removing a chip, adding
@@ -100,9 +126,11 @@ delete, "Show all", "+ New chat") so no horizontal space is spent on a separate 
 11. **Map tools** — hide the map (the discovery feed returns with a "Show map" button), search-and-pin
     any place near the destination, satellite toggle, weather chip.
 12. **Trip proposal** — when the traveler asks for a plan the assistant calls `create_trip` and a
-    proposal card appears (title, dates, travelers, budget, summary, day-by-day itinerary whose stops are
-    real places with a kind, resolved and pinned when the trip is saved). **Save to my trips** stores it
-    on the server; **Not yet** tells the assistant to adjust.
+    proposal card appears (title, dates, travelers, budget, summary, day-by-day itinerary). Its stops
+    resolve through Google Places and pin on the map while the traveler decides, so each line shows the
+    photo, rating, category, price, time, note and a match score (hover a stop to highlight its pin, click
+    it to open the sheet). **Save to my trips** stores it on the server and links straight to the board;
+    **Not yet** tells the assistant to adjust.
 13. **Follow-ups** — after each answer the assistant proposes 2–3 next steps as chips. While a proposal or
     "Remember this?" card is waiting for a click the chips pause (a suggestions run would otherwise send the
     model an unanswered tool call).
@@ -154,10 +182,14 @@ Trip tab; or **Add to trip → New trip** from any place.
   places with **Add to day…**. Stops drag within a day, across days and from Ideas with the pointer (drop
   where the pointer is) or the keyboard (space, arrows, space); every change saves as it happens
   ("Saving…"). Legs are requested per day when its placed stops or the mode change and cached on the
-  server for a day.
+  server for a day. A placed stop's chevron opens **Details**: a photo strip, rating and count, category,
+  price level, today's hours and phone (Place Details, cached 30 days), the editorial summary, address,
+  Google Maps and website links, the match score with thumbs, and **Ask about it** (opens the trip chat
+  with the question).
 - Tiles: **Ideas** (places added from chat, map, Explore or by searching here; each with note, Rate, Save,
-  Show on map, remove), **Itinerary** (read view with **Open the board**, **Edit as text**, or "Build it
-  with the assistant"), **Bookings** (typed by hand: title, link, note; imported from a confirmation: kind
+  Show on map, remove), **Itinerary** (read view: each stop with its photo, time, rating, category, price
+  and note, with **Open the board**, **Edit as text**, or "Build it with the assistant"), **Bookings**
+  (typed by hand: title, link, note; imported from a confirmation: kind
   icon, provider, confirmation code, dates and times, travelers, price, flight legs, plus a pin when the
   hotel or venue resolved) and **Media** (title, link, note; image links preview), **Trip preferences**
   (free text the assistant reads for this trip, plus **Learned for this trip**: the "For this trip"
@@ -193,8 +225,9 @@ the trip's Ideas and pinned on its map; the dialog offers **Open trip**.
   shows dark chips for applied filters, light chips for words searched in the text, and the remaining query.
 - **Tabs** — For you (experiences + restaurants), Restaurants, Experiences, Stays, Guides (community
   guides nearest to the location).
-- **Cards** — photo, name, rating and review count, category, locality, price tier; **Save**, **Add to
-  trip**; hovering highlights the pin, clicking the photo opens the place sheet on the map.
+- **Cards** — photo, name, rating and review count, category, locality, price tier, the match score and
+  thumbs; **Save**, **Add to trip**; hovering highlights the pin, clicking the photo opens the place sheet
+  on the map.
 - **Map** — labeled markers for every card, synced with the list.
 
 ## 7. Create (guides and trips)
@@ -253,11 +286,24 @@ read): you were added to a trip, a member added an idea/booking/media or edited 
 your guide. Each item links to the trip or guide. Trips that ended recently show a "How was Rome?" card
 on top with **Rate places** (opens the post-trip rating on the trip page) and **Not now**.
 
+## 10a. Bug reports and Admin
+
+The bug icon next to the traveler's name in the sidebar (and in the top bar on small screens) opens
+**Report a bug**: what kind of thing it is (something's broken / looks wrong / idea or request), what
+happened, what was expected, and an optional screenshot that the browser downscales to 1280 px JPEG before
+sending. The page, the current chat id, the browser and the deployed build are attached automatically.
+Reports land in `bug_reports`; every admin gets an Update ("Bug report from @tayo: …"). Accounts listed in
+`ADMIN_EMAILS` see **Admin** in the sidebar: `/admin` lists reports newest first (open / resolved / all,
+mark resolved / reopen, show screenshot) and the **Recommendation quality** summary: hit rate of thumbs
+across every traveler, by kind and by context (chat, home, explore, board), why picks miss, and the recent
+misses with the score that was shown.
+
 ## 11. Routes
 
 | Route | Screen |
 | --- | --- |
 | `/login`, `/signup` | Account |
+| `/admin` | Bug reports and recommendation quality (admins) |
 | `/` (`?thread=`, `?trip=`, `?prompt=`) | Chat and map; history expands under Chats in the sidebar; `/chats` redirects here |
 | `/trips`, `/trips/[id]` (`?view=board`, `?rate=1`) | Trips list and trip page (board view, post-trip rating) |
 | `/explore` | Things near you |
@@ -267,9 +313,11 @@ on top with **Rate places** (opens the post-trip rating on the trip page) and **
 
 ## 12. What is stored per user
 
-Profile, dealbreakers and learned preferences (profile-wide or per trip; reasons that repeat in reactions
-become preferences with source "feedback"), the computed taste profile, reactions to places (one row per
-place: verdict, reasons, note, score, trip), trips (with members, items — bookings imported from a
+Profile (the six onboarding sections), dealbreakers and learned preferences (profile-wide or per trip;
+reasons that repeat in reactions become preferences with source "feedback"), the computed taste profile,
+reactions to places (one row per place: verdict, reasons, note, score, trip), thumbs on recommendations
+(one row per place: up / down, the score shown, the match factors that fired, the miss reason, where it was
+shown), bug reports (with their screenshot), trips (with members, items — bookings imported from a
 confirmation keep their structured details — structured itinerary stops, preferences), saved places and
 guides, guides they authored (including private import collections),
 imports (source, verified places, unverified mentions), the chat list (titles, trip links), chat

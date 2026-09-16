@@ -33,6 +33,9 @@ interface UiStateValue {
   addToTrip: AddToTripRequest | null;
   openAddToTrip: (request: AddToTripRequest) => void;
   closeAddToTrip: () => void;
+  bugReportOpen: boolean;
+  openBugReport: () => void;
+  closeBugReport: () => void;
   newChatNonce: number;
   startNewChat: () => void;
 }
@@ -45,6 +48,7 @@ export function UiStateProvider({ children }: { children: ReactNode }) {
   const [plannerOpen, setPlannerOpen] = useState(false);
   const [plannerTab, setPlannerTab] = useState<PlannerTab>("where");
   const [addToTrip, setAddToTrip] = useState<AddToTripRequest | null>(null);
+  const [bugReportOpen, setBugReportOpen] = useState(false);
   const [newChatNonce, setNewChatNonce] = useState(0);
   const router = useRouter();
 
@@ -59,6 +63,8 @@ export function UiStateProvider({ children }: { children: ReactNode }) {
   const closePlanner = useCallback(() => setPlannerOpen(false), []);
   const openAddToTrip = useCallback((request: AddToTripRequest) => setAddToTrip(request), []);
   const closeAddToTrip = useCallback(() => setAddToTrip(null), []);
+  const openBugReport = useCallback(() => setBugReportOpen(true), []);
+  const closeBugReport = useCallback(() => setBugReportOpen(false), []);
   const startNewChat = useCallback(() => {
     setNewChatNonce((n) => n + 1);
     router.push("/");
@@ -79,10 +85,32 @@ export function UiStateProvider({ children }: { children: ReactNode }) {
       addToTrip,
       openAddToTrip,
       closeAddToTrip,
+      bugReportOpen,
+      openBugReport,
+      closeBugReport,
       newChatNonce,
       startNewChat,
     }),
-    [assistantOpen, openAssistant, closeAssistant, importOpen, openImport, closeImport, plannerOpen, plannerTab, openPlanner, closePlanner, addToTrip, openAddToTrip, closeAddToTrip, newChatNonce, startNewChat],
+    [
+      assistantOpen,
+      openAssistant,
+      closeAssistant,
+      importOpen,
+      openImport,
+      closeImport,
+      plannerOpen,
+      plannerTab,
+      openPlanner,
+      closePlanner,
+      addToTrip,
+      openAddToTrip,
+      closeAddToTrip,
+      bugReportOpen,
+      openBugReport,
+      closeBugReport,
+      newChatNonce,
+      startNewChat,
+    ],
   );
 
   return <UiStateContext.Provider value={value}>{children}</UiStateContext.Provider>;

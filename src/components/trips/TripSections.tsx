@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { findSaved, formatDateRange, useTravelStore, type BudgetTier } from "@/lib/store";
 import type { ItineraryDay, ItineraryStop, TripDetail, TripItem, TripItemKind, TripMember } from "@/lib/types";
-import { newStopId } from "@/lib/itinerary";
+import { newStopId, stopPinKey } from "@/lib/itinerary";
 import type { PlaceKind } from "@/lib/places/types";
 import { resolvePlaces } from "@/lib/places/client";
 import { Button } from "@/components/ui/Button";
@@ -367,7 +367,49 @@ function linesToStops(lines: string, existing: ItineraryStop[]): ItineraryStop[]
     });
 }
 
-function ItinerarySection({ trip, canEdit, onTrip, onOpenBoard }: SectionProps) {
+/** One stop in the read view: the same facts as the board card (photo, time, rating, category, price, note). */
+function StopSummaryRow({ stop, onSelectPlace }: { stop: ItineraryStop; onSelectPlace: (key: string | null) => void }) {
+  const [failed, setFailed] = useState(false);
+  const place = stop.place;
+  const photo = place?.photos?.[0];
+  const meta = [place?.category, place?.priceLevel].filter(Boolean).join(" · ");
+  return (
+    <li className="flex gap-2.5 rounded-xl bg-white p-2" data-testid="itinerary-stop">
+      {photo && !failed ? (
+        // eslint-disable-next-line @next/next/no-img-element -- proxied Places photo
+        <img src={photo} alt="" onError={() => setFailed(true)} className="h-12 w-12 shrink-0 rounded-lg object-cover" loading="lazy" />
+      ) : (
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-surface text-neutral-500">
+          <MapPin className="h-4 w-4" />
+        </span>
+      )}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-2">
+          {place ? (
+            <button type="button" onClick={() => onSelectPlace(stopPinKey(stop))} className="truncate text-left text-[14px] font-semibold hover:underline">
+              {stop.title}
+            </button>
+          ) : (
+            <span className="truncate text-[14px] font-semibold">{stop.title}</span>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-x-2 text-[12px] text-muted">
+          {stop.startTime ? <span className="font-medium text-foreground">{stop.startTime}</span> : null}
+          {place?.rating ? (
+            <span className="inline-flex items-center gap-1 font-medium text-foreground">
+              <Star className="h-3 w-3 fill-current" /> {place.rating.toFixed(1)}
+            </span>
+          ) : null}
+          {meta ? <span className="truncate">{meta}</span> : null}
+        </div>
+        {stop.note ? <div className="text-[12px] text-neutral-600">{stop.note}</div> : null}
+      </div>
+    </li>
+  );
+}
+
+function ItinerarySection(props: SectionProps) {
+  const { trip, canEdit, onTrip, onOpenBoard } = props;
   const { patchTrip } = useTravelStore();
   const send = useSendMessage();
   const [draft, setDraft] = useState<DayDraft[] | null>(null);
@@ -474,14 +516,9 @@ function ItinerarySection({ trip, canEdit, onTrip, onOpenBoard }: SectionProps) 
               Day {d.day}
               {d.title ? <span className="text-neutral-600"> · {d.title}</span> : null}
             </div>
-            <ul className="mt-1 list-disc pl-5 text-[14px] text-neutral-700">
+            <ul className="mt-2 grid gap-1.5">
               {d.stops.map((st) => (
-                <li key={st.id}>
-                  {st.startTime ? <span className="font-medium">{st.startTime} · </span> : null}
-                  {st.title}
-                  {st.place ? <MapPin className="ml-1 inline h-3.5 w-3.5 text-neutral-400" aria-label="pinned" /> : null}
-                  {st.note ? <span className="text-neutral-500"> · {st.note}</span> : null}
-                </li>
+                <StopSummaryRow key={st.id} stop={st} onSelectPlace={props.onSelectPlace} />
               ))}
             </ul>
           </li>
