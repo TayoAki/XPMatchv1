@@ -147,11 +147,10 @@ test("in-depth onboarding drives home picks with match scores and thumbs; itiner
     const context = await browser.newContext({ baseURL });
     const admin = await context.newPage();
     await login(admin, "admin@example.com");
-    // Let the sign-in redirect finish: a fresh admin account gets the wizard, a returning one the hero.
+    // Let the sign-in redirect finish; a fresh admin account still has to walk the wizard (it opens after hydration).
     await admin.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 30_000 });
-    const wizard = admin.getByRole("dialog", { name: /personalize/i });
-    await expect(wizard.or(admin.getByRole("heading", { name: /Where to today/ }))).toBeVisible({ timeout: 30_000 });
-    if (await wizard.isVisible()) await completeOnboarding(admin);
+    const before = (await (await admin.request.get("/api/me/state")).json()) as { profile: { onboarded: boolean } };
+    if (!before.profile.onboarded) await completeOnboarding(admin);
     await eventually(
       async () => (await (await admin.request.get("/api/me/state")).json()) as { profile: { onboarded: boolean } },
       (s) => s.profile.onboarded === true,
