@@ -21,9 +21,10 @@ sidebar. Signed-out visitors are redirected to `/login` by `src/proxy.ts`; API r
 
 ## 2. Chat (home)
 
-`/` is the chat. Wide screens show three columns: the **chat history rail** (all conversations, search,
-delete, "New chat"), the **active chat**, and the **right panel** (discovery feed until the conversation
-is about a place, then the live map).
+`/` is the chat: the **active chat** with the **right panel** beside it (discovery feed until the
+conversation is about a place, then the live map). Conversation history lives in the main sidebar:
+**Chats** expands in place to list every conversation (grouped newest first, trip labels, hover to
+delete, "Show all", "+ New chat") so no horizontal space is spent on a separate rail.
 
 1. **Start** — the welcome hero ("Where to today, Tayo?") shows suggestion chips built from the profile,
    the planner bar values and upcoming trips. Type anything travel-related or pick a chip.
@@ -37,18 +38,22 @@ is about a place, then the live map).
    highlights its pin and vice versa.
 4. **Place sheet** — clicking a pin or "View on map" opens the Mindtrip-style sheet: photos, rating and
    review count, category, price, description, hours, Google reviews, location, Save, Add to trip, and
-   a follow-up button ("Restaurants nearby"). For a destination the sheet's tabs (Stays, Restaurants,
-   Things to do) send the matching prompt.
+   a follow-up button ("Restaurants nearby"). A **destination's** sheet has **Stays**, **Restaurants**
+   and **Things to do** tabs that fill in beside the map: the assistant's own picks from this chat
+   ("Picked for you") first, then places near the destination queried with the traveler's preferences
+   (accommodation style, dietary needs, budget tier, first travel style — shown as chips). Each row has a
+   photo, rating, category and price, Save and Add to trip; tapping it pins the place and opens its
+   sheet. "Ask XPMatch for personalized picks" sends the matching prompt to the chat.
 5. **Map tools** — hide the map (the discovery feed returns with a "Show map" button), search-and-pin
    any place near the destination, satellite toggle, weather chip.
 6. **Trip proposal** — when the traveler asks for a plan the assistant calls `create_trip` and a
    proposal card appears (title, dates, travelers, budget, summary, day-by-day itinerary). **Save to my
    trips** stores it on the server; **Not yet** tells the assistant to adjust.
 7. **Follow-ups** — after each answer the assistant proposes 2–3 next steps as chips.
-8. **History** — the rail groups chats by day; click one to reopen it (`/?thread=…`), including its map
-   pins, which are rebuilt from the conversation. Chats started from a trip show the trip name and keep
-   the trip in context when reopened. The top-bar chat menu ("New chat ⌄") is the quick switcher on
-   smaller screens; "All chats" opens the rail.
+8. **History** — expand **Chats** in the sidebar and click a conversation to reopen it (`/?thread=…`),
+   including its map pins, which are rebuilt from the conversation. Chats started from a trip show the
+   trip name and keep the trip in context when reopened. The top-bar chat menu ("New chat ⌄") is the quick
+   switcher; "All chats" expands the sidebar list.
 
 ## 3. Planner bar and "Create a trip"
 
@@ -146,7 +151,7 @@ your guide. Each item links to the trip or guide.
 | Route | Screen |
 | --- | --- |
 | `/login`, `/signup` | Account |
-| `/` (`?thread=`, `?trip=`, `?prompt=`) | Chat with history rail and map; `/chats` redirects here |
+| `/` (`?thread=`, `?trip=`, `?prompt=`) | Chat and map; history expands under Chats in the sidebar; `/chats` redirects here |
 | `/trips`, `/trips/[id]` | Trips list and trip page |
 | `/explore` | Things near you |
 | `/create` (`?guide=`) | Guide editor / trip form |
@@ -158,4 +163,4 @@ your guide. Each item links to the trip or guide.
 Profile and preferences, trips (with members, items, itinerary, preferences), saved places and guides,
 guides they authored, the chat list (titles, trip links) and notifications — all in Postgres. Chat
 transcripts themselves live in the CopilotKit runtime's memory for the life of the server process; the
-planner bar values and small UI preferences (e.g. whether the chat rail is collapsed) stay in the browser.
+planner bar values and small UI preferences (e.g. whether Chats is expanded in the sidebar) stay in the browser.

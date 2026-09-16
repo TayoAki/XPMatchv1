@@ -48,15 +48,17 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   `focus_map`, fixing typos like "roam" → Rome), the right panel becomes a Google Map centered on
   it. Every hotel, restaurant and attraction card is resolved through the Places API and pinned;
   clicking a marker or "View on map" opens a place sheet with photos, rating, Google reviews,
-  hours, Save and Add to trip. A weather chip, search-and-pin and a satellite toggle round it out.
+  hours, Save and Add to trip; a destination's sheet adds Stays, Restaurants and Things to do tabs
+  filled with the assistant's picks and preference-based Google Places results. A weather chip,
+  search-and-pin and a satellite toggle round it out.
   Without Google keys the panel degrades to estimated pins from a small gazetteer.
 - **Live grounding tools (server-side)** — weather outlook (Open-Meteo) and destination facts
   (Wikipedia), both keyless.
 - **Mindtrip-style shell** — left navigation (Chats, Trips, Explore, Saved, Updates, Inspiration,
   Create), a Where / When / Who / Budget planner bar, "Create a trip", a welcome hero
   ("Where to today, Tayo?"), and a discovery panel with a proactive nudge, "Jump back in",
-  "For you in {city}" and "Get inspired". Chats is one experience: a collapsible history rail
-  (search, delete, new chat) sits beside the active chat, with the map or discovery feed on the right.
+  "For you in {city}" and "Get inspired". Chats is one experience: the sidebar's Chats item expands
+  in place to list conversations, and the active chat sits beside the map or discovery feed.
 - **Personalized suggestion chips** — static chips before the first message, model-generated
   follow-ups after.
 - **Demo mode** — with no API key configured the app runs against an offline demo model so the
