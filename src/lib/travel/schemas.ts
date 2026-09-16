@@ -253,6 +253,17 @@ export const compareOptionsSchema = z.object({
 export type CompareOptionsArgs = z.infer<typeof compareOptionsSchema>;
 export type CompareOptionArg = z.infer<typeof compareOptionSchema>;
 
+/* ---------------------- Wave 2: questions from reviews ---------------------- */
+
+export const askAboutPlaceSchema = z.object({
+  name: z.string().describe("The place exactly as named on its card or on Google Maps"),
+  kind: z.enum(["hotel", "restaurant", "attraction"]).optional(),
+  destination: z.string().optional().describe("City the place is in, 'City, Country'"),
+  question: z.string().describe("The traveler's question about this place, in their words"),
+});
+
+export type AskAboutPlaceArgs = z.infer<typeof askAboutPlaceSchema>;
+
 /* -------------------- Wave 1: learn preferences in chat -------------------- */
 
 export const rememberPreferenceSchema = z.object({

@@ -1,4 +1,4 @@
-import { getPlaceDetails } from "@/server/places";
+import { getPlaceDetails } from "@/server/place-facts";
 import { getSessionUser } from "@/server/auth";
 
 export const dynamic = "force-dynamic";

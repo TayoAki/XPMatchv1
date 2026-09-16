@@ -1,5 +1,5 @@
 import { findCity } from "@/lib/places/gazetteer";
-import type { LatLng, PlaceDetails, PlaceKind, PlaceReview, ResolvedPlace } from "@/lib/places/types";
+import type { LatLng, PlaceKind, ResolvedPlace } from "@/lib/places/types";
 
 /**
  * Server-side place resolution. Uses the Google Places API (New) when a key is
@@ -7,7 +7,8 @@ import type { LatLng, PlaceDetails, PlaceKind, PlaceReview, ResolvedPlace } from
  * map still works (with estimated pins) without one.
  */
 
-const PLACES_BASE = "https://places.googleapis.com/v1";
+/** Google Places API (New) base; overridable so tests can run against a stub server. */
+const PLACES_BASE = (process.env.PLACES_BASE_URL?.trim() || "https://places.googleapis.com/v1").replace(/\/$/, "");
 
 const SEARCH_FIELDS = [
   "places.id",
@@ -26,8 +27,13 @@ const SEARCH_FIELDS = [
   "places.priceLevel",
 ].join(",");
 
+/**
+ * Details field mask: everything the sheet shows plus the evidence the review Q&A,
+ * comparison and heads-up features read (Google's review summary, attributes).
+ */
 const DETAIL_FIELDS = [
   "id",
+  "types",
   "displayName",
   "formattedAddress",
   "addressComponents",
@@ -44,10 +50,32 @@ const DETAIL_FIELDS = [
   "regularOpeningHours.weekdayDescriptions",
   "internationalPhoneNumber",
   "reviews",
+  "reviewSummary",
+  "generativeSummary",
+  "allowsDogs",
+  "goodForChildren",
+  "goodForGroups",
+  "liveMusic",
+  "menuForChildren",
+  "outdoorSeating",
+  "reservable",
+  "restroom",
+  "servesVegetarianFood",
+  "servesBreakfast",
+  "servesBrunch",
+  "servesLunch",
+  "servesDinner",
+  "takeout",
+  "delivery",
+  "dineIn",
+  "accessibilityOptions",
+  "parkingOptions",
+  "paymentOptions",
 ].join(",");
 
-interface GooglePlace {
+export interface GooglePlace {
   id: string;
+  types?: string[];
   displayName?: { text?: string };
   formattedAddress?: string;
   addressComponents?: { longText?: string; shortText?: string; types?: string[] }[];
@@ -63,6 +91,8 @@ interface GooglePlace {
   priceLevel?: string;
   regularOpeningHours?: { weekdayDescriptions?: string[] };
   internationalPhoneNumber?: string;
+  reviewSummary?: { text?: { text?: string } };
+  generativeSummary?: { overview?: { text?: string } };
   reviews?: {
     rating?: number;
     relativePublishTimeDescription?: string;
@@ -103,7 +133,7 @@ function localityOf(place: GooglePlace): string | undefined {
   return parts.length ? parts.join(", ") : undefined;
 }
 
-function toResolved(place: GooglePlace, kind: PlaceKind): ResolvedPlace | null {
+export function toResolved(place: GooglePlace, kind: PlaceKind): ResolvedPlace | null {
   if (!place.location) return null;
   return {
     id: place.id,
@@ -156,7 +186,6 @@ async function googleFetch<T>(url: string, init: RequestInit, fieldMask: string)
 /* ---------------------------- caching ---------------------------- */
 
 const searchCache = new Map<string, Promise<ResolvedPlace | null>>();
-const detailCache = new Map<string, Promise<PlaceDetails | null>>();
 const MAX_CACHE = 500;
 
 function remember<T>(cache: Map<string, Promise<T>>, key: string, make: () => Promise<T>): Promise<T> {
@@ -287,27 +316,10 @@ export async function resolvePointOfInterest(
   });
 }
 
-export async function getPlaceDetails(id: string): Promise<PlaceDetails | null> {
+/** Raw Place Details with the full field mask; `place-facts.ts` caches and shapes it. */
+export async function fetchGooglePlaceDetails(id: string): Promise<GooglePlace | null> {
   if (!placesApiKey() || id.startsWith("est:")) return null;
-  return remember(detailCache, id, async () => {
-    const place = await googleFetch<GooglePlace>(`${PLACES_BASE}/places/${encodeURIComponent(id)}`, { method: "GET" }, DETAIL_FIELDS);
-    const base = toResolved(place, "attraction");
-    if (!base) return null;
-    const reviews: PlaceReview[] = (place.reviews ?? []).slice(0, 5).map((r) => ({
-      author: r.authorAttribution?.displayName ?? "Google user",
-      authorPhoto: r.authorAttribution?.photoUri,
-      rating: r.rating,
-      text: r.text?.text ?? r.originalText?.text ?? "",
-      relativeTime: r.relativePublishTimeDescription,
-    }));
-    return {
-      ...base,
-      photos: (place.photos ?? []).slice(0, 10).map((p) => photoProxyUrl(p.name, 1200)),
-      reviews,
-      openingHours: place.regularOpeningHours?.weekdayDescriptions,
-      phone: place.internationalPhoneNumber,
-    };
-  });
+  return googleFetch<GooglePlace>(`${PLACES_BASE}/places/${encodeURIComponent(id)}`, { method: "GET" }, DETAIL_FIELDS);
 }
 
 /* ----------------------------- nearby ----------------------------- */

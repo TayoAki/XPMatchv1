@@ -9,6 +9,7 @@ import { useHitlPending } from "@/lib/hitl-store";
 import { mapActions, useMapView } from "@/lib/map-store";
 import { resolvePlaces } from "@/lib/places/client";
 import {
+  askAboutPlaceSchema,
   compareOptionsSchema,
   createTripSchema,
   focusMapSchema,
@@ -20,6 +21,7 @@ import {
   showHotelsSchema,
   showRestaurantsSchema,
   updateTravelerProfileSchema,
+  type AskAboutPlaceArgs,
   type CompareOptionsArgs,
   type CreateTripArgs,
   type FocusMapArgs,
@@ -45,6 +47,8 @@ import { FocusCallout } from "@/components/chat/cards/FocusCallout";
 import { ConstraintChips } from "@/components/chat/cards/ConstraintChips";
 import { ComparisonCard } from "@/components/chat/cards/ComparisonCard";
 import { RememberPreferenceCard } from "@/components/chat/cards/RememberPreferenceCard";
+import { PlaceAnswerCard } from "@/components/chat/cards/PlaceAnswerCard";
+import { api } from "@/lib/api";
 
 type RenderProps<T> = { args: Partial<T> | T; status: ToolCallStatus; result?: string; toolCallId: string };
 
@@ -87,6 +91,9 @@ const ConstraintsRenderer = ({ args, status, toolCallId }: RenderProps<SetSearch
 );
 const CompareRenderer = ({ args, status, toolCallId }: RenderProps<CompareOptionsArgs>) => (
   <ComparisonCard args={args as Streaming<CompareOptionsArgs>} status={status} toolCallId={toolCallId} />
+);
+const AskRenderer = ({ args, status, result }: RenderProps<AskAboutPlaceArgs>) => (
+  <PlaceAnswerCard args={args as Streaming<AskAboutPlaceArgs>} status={status} result={result} />
 );
 const RememberRenderer = ({
   args,
@@ -409,6 +416,33 @@ export function TravelCopilot() {
       handler: async () =>
         "The comparison is displayed with map links, save and add-to-trip actions per option. Do not repeat the table; add at most two sentences.",
       render: CompareRenderer,
+    },
+    [],
+  );
+
+  useFrontendTool(
+    {
+      name: "ask_about_place",
+      description:
+        "Answer a question about one specific hotel, restaurant or attraction (noise, workspace, kids, dogs, booking, crowds, accessibility, timing…) from Google's reviews, review summary and attributes. Call it whenever the traveler asks something about a specific place; the card shows the answer with verbatim quotes.",
+      parameters: askAboutPlaceSchema,
+      followUp: true,
+      handler: async (args) => {
+        const threadId = mapActions.activeThreadId();
+        const pinned = threadId ? mapActions.getState().threads[threadId]?.places : undefined;
+        const match = pinned ? Object.values(pinned).find((p) => p.name.toLowerCase() === args.name.toLowerCase()) : undefined;
+        const destination = args.destination ?? (threadId ? mapActions.getState().threads[threadId]?.focus?.name : undefined);
+        try {
+          const answer = await api<{ answer: string; confidence: string; basis: string; refs: unknown[]; evidence: unknown; placeId: string; name: string; question: string }>(
+            "/api/places/ask",
+            { method: "POST", json: { placeId: match?.id, name: args.name, kind: args.kind ?? match?.kind, destination, question: args.question } },
+          );
+          return JSON.stringify({ ...answer, guidance: "The answer card with quotes is displayed. Add at most one sentence; do not repeat the quotes." });
+        } catch (err) {
+          return JSON.stringify({ error: err instanceof Error ? err.message : "Could not answer", guidance: "Tell the traveler briefly that the reviews could not be checked." });
+        }
+      },
+      render: AskRenderer,
     },
     [],
   );

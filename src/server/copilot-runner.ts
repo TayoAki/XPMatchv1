@@ -1,9 +1,10 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { InMemoryAgentRunner } from "@copilotkit/runtime/v2";
 import type { AgentRunnerConnectRequest, AgentRunnerRunRequest } from "@copilotkit/runtime/v2";
-import { EventType, type BaseEvent, type Message } from "@ag-ui/client";
+import { EventType, type BaseEvent } from "@ag-ui/client";
 import { Observable } from "rxjs";
 import { loadTranscript, saveTranscript } from "./models";
+import { settlePendingToolCalls } from "./transcripts";
 
 /**
  * The signed-in user for the CopilotKit request being handled. The runtime's
@@ -14,43 +15,6 @@ const requestUser = new AsyncLocalStorage<{ userId: string }>();
 
 export function withCopilotUser<T>(userId: string, fn: () => Promise<T>): Promise<T> {
   return requestUser.run({ userId }, fn);
-}
-
-interface ToolCallLike {
-  id: string;
-}
-
-interface MessageLike {
-  id?: string;
-  role?: string;
-  toolCalls?: ToolCallLike[];
-  toolCallId?: string;
-}
-
-/**
- * A transcript can end with a human-in-the-loop tool call the traveler never
- * answered (a trip proposal, a "remember this?" card). Reopening it must not
- * leave the model with a dangling tool call, so those get a neutral result.
- */
-export function settlePendingToolCalls(messages: unknown[]): Message[] {
-  const list = messages as MessageLike[];
-  const answered = new Set(list.filter((m) => m.role === "tool" && m.toolCallId).map((m) => m.toolCallId as string));
-  const out: MessageLike[] = [];
-  for (const message of list) {
-    out.push(message);
-    if (message.role !== "assistant" || !message.toolCalls?.length) continue;
-    for (const call of message.toolCalls) {
-      if (answered.has(call.id)) continue;
-      answered.add(call.id);
-      out.push({
-        id: `settled-${call.id}`,
-        role: "tool",
-        toolCallId: call.id,
-        content: JSON.stringify({ created: false, saved: false, note: "The chat was reopened before the traveler responded; do not act on this." }),
-      } as MessageLike);
-    }
-  }
-  return out as Message[];
 }
 
 /**

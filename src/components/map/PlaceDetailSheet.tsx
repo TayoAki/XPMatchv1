@@ -13,6 +13,10 @@ import { useUiState } from "@/components/providers/UiState";
 import { useTripScope } from "@/components/trips/TripScope";
 import { iconSvg } from "./markerIcons";
 import { DestinationTab, type DestinationTabKind } from "./DestinationTab";
+import { AskAboutPlace } from "@/components/place/AskAboutPlace";
+import { TopicChips } from "@/components/place/TopicChips";
+import { reviewsOnTopic } from "@/lib/places/evidence";
+import type { EvidenceTopic } from "@/lib/places/facts";
 
 type Tab = "overview" | "reviews" | "location" | DestinationTabKind;
 
@@ -67,6 +71,7 @@ export function PlaceDetailSheet({
   const [detailsState, setDetailsState] = useState<{ id: string; data: PlaceDetails | null } | null>(null);
   const [wikiState, setWikiState] = useState<{ id: string; text: string } | null>(null);
   const [tab, setTab] = useState<Tab>("overview");
+  const [topic, setTopic] = useState<EvidenceTopic | null>(null);
   const details = detailsState?.id === place.id ? detailsState.data : null;
   const detailsPending = place.source === "google" && detailsState?.id !== place.id;
   const wiki = wikiState?.id === place.id ? wikiState.text : null;
@@ -237,6 +242,12 @@ export function PlaceDetailSheet({
                 ) : null}
                 {details?.phone ? <span className="inline-flex h-9 items-center rounded-full border border-border px-3">{details.phone}</span> : null}
               </div>
+              {!isDestination && place.source === "google" ? (
+                <div className="mt-6">
+                  <div className="mb-2 text-[14px] font-semibold">Ask about this place</div>
+                  <AskAboutPlace place={data} />
+                </div>
+              ) : null}
             </>
           ) : null}
 
@@ -249,7 +260,10 @@ export function PlaceDetailSheet({
               <p className="text-muted">Loading reviews…</p>
             ) : details?.reviews?.length ? (
               <ul className="grid gap-5">
-                {details.reviews.map((r, i) => (
+                <li>
+                  <TopicChips reviews={details.reviews} active={topic} onSelect={setTopic} />
+                </li>
+                {details.reviews.map((r, i) => (topic && !reviewsOnTopic(details.reviews, topic).includes(i) ? null : (
                   <li key={i}>
                     <div className="flex items-center gap-2 text-[14px]">
                       <span className="font-semibold">{r.author}</span>
@@ -258,7 +272,7 @@ export function PlaceDetailSheet({
                     </div>
                     <p className="mt-1 text-[15px] text-neutral-700">{r.text}</p>
                   </li>
-                ))}
+                )))}
               </ul>
             ) : (
               <p className="text-muted">No Google reviews available for this place.</p>

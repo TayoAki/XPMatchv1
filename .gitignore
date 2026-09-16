@@ -15,6 +15,7 @@
 
 # next.js
 /.next/
+/.next-*/
 /out/
 
 # production
@@ -22,6 +23,10 @@
 
 # local embedded database (PGlite)
 /.data/
+
+# test runner output
+/test-results/
+/playwright-report/
 
 # misc
 .DS_Store

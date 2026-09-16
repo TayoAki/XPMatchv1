@@ -17,6 +17,7 @@ import type {
 } from "@/lib/types";
 import { DEFAULT_PROFILE } from "@/lib/types";
 import { queryAll, queryOne, type Row } from "./db";
+import { trimTranscript, type TranscriptMessage } from "./transcripts";
 
 /* ----------------------------- helpers ----------------------------- */
 
@@ -175,33 +176,6 @@ export async function upsertChat(userId: string, threadId: string, title: string
 }
 
 /* --------------------------- transcripts --------------------------- */
-
-/** Rough ceiling for one stored transcript (Postgres jsonb is fine with this; the model context is not). */
-const TRANSCRIPT_MAX_BYTES = 1_500_000;
-const TRANSCRIPT_MAX_MESSAGES = 400;
-
-interface TranscriptMessage {
-  id?: string;
-  role?: string;
-}
-
-/**
- * Keeps the newest messages under the size cap, always cutting at a user turn so
- * an assistant tool call is never separated from its result.
- */
-export function trimTranscript<T extends TranscriptMessage>(messages: T[]): T[] {
-  let list = messages;
-  const cutAtNextUserTurn = (from: number) => {
-    const next = list.findIndex((m, i) => i > from && m.role === "user");
-    return next === -1 ? list.length : next;
-  };
-  if (list.length > TRANSCRIPT_MAX_MESSAGES) list = list.slice(cutAtNextUserTurn(list.length - TRANSCRIPT_MAX_MESSAGES - 1));
-  let guard = 0;
-  while (list.length > 1 && JSON.stringify(list).length > TRANSCRIPT_MAX_BYTES && guard++ < 50) {
-    list = list.slice(cutAtNextUserTurn(0));
-  }
-  return list;
-}
 
 export async function saveTranscript(userId: string, threadId: string, messages: unknown[]): Promise<void> {
   const trimmed = trimTranscript(messages as TranscriptMessage[]);

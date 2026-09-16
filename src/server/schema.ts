@@ -152,4 +152,52 @@ export const MIGRATIONS: Migration[] = [
       `CREATE INDEX IF NOT EXISTS preferences_user_idx ON preferences(user_id, created_at DESC)`,
     ],
   },
+  {
+    id: "0003_place_facts_feedback_imports",
+    statements: [
+      // Shared, 30-day cache of Place Details (reviews, summaries, attributes) for every feature that needs evidence.
+      `CREATE TABLE IF NOT EXISTS place_facts (
+        place_id text PRIMARY KEY,
+        kind text NOT NULL DEFAULT 'attraction',
+        name text NOT NULL DEFAULT '',
+        facts jsonb NOT NULL DEFAULT '{}'::jsonb,
+        fetched_at timestamptz NOT NULL DEFAULT now()
+      )`,
+      // Reactions to places (loved / fine / not for me) with reasons; one row per user and place.
+      `CREATE TABLE IF NOT EXISTS place_feedback (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        place_id text NOT NULL,
+        kind text NOT NULL,
+        name text NOT NULL,
+        destination text,
+        place jsonb,
+        verdict text NOT NULL,
+        reasons text[] NOT NULL DEFAULT '{}',
+        note text NOT NULL DEFAULT '',
+        trip_id uuid REFERENCES trips(id) ON DELETE SET NULL,
+        source text NOT NULL DEFAULT 'card',
+        score numeric,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        updated_at timestamptz NOT NULL DEFAULT now(),
+        UNIQUE (user_id, place_id)
+      )`,
+      `CREATE INDEX IF NOT EXISTS place_feedback_user_idx ON place_feedback(user_id, updated_at DESC)`,
+      // Inspiration imports: the places extracted from a link or screenshot.
+      `CREATE TABLE IF NOT EXISTS imports (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        source_url text,
+        source_title text NOT NULL DEFAULT '',
+        site text NOT NULL DEFAULT '',
+        destination text,
+        place jsonb,
+        places jsonb NOT NULL DEFAULT '[]'::jsonb,
+        unverified jsonb NOT NULL DEFAULT '[]'::jsonb,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )`,
+      `CREATE INDEX IF NOT EXISTS imports_user_idx ON imports(user_id, created_at DESC)`,
+      `ALTER TABLE profiles ADD COLUMN IF NOT EXISTS taste jsonb NOT NULL DEFAULT '{}'::jsonb`,
+    ],
+  },
 ];
