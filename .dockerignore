@@ -1,0 +1,14 @@
+node_modules
+.next
+.data
+.git
+.gitignore
+.env*
+!.env.example
+docs
+Dockerfile
+.dockerignore
+railway.json
+README.md
+AGENTS.md
+CLAUDE.md
