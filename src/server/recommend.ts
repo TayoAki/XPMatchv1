@@ -109,6 +109,18 @@ export function buildHomeQueries(profile: TravelerProfile): Record<HomeRowKey, R
   return { things: uniq(things.map((t) => t.query)).map((q) => things.find((t) => t.query === q)!), stays: uniq(stays.map((s) => s.query)).map((q) => stays.find((s) => s.query === q)!), eat: uniq(eat.map((e) => e.query)).map((q) => eat.find((e) => e.query === q)!) };
 }
 
+const HOTEL_CATEGORY = /\b(hotel|hotels|lodging|inn|hostel|resort|motel|guest house|guesthouse|aparthotel|apartment|bed and breakfast|b&b|residence|pension)\b/i;
+const FOOD_CATEGORY =
+  /\b(restaurant|cafe|café|coffee|bar|pub|bakery|pizzeria|pizza|trattoria|osteria|bistro|brasserie|diner|eatery|steakhouse|steak house|grill|sushi|ramen|taqueria|food court|gelato|ice cream|dessert|cocktail|tea house|deli|takeout|fast food|noodle|burger|seafood|kitchen|wine bar|brewery|taproom)\b/i;
+
+/** What Google's primary type says a place is; null when it says nothing. A hotel never belongs in "things to do". */
+export function inferKind(category: string | undefined): PlaceKind | null {
+  if (!category) return null;
+  if (HOTEL_CATEGORY.test(category)) return "hotel";
+  if (FOOD_CATEGORY.test(category)) return "restaurant";
+  return "attraction";
+}
+
 const ROW_TITLE: Record<HomeRowKey, (destination: string) => string> = {
   things: (d) => `Things to do in ${d}`,
   stays: (d) => `Where to stay in ${d}`,
@@ -162,9 +174,13 @@ export async function homePicks(destinationQuery: string, inputs: MatchInputs): 
     const lists = provider === "google" ? await Promise.all(rowQueries.map((q) => candidates(q, destination))) : [];
     const seen = new Set<string>();
     const scored: HomePick[] = [];
+    const rowKind: PlaceKind = key === "things" ? "attraction" : key === "stays" ? "hotel" : "restaurant";
     for (const list of lists) {
       for (const place of list) {
         if (seen.has(place.id) || place.kind === "destination") continue;
+        // Text Search answers with whatever matched the words; keep only what Google's own type agrees with.
+        const inferred = inferKind(place.category);
+        if (inferred && inferred !== rowKind) continue;
         seen.add(place.id);
         scored.push({ place, match: scoreMatch(candidateFromPlace(place), inputs) });
       }

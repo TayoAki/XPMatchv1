@@ -236,6 +236,42 @@ function report(action: string, err: unknown) {
 
 let hydration: Promise<void> | null = null;
 
+/** Thumbs writes for the same place run one after another (a quick thumbs-down followed by its reason must land in that order). */
+const recQueues = new Map<string, Promise<unknown>>();
+
+async function writeRecFeedback(placeId: string, input: NewRecFeedback): Promise<RecFeedback> {
+  const prev = readSnapshot();
+  const existing = prev.recFeedback.find((f) => f.placeId === placeId);
+  const now = new Date().toISOString();
+  const optimistic: RecFeedback = {
+    id: existing?.id ?? `temp-${newId()}`,
+    placeId,
+    kind: input.kind,
+    name: input.name,
+    destination: input.destination ?? existing?.destination,
+    context: input.context,
+    verdict: input.verdict,
+    score: input.score ?? undefined,
+    factors: input.factors,
+    reason: input.reason ?? undefined,
+    createdAt: existing?.createdAt ?? now,
+    updatedAt: now,
+  };
+  set({ recFeedback: [optimistic, ...prev.recFeedback.filter((f) => f.placeId !== placeId)] });
+  try {
+    const res = await api<{ recFeedback: RecFeedback }>("/api/me/recs", {
+      method: "POST",
+      json: { placeId, name: input.name, kind: input.kind, destination: input.destination, context: input.context, verdict: input.verdict, score: input.score ?? null, factors: input.factors, reason: input.reason ?? null },
+    });
+    set((s) => ({ recFeedback: [res.recFeedback, ...s.recFeedback.filter((f) => f.placeId !== placeId)] }));
+    return res.recFeedback;
+  } catch (err) {
+    report("saving your thumbs", err);
+    set((s) => ({ recFeedback: existing ? s.recFeedback.map((f) => (f.placeId === placeId ? existing : f)) : s.recFeedback.filter((f) => f.placeId !== placeId) }));
+    throw err;
+  }
+}
+
 export const travelActions = {
   getState: () => readSnapshot(),
   getPlanner: () => readSnapshot().planner,
@@ -392,38 +428,15 @@ export const travelActions = {
   },
 
   /** Thumbs up / down on a recommendation (optimistic); the same place gets one row that later thumbs replace. */
-  async recordRecFeedback(input: NewRecFeedback): Promise<RecFeedback> {
-    const prev = readSnapshot();
+  recordRecFeedback(input: NewRecFeedback): Promise<RecFeedback> {
     const placeId = input.placeId ?? recKey(input.name, input.place);
-    const existing = prev.recFeedback.find((f) => f.placeId === placeId);
-    const now = new Date().toISOString();
-    const optimistic: RecFeedback = {
-      id: existing?.id ?? `temp-${newId()}`,
-      placeId,
-      kind: input.kind,
-      name: input.name,
-      destination: input.destination ?? existing?.destination,
-      context: input.context,
-      verdict: input.verdict,
-      score: input.score ?? undefined,
-      factors: input.factors,
-      reason: input.reason ?? undefined,
-      createdAt: existing?.createdAt ?? now,
-      updatedAt: now,
-    };
-    set({ recFeedback: [optimistic, ...prev.recFeedback.filter((f) => f.placeId !== placeId)] });
-    try {
-      const res = await api<{ recFeedback: RecFeedback }>("/api/me/recs", {
-        method: "POST",
-        json: { placeId, name: input.name, kind: input.kind, destination: input.destination, context: input.context, verdict: input.verdict, score: input.score ?? null, factors: input.factors, reason: input.reason ?? null },
-      });
-      set((s) => ({ recFeedback: [res.recFeedback, ...s.recFeedback.filter((f) => f.placeId !== placeId)] }));
-      return res.recFeedback;
-    } catch (err) {
-      report("saving your thumbs", err);
-      set((s) => ({ recFeedback: existing ? s.recFeedback.map((f) => (f.placeId === placeId ? existing : f)) : s.recFeedback.filter((f) => f.placeId !== placeId) }));
-      throw err;
-    }
+    const previous = recQueues.get(placeId) ?? Promise.resolve();
+    const run = previous.catch(() => undefined).then(() => writeRecFeedback(placeId, input));
+    recQueues.set(placeId, run);
+    void run.finally(() => {
+      if (recQueues.get(placeId) === run) recQueues.delete(placeId);
+    }).catch(() => undefined);
+    return run;
   },
 
   removeRecFeedback(id: string) {

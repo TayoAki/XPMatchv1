@@ -3,7 +3,7 @@ import { calibrationFrom, priceLevelNumber, scoreMatch, statementMatches, type M
 import { DEFAULT_PROFILE, type LearnedPreference, type TravelerProfile } from "@/lib/types";
 import type { TasteProfile } from "@/lib/feedback/types";
 import { recQuality, type RecFeedback } from "@/lib/recs/types";
-import { buildHomeQueries, pickTop } from "@/server/recommend";
+import { buildHomeQueries, inferKind, pickTop } from "@/server/recommend";
 import { todaysHours } from "@/lib/places/hours";
 
 const profile: TravelerProfile = {
@@ -125,6 +125,17 @@ describe("home picks", () => {
     expect(bare.things.map((t) => t.query)).toEqual(["historic landmarks and museums", "top things to do"]);
     expect(bare.stays.map((s) => s.query)).toEqual(["well-rated hotels"]);
     expect(bare.eat.map((e) => e.query)).toEqual(["best restaurants"]);
+  });
+
+  it("reads the kind off Google's primary type so a hotel never lands under things to do", () => {
+    expect(inferKind("Hotel")).toBe("hotel");
+    expect(inferKind("Bed and breakfast")).toBe("hotel");
+    expect(inferKind("Italian restaurant")).toBe("restaurant");
+    expect(inferKind("Trattoria")).toBe("restaurant");
+    expect(inferKind("Wine bar")).toBe("restaurant");
+    expect(inferKind("Historical landmark")).toBe("attraction");
+    expect(inferKind("Food market")).toBe("attraction");
+    expect(inferKind(undefined)).toBeNull();
   });
 
   it("keeps the best three with different categories when it can", () => {

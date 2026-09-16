@@ -349,9 +349,9 @@ export const PLACES = [
 ];
 
 const KIND_WORDS = {
-  hotel: /\b(hotel|hotels|stay|stays|lodging|resort|inn|hostel|boutique)\b/i,
-  restaurant: /\b(restaurant|restaurants|food|eat|dinner|lunch|trattoria|sushi|pizza|cafe|bar|bars|brunch)\b/i,
-  attraction: /\b(things to do|attraction|attractions|museum|park|parks|landmark|sights|tour|tours|hiking|viewpoint|market|markets)\b/i,
+  hotel: /\b(hotel|hotels|stay|stays|lodging|resort|resorts|inn|hostel|hostels|boutique|apartments?|b&b|guesthouses?)\b/i,
+  restaurant: /\b(restaurants?|food|eat|dinner|lunch|trattorias?|sushi|pizza|cafes?|cafés?|bakeries|bar|bars|brunch|bistros?|steakhouses?|vegetarian|vegan|japanese|italian|mexican)\b/i,
+  attraction: /\b(things to do|attractions?|museums?|galleries|gallery|art|parks?|landmarks?|sights|tours?|hiking|hikes|trails?|viewpoints?|markets?|neighborhoods?|beaches|spas?|nightlife)\b/i,
 };
 
 const norm = (s) => (s || "").toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
