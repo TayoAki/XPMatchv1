@@ -36,6 +36,7 @@ import { useSendMessage } from "@/components/chat/useSendMessage";
 import { TripCalendar } from "./TripCalendar";
 import { tripItemKey } from "./TripMap";
 import { ReactionControl } from "@/components/feedback/ReactionControl";
+import { BookingMeta, ReservationIcon } from "@/components/reservations/BookingMeta";
 
 export type TripSection = "ideas" | "itinerary" | "bookings" | "media" | "preferences" | "calendar" | "members";
 
@@ -574,7 +575,7 @@ function LinkItemsSection({ kind, trip, canEdit, onTrip }: SectionProps & { kind
                 <img src={item.url} alt={item.title} className="h-[72px] w-[72px] shrink-0 rounded-xl object-cover" loading="lazy" />
               ) : (
                 <span className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-xl bg-surface">
-                  <Icon className="h-5 w-5 text-neutral-600" />
+                  {kind === "booking" && item.details ? <ReservationIcon kind={item.details.kind} className="h-5 w-5 text-neutral-600" /> : <Icon className="h-5 w-5 text-neutral-600" />}
                 </span>
               )}
               <div className="min-w-0 flex-1">
@@ -587,7 +588,7 @@ function LinkItemsSection({ kind, trip, canEdit, onTrip }: SectionProps & { kind
                     ) : (
                       <div className="truncate text-[15px] font-semibold">{item.title}</div>
                     )}
-                    {item.note ? <p className="mt-0.5 text-[13px] text-neutral-700">{item.note}</p> : null}
+                    {item.details ? <BookingMeta details={item.details} /> : item.note ? <p className="mt-0.5 text-[13px] text-neutral-700">{item.note}</p> : null}
                   </div>
                   {canEdit ? (
                     <IconButton label={`Remove ${item.title}`} danger onClick={() => removeTripItem(trip.id, item.id).then(onTrip).catch((err) => console.error(err))}>

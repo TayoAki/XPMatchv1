@@ -3,14 +3,17 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import type { ResolvedPlace } from "@/lib/places/types";
+import type { Reservation } from "@/lib/reservations/types";
 
 export type PlannerTab = "where" | "when" | "who" | "budget";
 
-/** A place the traveler wants to add to one of their trips (opens the trip picker). */
+/** Something the traveler wants to add to one of their trips (opens the trip picker): a place, several places, or a booking. */
 export interface AddToTripRequest {
-  place: ResolvedPlace;
+  place?: ResolvedPlace;
   /** Several places at once (an import's "Add all to a trip"); `place` is the first of them. */
   places?: ResolvedPlace[];
+  /** A reservation read from a confirmation; stored under Bookings with its details. */
+  booking?: Reservation;
   /** Preselected trip, e.g. the trip whose page or chat is open. */
   tripId?: string;
   note?: string;

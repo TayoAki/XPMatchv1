@@ -8,20 +8,23 @@ import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { TextArea, TextInput } from "@/components/ui/Field";
 import { formatDateRange, useTravelStore } from "@/lib/store";
+import { reservationSummary } from "@/lib/reservations/types";
 import { useUiState, type AddToTripRequest } from "@/components/providers/UiState";
 
 /** Trip picker opened from "Add to trip" on cards and place sheets. */
 export function AddToTripDialog() {
   const { addToTrip } = useUiState();
-  return addToTrip ? <AddToTripForm key={`${addToTrip.place.id}-${addToTrip.tripId ?? ""}`} request={addToTrip} /> : null;
+  return addToTrip ? <AddToTripForm key={`${addToTrip.place?.id ?? addToTrip.booking?.title ?? "item"}-${addToTrip.tripId ?? ""}`} request={addToTrip} /> : null;
 }
 
 const NEW = "__new__";
 
 function AddToTripForm({ request }: { request: AddToTripRequest }) {
-  const { place } = request;
-  const places = request.places?.length ? request.places : [place];
+  const booking = request.booking;
+  const place = request.place ?? booking?.place;
+  const places = request.places?.length ? request.places : place ? [place] : [];
   const many = places.length > 1;
+  const label = booking ? booking.title : (place?.name ?? "this");
   const { trips, addTrip, addTripItem } = useTravelStore();
   const { closeAddToTrip } = useUiState();
   const today = new Date().toISOString().slice(0, 10);
@@ -37,7 +40,7 @@ function AddToTripForm({ request }: { request: AddToTripRequest }) {
         }),
     [trips, today],
   );
-  const destination = place.kind === "destination" ? place.name : place.locality?.split(",")[0]?.trim() || place.name;
+  const destination = booking?.city || (place ? (place.kind === "destination" ? place.name : place.locality?.split(",")[0]?.trim() || place.name) : "your destination");
   const [choice, setChoice] = useState<string>(request.tripId && options.some((t) => t.id === request.tripId) ? request.tripId : options[0]?.id ?? NEW);
   const [newTitle, setNewTitle] = useState(`Trip to ${destination}`);
   const [note, setNote] = useState(request.note ?? "");
@@ -56,14 +59,25 @@ function AddToTripForm({ request }: { request: AddToTripRequest }) {
         tripId = created.id;
         title = created.title;
       }
-      for (const p of places) {
+      if (booking) {
         await addTripItem(tripId, {
-          kind: "idea",
-          title: p.name,
-          note: note.trim(),
-          url: p.googleMapsUri,
-          place: p,
+          kind: "booking",
+          title: booking.title,
+          note: [reservationSummary(booking), note.trim()].filter(Boolean).join(" · "),
+          url: booking.place?.googleMapsUri,
+          place: booking.place,
+          details: booking,
         });
+      } else {
+        for (const p of places) {
+          await addTripItem(tripId, {
+            kind: "idea",
+            title: p.name,
+            note: note.trim(),
+            url: p.googleMapsUri,
+            place: p,
+          });
+        }
       }
       setDone({ tripId, title });
     } catch (err) {
@@ -93,7 +107,7 @@ function AddToTripForm({ request }: { request: AddToTripRequest }) {
         <div className="flex items-center gap-3 rounded-2xl bg-emerald-50 px-4 py-3 text-[14px] text-emerald-800">
           <Check className="h-5 w-5" />
           <span>
-            <span className="font-semibold">{many ? `${places.length} places` : place.name}</span> {many ? "are" : "is"} now in the ideas for <span className="font-semibold">{done.title}</span>.
+            <span className="font-semibold">{many ? `${places.length} places` : label}</span> {many ? "are" : "is"} now in the {booking ? "bookings" : "ideas"} for <span className="font-semibold">{done.title}</span>.
           </span>
         </div>
       </Modal>
@@ -105,7 +119,9 @@ function AddToTripForm({ request }: { request: AddToTripRequest }) {
       open
       onClose={closeAddToTrip}
       title="Add to trip"
-      description={many ? `${places.length} places: ${places.map((p) => p.name).join(", ")}` : [place.name, place.locality].filter(Boolean).join(" · ")}
+      description={
+        booking ? reservationSummary(booking) : many ? `${places.length} places: ${places.map((p) => p.name).join(", ")}` : [place?.name, place?.locality].filter(Boolean).join(" · ")
+      }
       footer={
         <div className="flex items-center justify-between gap-2">
           <span className="text-[13px] text-red-600">{error}</span>

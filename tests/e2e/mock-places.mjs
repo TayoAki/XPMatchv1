@@ -452,6 +452,25 @@ const server = http.createServer((req, res) => {
         if (!place) return send(404, { error: { message: "not found" } });
         return send(200, detailsOf(place));
       }
+      // Routes API stand-in: legs from straight-line distance and a speed per mode, so tests are deterministic.
+      if (req.method === "POST" && url.pathname === "/directions/v2:computeRoutes") {
+        if (!req.headers["x-goog-api-key"]) return send(403, { error: { message: "missing key" } });
+        const b = JSON.parse(body || "{}");
+        const pt = (w) => ({ lat: Number(w?.location?.latLng?.latitude), lng: Number(w?.location?.latLng?.longitude) });
+        const points = [pt(b.origin), ...(b.intermediates || []).map(pt), pt(b.destination)];
+        if (points.some((p) => !Number.isFinite(p.lat) || !Number.isFinite(p.lng))) return send(400, { error: { message: "bad waypoint" } });
+        const speed = b.travelMode === "WALK" ? 5 : b.travelMode === "TRANSIT" ? 15 : 30;
+        const toRad = (d) => (d * Math.PI) / 180;
+        const legs = [];
+        for (let i = 1; i < points.length; i++) {
+          const a = points[i - 1];
+          const c = points[i];
+          const h = Math.sin(toRad(c.lat - a.lat) / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(c.lat)) * Math.sin(toRad(c.lng - a.lng) / 2) ** 2;
+          const km = 2 * 6371 * Math.asin(Math.sqrt(h)) * 1.25;
+          legs.push({ distanceMeters: Math.round(km * 1000), duration: `${Math.max(60, Math.round((km / speed) * 3600))}s` });
+        }
+        return send(200, { routes: [{ legs }] });
+      }
       return send(404, { error: { message: `no route for ${req.method} ${url.pathname}` } });
     } catch (err) {
       return send(500, { error: { message: String(err) } });

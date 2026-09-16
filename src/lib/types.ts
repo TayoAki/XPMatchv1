@@ -1,5 +1,6 @@
 import type { PlaceKind, ResolvedPlace } from "@/lib/places/types";
 import type { PlaceFeedback, TasteProfile } from "@/lib/feedback/types";
+import type { Reservation } from "@/lib/reservations/types";
 
 export type BudgetTier = "budget" | "mid-range" | "premium" | "luxury";
 export type Pace = "relaxed" | "balanced" | "packed";
@@ -133,6 +134,8 @@ export interface TripItem {
   note: string;
   url?: string;
   place?: ResolvedPlace;
+  /** Structured booking read from a confirmation (bookings only). */
+  details?: Reservation;
   addedBy?: string;
   createdAt: string;
 }

@@ -259,8 +259,22 @@ export function optimizeDay(stops: ItineraryStop[]): ItineraryStop[] {
   return [...ordered, ...unplaced];
 }
 
+export type DirectionsMode = "walk" | "drive" | "transit";
+export const DIRECTIONS_MODES: DirectionsMode[] = ["walk", "drive", "transit"];
+
+/** A leg as the board shows it: routed by Google or estimated here. */
+export interface RoutedLeg extends TravelLeg {
+  source: "routes" | "estimate";
+}
+
+export function formatRoutedLeg(leg: RoutedLeg): string {
+  const time = leg.minutes >= 60 ? `${Math.floor(leg.minutes / 60)} h ${leg.minutes % 60 ? `${leg.minutes % 60} min` : ""}`.trim() : `${leg.minutes} min`;
+  const dist = leg.km < 1 ? `${Math.round(leg.km * 1000)} m` : `${leg.km} km`;
+  return `${time} ${leg.mode} · ${dist} · ${leg.source === "routes" ? "via Google" : "est."}`;
+}
+
 /** Google Maps directions link through a day's placed stops, in order. */
-export function directionsUrl(stops: ItineraryStop[]): string | null {
+export function directionsUrl(stops: ItineraryStop[], mode: DirectionsMode = "walk"): string | null {
   const points = stops.filter((s) => s.place).map((s) => `${s.place!.lat},${s.place!.lng}`);
   if (points.length < 2) return null;
   const origin = points[0];
@@ -271,7 +285,7 @@ export function directionsUrl(stops: ItineraryStop[]): string | null {
   url.searchParams.set("origin", origin);
   url.searchParams.set("destination", destination);
   if (waypoints) url.searchParams.set("waypoints", waypoints);
-  url.searchParams.set("travelmode", "walking");
+  url.searchParams.set("travelmode", mode === "drive" ? "driving" : mode === "transit" ? "transit" : "walking");
   return url.toString();
 }
 

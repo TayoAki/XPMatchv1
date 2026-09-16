@@ -144,6 +144,36 @@ const server = http.createServer((req, res) => {
             ? "Yes, dogs are allowed according to Google's listing and a recent review."
             : "The evidence points to yes, with one caveat mentioned in a review.";
         content = JSON.stringify({ answer, confidence: refs.length > 1 ? "clear" : "thin", refs });
+      } else if (/extract the reservations/i.test(system)) {
+        content = JSON.stringify({
+          reservations: [
+            {
+              kind: "hotel",
+              title: "Hotel Artemide, 3 nights",
+              provider: "Hotel Artemide",
+              confirmationCode: "ART-88213",
+              startsAt: "2026-10-10T15:00",
+              endsAt: "2026-10-13T11:00",
+              placeName: "Hotel Artemide",
+              address: "Via Nazionale 22, Rome",
+              city: "Rome",
+              travelers: 2,
+              price: 780,
+              currency: "EUR",
+              notes: "Superior double, breakfast included, free cancellation until Oct 3",
+            },
+            {
+              kind: "flight",
+              title: "Delta ATL → FCO",
+              provider: "Delta",
+              confirmationCode: "DLX9Q2",
+              travelers: 2,
+              price: 1420,
+              currency: "USD",
+              legs: [{ from: "ATL", to: "FCO", flightNumber: "DL 1234", departsAt: "2026-10-09T17:30", arrivesAt: "2026-10-10T08:45" }],
+            },
+          ],
+        });
       } else if (/extract the places/i.test(system)) {
         content = JSON.stringify({
           destination: "Rome, Italy",
@@ -192,7 +222,11 @@ const server = http.createServer((req, res) => {
       if (toolName === "schedule_stops") return streamReply(res, { text: "Done — it's on the board." });
       if (toolName === "record_feedback") return streamReply(res, { text: "Noted — I'll steer away from that next time." });
       if (toolName === "import_inspiration") return streamReply(res, { text: "Those are on the cards above. Want them in a trip?" });
+      if (toolName === "import_reservation") return streamReply(res, { text: "Got it — the bookings are on the cards above. Add them to a trip?" });
       return streamReply(res, { text: "Done — those are on the cards above. Want stays or things to do next?" });
+    }
+    if (/confirmation|booking reference|itinerary receipt/.test(text) && tools.includes("import_reservation")) {
+      return streamReply(res, { text: "Let me read that confirmation.", toolCall: { name: "import_reservation", args: { text: textOf(lastUser?.content) } } });
     }
     const link = textOf(lastUser?.content).match(/https?:\/\/\S+/);
     if (link && tools.includes("import_inspiration")) {

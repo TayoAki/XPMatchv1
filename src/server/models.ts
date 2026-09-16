@@ -1,4 +1,5 @@
 import type { ResolvedPlace } from "@/lib/places/types";
+import type { Reservation } from "@/lib/reservations/types";
 import type {
   ChatSummary,
   LearnedPreference,
@@ -372,6 +373,7 @@ interface ItemRow extends Row {
   note: string;
   url: string | null;
   place: unknown;
+  details: unknown;
   added_by: string | null;
   created_at: unknown;
 }
@@ -386,7 +388,7 @@ export async function loadTripDetail(tripId: string, userId: string): Promise<Tr
       [tripId],
     ),
     queryAll<ItemRow>(
-      "SELECT id, kind, title, note, url, place, added_by, created_at FROM trip_items WHERE trip_id = $1 ORDER BY created_at DESC",
+      "SELECT id, kind, title, note, url, place, details, added_by, created_at FROM trip_items WHERE trip_id = $1 ORDER BY created_at DESC",
       [tripId],
     ),
     queryAll<ChatRow>(
@@ -402,6 +404,7 @@ export async function loadTripDetail(tripId: string, userId: string): Promise<Tr
     note: i.note,
     url: i.url ?? undefined,
     place: jsonb<ResolvedPlace>(i.place),
+    details: jsonb<Reservation>(i.details),
     addedBy: i.added_by ?? undefined,
     createdAt: iso(i.created_at),
   });

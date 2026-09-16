@@ -4,6 +4,7 @@ import { useMemo, useSyncExternalStore } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { PlaceKind, ResolvedPlace } from "@/lib/places/types";
 import { feedbackKey, type FeedbackSource, type FeedbackVerdict, type PlaceFeedback, type TasteProfile } from "@/lib/feedback/types";
+import type { Reservation } from "@/lib/reservations/types";
 import {
   DEFAULT_PLANNER,
   DEFAULT_PROFILE,
@@ -73,6 +74,8 @@ export interface NewTripItem {
   note?: string;
   url?: string;
   place?: ResolvedPlace;
+  /** Structured reservation for bookings read from a confirmation. */
+  details?: Reservation;
 }
 
 /** A reaction to a place; the same place gets one row that later reactions replace. */

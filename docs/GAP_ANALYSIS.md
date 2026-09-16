@@ -50,6 +50,17 @@ inspiration import); flows in `docs/USER_FLOWS.md`, beta notes in `docs/BETA_REA
 | 2 | `import_inspiration` and Import inspiration (composer + menu, Create › Import): links (blog, Reddit, YouTube, article) and screenshots → verified place cards with Add all to a trip, Plan a trip, Save as a collection; unverified mentions listed; SSRF guard; 7-day cache; Saved › Imports | Documents and email confirmations (Wanderlog-style bookings), itineraries |
 | — | Test foundation: Vitest unit tests, in-repo Playwright suite with a stand-in model, a Places stub and a fixture site, CI on every push | Nightly runs against the real Google API |
 
+## Wave 3 status: shipped
+
+Built and tested per `docs/WAVE3_PLAN.md`. Wave 4 (flight price tracking, password reset, email
+verification) is skipped by decision, so nothing is scheduled after Wave 3.
+
+| # | What shipped | Left for later |
+| --- | --- | --- |
+| 2 | Reservation import: `import_reservation` in chat and Import inspiration › **A reservation** (pasted confirmation, PDF read by `unpdf`, screenshot read by the vision model) → reservation cards (kind, provider, confirmation code, dates and times, place, travelers, price, flight legs) → Add to trip stores the structured details under Bookings (`trip_items.details`), pins hotels and venues that Places recognizes on the trip map, and the Board lists each reservation on the day it starts | Confirmations forwarded by email, cancellations and changes |
+| 3 | Routes API travel legs on the Board with Walk / Drive / Transit (remembered per browser), "via Google" vs "est." labels, Directions by mode, one request per day per change cached for a day, straight-line estimate as fallback | Budget lines, live traffic |
+| 9 | — | Flight price tracking (Wave 4, skipped) |
+
 ## Where the research says we can beat the originals
 
 The competitor teardowns in `docs/COMPETITIVE_RESEARCH.md` expose four gaps none of the nine currently

@@ -36,10 +36,11 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   quotes picked by index (never retyped by the model), a confidence label and topic filters on the
   Reviews tab; Place Details are cached for 30 days in a shared `place_facts` table.
 - **Itinerary board with the map** — a trip's itinerary is structured stops linked to real places:
-  a Wanderlog-style Board (days as sortable lists with numbered stops, estimated travel legs,
-  Directions, Optimize order, Move to…, time and note edits, an Ideas tray, Add a stop) with
-  drag-and-drop (pointer or keyboard, dnd-kit), numbered per-day pins and route lines on the map with
-  Day chips as layers; `schedule_stops` puts a place on a day from chat.
+  a Wanderlog-style Board (days as sortable lists with numbered stops, travel legs by **Walk / Drive /
+  Transit** from the Google Routes API ("12 min walk · 0.9 km · via Google", straight-line estimates
+  as the fallback), Directions in the same mode, Optimize order, Move to…, time and note edits, an
+  Ideas tray, Add a stop) with drag-and-drop (pointer or keyboard, dnd-kit), numbered per-day pins and
+  route lines on the map with Day chips as layers; `schedule_stops` puts a place on a day from chat.
 - **Taste profile that learns from reactions** — Rate any place (Loved it / It was fine / Not for me
   with reason chips) on cards, the sheet, trips and Saved; "Not for me" hides the card. Reactions
   feed a per-domain taste profile (Your taste in Update my assistant), repeated reasons become
@@ -51,6 +52,12 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   the model, verified through Google Places and shown as cards with Add all to a trip, Plan a trip and
   Save as a collection; unverified mentions are listed honestly. SSRF-guarded fetching, seven-day
   cache per link, history under Saved › Imports.
+- **Reservations into the trip** — paste a confirmation email in chat (`import_reservation`) or use
+  Import inspiration › **A reservation** with the text, its PDF or a screenshot: flights, hotels,
+  restaurants, cars, trains and activities become reservation cards (provider, confirmation code,
+  dates and times, place, travelers, price, flight legs). Add to trip stores them under the trip's
+  Bookings with those details, pins hotels and venues that Google Places recognizes on the trip map,
+  and the Board shows each reservation on the day it starts.
 - **Generative UI recommendations** — the agent calls frontend tools that render streaming cards:
   `show_destinations`, `show_hotels`, `show_flights`, `show_restaurants`, `show_attractions`.
 - **Actionable, not just descriptive** — every card links out to live inventory: Google Flights,
@@ -124,14 +131,16 @@ Without a model key the app starts in demo mode. Model selection lives in `src/s
 | `ANTHROPIC_API_KEY` | Enables Claude directly (`anthropic/claude-opus-5` by default). |
 | `OPENAI_API_KEY`, `GOOGLE_API_KEY` | Used when no Anthropic key is present (`openai/gpt-5`, `google/gemini-2.5-pro`). |
 | `COPILOT_MODEL` | Force a `provider/model` (any model the AI SDK knows) or `demo`. |
-| `HELPER_MODEL` | OpenRouter model for small structured jobs (review answers, import extraction); defaults to the agent's model. |
-| `HELPER_VISION_MODEL` | OpenRouter model that reads screenshots for imports (default `openai/gpt-4o-mini`). |
+| `HELPER_MODEL` | OpenRouter model for small structured jobs (review answers, import and reservation extraction); defaults to the agent's model. |
+| `HELPER_VISION_MODEL` | OpenRouter model that reads screenshots for imports and reservations (default `openai/gpt-4o-mini`). |
 | `PLACES_BASE_URL` | Override the Places API base URL (the end-to-end suite points it at a stub). |
+| `ROUTES_API_ENABLED` | `0` skips the Routes API; board travel legs are then straight-line estimates labeled "est.". |
+| `ROUTES_BASE_URL` | Override the Routes API base URL (the end-to-end suite points it at a stub). |
 | `IMPORT_ALLOW_LOOPBACK` | `1` lets imports fetch `localhost` (test fixture site only; never set in production). |
 | `COPILOT_EFFORT` | Claude effort level for 4.6+/5 models (`low` … `max`, default `medium`). |
 | `NEXT_PUBLIC_COPILOTKIT_INSPECTOR` | `true` shows the CopilotKit dev inspector. |
 | `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Browser key for the Maps JavaScript API (restrict to your referrers). |
-| `GOOGLE_MAPS_API_KEY` | Server key for the Places API (New): geocoding, ratings, photos, reviews. |
+| `GOOGLE_MAPS_API_KEY` | Server key for the Places API (New) (geocoding, ratings, photos, reviews) and the Routes API (board travel legs). |
 | `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID` | Optional Map ID for custom styling; defaults to `DEMO_MAP_ID`. |
 | `DATABASE_URL` | Postgres connection string (Railway provides it). Unset → embedded PGlite in `.data/pglite`. |
 | `PGSSL` | `true` to force TLS to Postgres when the URL has no `sslmode=require`. |

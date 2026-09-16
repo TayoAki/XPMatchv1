@@ -40,6 +40,8 @@ const appEnv = {
   OPENROUTER_BASE_URL: `http://localhost:${modelPort}/api/v1`,
   GOOGLE_MAPS_API_KEY: "e2e-places-stub",
   PLACES_BASE_URL: `http://localhost:${placesPort}/v1`,
+  // The Places stub also answers Routes API computeRoutes calls with deterministic legs.
+  ROUTES_BASE_URL: `http://localhost:${placesPort}`,
   // The import fixture site runs on localhost, which the import guard otherwise refuses.
   IMPORT_ALLOW_LOOPBACK: "1",
   COPILOTKIT_TELEMETRY_DISABLED: "true",

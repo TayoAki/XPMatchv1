@@ -200,4 +200,11 @@ export const MIGRATIONS: Migration[] = [
       `ALTER TABLE profiles ADD COLUMN IF NOT EXISTS taste jsonb NOT NULL DEFAULT '{}'::jsonb`,
     ],
   },
+  {
+    id: "0004_reservations",
+    statements: [
+      // Structured booking details (kind, provider, confirmation code, dates, price, legs) read from confirmations.
+      `ALTER TABLE trip_items ADD COLUMN IF NOT EXISTS details jsonb`,
+    ],
+  },
 ];

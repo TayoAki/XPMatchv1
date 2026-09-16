@@ -90,16 +90,23 @@ delete, "Show all", "+ New chat") so no horizontal space is spent on a separate 
    did not resolve. Below: **Add all to a trip**, **Plan a trip from these** and **Save as a collection**
    (a private guide). Instagram and TikTok links cannot be read; the composer's **+** menu has **Import
    inspiration** for a screenshot instead (also on Create › Import).
-10. **Map tools** — hide the map (the discovery feed returns with a "Show map" button), search-and-pin
+10. **Reservations** — paste a confirmation email (flight, hotel, restaurant, car, train, tickets) and the
+    assistant calls `import_reservation`: one structured model call reads it and **reservation cards**
+    appear (kind icon, provider, confirmation code, dates and times, place or address, travelers, price;
+    flights list their legs "ATL → FCO DL 1234"). Hotels, restaurants and venues that Google Places
+    recognizes show "Pinned: <name>" and get a pin. **Add to trip** stores the card under the trip's
+    Bookings with its details (see Trips). PDFs and screenshots go through Import inspiration › **A
+    reservation**.
+11. **Map tools** — hide the map (the discovery feed returns with a "Show map" button), search-and-pin
     any place near the destination, satellite toggle, weather chip.
-11. **Trip proposal** — when the traveler asks for a plan the assistant calls `create_trip` and a
+12. **Trip proposal** — when the traveler asks for a plan the assistant calls `create_trip` and a
     proposal card appears (title, dates, travelers, budget, summary, day-by-day itinerary whose stops are
     real places with a kind, resolved and pinned when the trip is saved). **Save to my trips** stores it
     on the server; **Not yet** tells the assistant to adjust.
-12. **Follow-ups** — after each answer the assistant proposes 2–3 next steps as chips. While a proposal or
+13. **Follow-ups** — after each answer the assistant proposes 2–3 next steps as chips. While a proposal or
     "Remember this?" card is waiting for a click the chips pause (a suggestions run would otherwise send the
     model an unanswered tool call).
-13. **History** — expand **Chats** in the sidebar and click a conversation to reopen it (`/?thread=…`),
+14. **History** — expand **Chats** in the sidebar and click a conversation to reopen it (`/?thread=…`),
     including its cards and map pins, which are rebuilt from the stored transcript; transcripts live in
     Postgres, so chats survive deploys and restarts. Chats started from a trip show the trip name and keep
     the trip in context when reopened. The top-bar chat menu ("New chat ⌄") is the quick switcher; "All
@@ -135,21 +142,27 @@ Trip tab; or **Add to trip → New trip** from any place.
 - **Chats** — every conversation attached to this trip, newest first.
 - **Board | Tiles** toggle (right column; the choice is remembered per browser, `?view=board` opens the
   board from chat).
-- **Board** — Wanderlog-style: dates, travelers, bookings and ideas chips; then each **Day** (color dot,
-  date, editable theme) as a list of numbered stops with photo, name, rating, category, start time,
-  duration and note, an estimated travel leg between placed stops ("12 min walk · 0.9 km · est.") and
-  **Directions** (Google Maps through the day's stops); **Optimize order** (nearest neighbor from the first
-  stop); a per-stop pencil for time, duration and note; **Move to… / Back to ideas / Remove**; **Rate**;
-  an **Add a stop** form per day (a place kind gets it resolved and pinned, "Note only" stays text); **Add
-  day**, **Remove day**; and the **Ideas** tray of unscheduled places with **Add to day…**. Stops drag
-  within a day, across days and from Ideas with the pointer (drop where the pointer is) or the keyboard
-  (space, arrows, space); every change saves as it happens ("Saving…").
+- **Board** — Wanderlog-style: dates, travelers, bookings and ideas chips and a **Walk / Drive /
+  Transit** travel mode (remembered per browser); then each **Day** (color dot, date, editable theme)
+  with the reservations that start on it (time, name, confirmation code) above a list of numbered stops
+  with photo, name, rating, category, start time, duration and note, a travel leg between placed stops
+  in the chosen mode ("12 min walk · 0.9 km · via Google" from the Routes API, or "… · est." when it is
+  off or fails) and **Directions** (Google Maps through the day's stops in that mode); **Optimize order**
+  (nearest neighbor from the first stop); a per-stop pencil for time, duration and note; **Move to… /
+  Back to ideas / Remove**; **Rate**; an **Add a stop** form per day (a place kind gets it resolved and
+  pinned, "Note only" stays text); **Add day**, **Remove day**; and the **Ideas** tray of unscheduled
+  places with **Add to day…**. Stops drag within a day, across days and from Ideas with the pointer (drop
+  where the pointer is) or the keyboard (space, arrows, space); every change saves as it happens
+  ("Saving…"). Legs are requested per day when its placed stops or the mode change and cached on the
+  server for a day.
 - Tiles: **Ideas** (places added from chat, map, Explore or by searching here; each with note, Rate, Save,
   Show on map, remove), **Itinerary** (read view with **Open the board**, **Edit as text**, or "Build it
-  with the assistant"), **Bookings** and **Media** (title, link, note; image links preview), **Trip
-  preferences** (free text the assistant reads for this trip, plus **Learned for this trip**: the "For
-  this trip" answers from its chats, each removable), **Calendar** (dates, travelers, budget plus a month
-  view), **Members** (add by email, role Can edit / Can view; remove; leave).
+  with the assistant"), **Bookings** (typed by hand: title, link, note; imported from a confirmation: kind
+  icon, provider, confirmation code, dates and times, travelers, price, flight legs, plus a pin when the
+  hotel or venue resolved) and **Media** (title, link, note; image links preview), **Trip preferences**
+  (free text the assistant reads for this trip, plus **Learned for this trip**: the "For this trip"
+  answers from its chats, each removable), **Calendar** (dates, travelers, budget plus a month view),
+  **Members** (add by email, role Can edit / Can view; remove; leave).
 - **Map** — destination pin, unscheduled ideas/bookings/media with a place, and the itinerary's stops as
   numbered pins colored per day with a line through each day; chips **All · Day 1 · Day 2…** show one day
   at a time; hovering a board card highlights its pin and vice versa; click a pin for its sheet.
@@ -206,6 +219,15 @@ cards as the chat, plus **Chat about these** and **Import another**. Instagram a
 screenshot hint before anything is fetched. A link imported within the last seven days is served from the
 traveler's history without a new fetch or model call.
 
+The tab's switch **Places from a post | A reservation** turns the same form into the confirmation
+importer: paste the confirmation text, or upload the PDF or a screenshot (PDF, PNG, JPEG, WebP up to 6 MB).
+PDFs are read as text on the server (no model sees the file), images go to the vision model, and one
+structured call extracts up to ten reservations (kind, provider, confirmation code, dates and times, place
+or address, travelers, price, flight legs); codes and dates are copied as written, hotels, restaurants and
+venues are verified through Google Places and pinned when the name matches. The result is the reservation
+cards from the chat with **Add to trip** on each and **Import another**. The same importer is behind the
+composer's **+** menu (Import inspiration).
+
 ## 8. Inspiration and guide pages
 
 `/inspiration` lists published community guides (cover, title, destination, author, places, saves) with
@@ -247,15 +269,17 @@ on top with **Rate places** (opens the post-trip rating on the trip page) and **
 
 Profile, dealbreakers and learned preferences (profile-wide or per trip; reasons that repeat in reactions
 become preferences with source "feedback"), the computed taste profile, reactions to places (one row per
-place: verdict, reasons, note, score, trip), trips (with members, items, structured itinerary stops,
-preferences), saved places and guides, guides they authored (including private import collections),
+place: verdict, reasons, note, score, trip), trips (with members, items — bookings imported from a
+confirmation keep their structured details — structured itinerary stops, preferences), saved places and
+guides, guides they authored (including private import collections),
 imports (source, verified places, unverified mentions), the chat list (titles, trip links), chat
 transcripts (every message, tool call and card, written by the runtime after each run and restored when a
 chat is reopened) and notifications — all in Postgres. A shared 30-day cache of Place Details (reviews,
 summaries, attributes) backs "Ask about a place". Live runs stream from the runtime's memory; the planner
-bar values, the compare selection, constraint chips of the current session, the Board | Tiles choice, which
-post-trip prompts were dismissed and small UI preferences (e.g. whether Chats is expanded in the sidebar)
-stay in the browser.
+bar values, the compare selection, constraint chips of the current session, the Board | Tiles choice, the
+board's travel mode, which post-trip prompts were dismissed and small UI preferences (e.g. whether Chats
+is expanded in the sidebar) stay in the browser. Routes API legs are cached in the server process for a
+day per mode and coordinates, not per user.
 
 ## 13. Your taste (Update my assistant)
 
