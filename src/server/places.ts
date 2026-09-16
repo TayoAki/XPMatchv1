@@ -440,13 +440,23 @@ export async function searchNearby(
   return promise;
 }
 
-/** Resolves a Places photo reference to its temporary googleusercontent URL. */
-export async function resolvePhotoUri(photoName: string, width: number): Promise<string | null> {
+const photoUriCache = new Map<string, { uri: string; at: number }>();
+const PHOTO_URI_TTL_MS = 2 * 60 * 60_000;
+
+/** Resolves a Places photo reference to its temporary googleusercontent URL (cached for two hours). */
+export async function resolvePhotoUri(photoName: string, width: number, fresh = false): Promise<string | null> {
   const key = placesApiKey();
   if (!key) return null;
-  const url = `${PLACES_BASE}/${photoName}/media?maxWidthPx=${Math.min(Math.max(width, 100), 1600)}&skipHttpRedirect=true&key=${key}`;
+  const px = Math.min(Math.max(width, 100), 1600);
+  const cacheKey = `${photoName}|${px}`;
+  const hit = photoUriCache.get(cacheKey);
+  if (hit && !fresh && Date.now() - hit.at < PHOTO_URI_TTL_MS) return hit.uri;
+  const url = `${PLACES_BASE}/${photoName}/media?maxWidthPx=${px}&skipHttpRedirect=true&key=${key}`;
   const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
   if (!res.ok) return null;
   const data = (await res.json()) as { photoUri?: string };
-  return data.photoUri ?? null;
+  if (!data.photoUri) return null;
+  if (photoUriCache.size >= 2000) photoUriCache.delete(photoUriCache.keys().next().value as string);
+  photoUriCache.set(cacheKey, { uri: data.photoUri, at: Date.now() });
+  return data.photoUri;
 }
