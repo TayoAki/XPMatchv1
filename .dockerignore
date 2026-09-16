@@ -6,6 +6,7 @@ node_modules
 tests
 test-results
 playwright-report
+demo
 .gitignore
 .env*
 !.env.example

@@ -1,0 +1,13 @@
+{
+  "duration": 120,
+  "width": 1440,
+  "height": 900,
+  "marks": [
+    { "key": "signup", "at": 0 },
+    { "key": "onboarding", "at": 8 },
+    { "key": "home", "at": 40 },
+    { "key": "chat", "at": 55 },
+    { "key": "board", "at": 80 },
+    { "key": "reservation", "at": 100 }
+  ]
+}

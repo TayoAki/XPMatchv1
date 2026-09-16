@@ -28,6 +28,12 @@
 /test-results/
 /playwright-report/
 
+# demo video project: dependencies, recordings and renders are regenerated
+/demo/node_modules/
+/demo/capture/
+/demo/public/
+/demo/out/
+
 # misc
 .DS_Store
 *.pem
