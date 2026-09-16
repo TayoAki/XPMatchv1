@@ -64,7 +64,7 @@ test("smart filters, heads-ups, comparison, remembered preferences and Explore p
     const panel = page.getByTestId("memory-panel");
     await expect(panel.getByText("Prefers boutique hotels over big chains")).toBeVisible();
     await panel.getByRole("button", { name: /Forget Prefers boutique/ }).click();
-    await page.getByRole("button", { name: "Cancel" }).click();
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
     await eventually(preferences, (r) => !r.preferences.some((p) => /boutique/i.test(p.statement)));
   });
 

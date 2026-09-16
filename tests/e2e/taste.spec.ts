@@ -60,7 +60,7 @@ test("taste: reactions on cards and the sheet, Your taste, model context, chat f
     const panel = page.getByTestId("taste-panel");
     await expect(panel).toContainText("Hotel Artemide");
     await expect(panel).toContainText("Quiet ×1");
-    await page.getByRole("button", { name: "Cancel" }).click();
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
   });
 
   await test.step("the assistant receives the taste profile on the next turn", async () => {
@@ -104,7 +104,7 @@ test("taste: reactions on cards and the sheet, Your taste, model context, chat f
     await expect(memory).toContainText("Avoids noisy stays", { timeout: 15_000 });
     await expect(memory).toContainText("from your feedback");
     await expect(page.getByTestId("taste-panel")).toContainText("Noisy ×2");
-    await page.getByRole("button", { name: "Cancel" }).click();
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
   });
 
   await test.step("a finished trip asks for ratings from Updates and ranks the places", async () => {

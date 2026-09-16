@@ -123,7 +123,8 @@ test("in-depth onboarding drives home picks with match scores and thumbs; itiner
     await expect(dialog.getByTestId("interest-chips").getByRole("button", { name: "Museums & art", exact: true })).toHaveAttribute("aria-pressed", "true");
     await expect(dialog.getByTestId("cuisine-chips").getByRole("button", { name: "Italian", exact: true })).toHaveAttribute("aria-pressed", "true");
     await expect(dialog.getByTestId("taste-panel")).toBeVisible();
-    await dialog.getByRole("button", { name: "Cancel" }).click();
+    // exact: the stays section's "Free cancellation" chip also contains "cancel".
+    await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
   });
 
   await test.step("a bug report with a screenshot is sent from the sidebar", async () => {
