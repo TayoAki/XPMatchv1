@@ -59,7 +59,11 @@ export function Sidebar() {
 
       <nav className="mt-6 flex flex-col gap-0.5">
         {NAV.map((item) => {
-          const active = pathname === item.href || pathname.startsWith(`${item.href}/`) || (item.href === "/chats" && pathname === "/");
+          const active =
+            pathname === item.href ||
+            pathname.startsWith(`${item.href}/`) ||
+            (item.href === "/chats" && pathname === "/") ||
+            (item.href === "/inspiration" && pathname.startsWith("/guides"));
           const Icon = item.icon;
           const badge = item.badge === "chats" ? chats.length : item.badge === "updates" ? unread : 0;
           return (

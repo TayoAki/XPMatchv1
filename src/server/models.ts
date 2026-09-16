@@ -16,7 +16,7 @@ import { queryAll, queryOne, type Row } from "./db";
 
 /* ----------------------------- helpers ----------------------------- */
 
-const iso = (value: unknown): string => {
+export const iso = (value: unknown): string => {
   if (value instanceof Date) return value.toISOString();
   if (typeof value === "string") {
     const d = new Date(value);
@@ -31,7 +31,7 @@ const dateOnly = (value: unknown): string | undefined => {
   return String(value).slice(0, 10);
 };
 
-const jsonb = <T>(value: unknown): T | undefined => {
+export const jsonb = <T>(value: unknown): T | undefined => {
   if (value === null || value === undefined) return undefined;
   if (typeof value === "string") {
     try {
@@ -66,7 +66,7 @@ export async function saveProfile(userId: string, profile: TravelerProfile): Pro
 
 /* ------------------------------ saved ------------------------------ */
 
-interface SavedRow extends Row {
+export interface SavedRow extends Row {
   id: string;
   kind: string;
   ref_id: string | null;
@@ -78,7 +78,7 @@ interface SavedRow extends Row {
   created_at: unknown;
 }
 
-const mapSaved = (r: SavedRow): SavedItem => ({
+export const mapSaved = (r: SavedRow): SavedItem => ({
   id: r.id,
   kind: r.kind as SavedKind,
   title: r.title,

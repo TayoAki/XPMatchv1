@@ -7,6 +7,7 @@ import {
   DEFAULT_PLANNER,
   DEFAULT_PROFILE,
   type ChatSummary,
+  type Guide,
   type SavedItem,
   type SavedKind,
   type SessionUser,
@@ -239,6 +240,45 @@ export const travelActions = {
       .then((created) => set((s) => ({ saved: s.saved.map((x) => (x.id === tempId ? created : x)) })))
       .catch((err) => {
         report("saving an item", err);
+        set((s) => ({ saved: s.saved.filter((x) => x.id !== tempId) }));
+      });
+    return true;
+  },
+
+  isGuideSaved(guideId: string): boolean {
+    return readSnapshot().saved.some((s) => s.kind === "guide" && s.refId === guideId);
+  },
+
+  /** Saves or unsaves a community guide; returns true when the guide is now saved. */
+  toggleGuideSaved(guide: Guide): boolean {
+    const prev = readSnapshot();
+    const existing = prev.saved.find((s) => s.kind === "guide" && s.refId === guide.id);
+    const path = `/api/guides/${encodeURIComponent(guide.id)}/save`;
+    if (existing) {
+      set({ saved: prev.saved.filter((s) => s.id !== existing.id) });
+      api(path, { method: "DELETE" }).catch((err) => {
+        report("removing a saved guide", err);
+        set((s) => ({ saved: [existing, ...s.saved] }));
+      });
+      return false;
+    }
+    const tempId = `temp-${newId()}`;
+    const optimistic: SavedItem = {
+      id: tempId,
+      kind: "guide",
+      refId: guide.id,
+      title: guide.title,
+      subtitle: `${guide.destination} · by @${guide.authorHandle}`,
+      destination: guide.destination,
+      url: `/guides/${guide.id}`,
+      place: guide.place,
+      savedAt: new Date().toISOString(),
+    };
+    set({ saved: [optimistic, ...prev.saved] });
+    api<{ saved: SavedItem | null }>(path, { method: "POST", json: {} })
+      .then((res) => set((s) => ({ saved: s.saved.map((x) => (x.id === tempId ? res.saved ?? x : x)) })))
+      .catch((err) => {
+        report("saving a guide", err);
         set((s) => ({ saved: s.saved.filter((x) => x.id !== tempId) }));
       });
     return true;
