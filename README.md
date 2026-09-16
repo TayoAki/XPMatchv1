@@ -55,11 +55,16 @@ in development), and the app deploys to **Railway** with the included Dockerfile
 - **Mindtrip-style shell** — left navigation (Chats, Trips, Explore, Saved, Updates, Inspiration,
   Create), a Where / When / Who / Budget planner bar, "Create a trip", a welcome hero
   ("Where to today, Tayo?"), and a discovery panel with a proactive nudge, "Jump back in",
-  "For you in {city}" and "Get inspired".
+  "For you in {city}" and "Get inspired". Chats is one experience: a collapsible history rail
+  (search, delete, new chat) sits beside the active chat, with the map or discovery feed on the right.
 - **Personalized suggestion chips** — static chips before the first message, model-generated
   follow-ups after.
 - **Demo mode** — with no API key configured the app runs against an offline demo model so the
   whole UI can be explored; a banner makes this explicit.
+
+See `docs/USER_FLOWS.md` for every user flow screen by screen, `docs/COGS.md` for the unit-cost model
+(the Google Places calls behind the map, not the model, dominate cost), and `docs/PLAN.md` for the
+architecture and build plan.
 
 ## Getting started
 
