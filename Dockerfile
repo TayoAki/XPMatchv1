@@ -7,7 +7,8 @@ ENV NEXT_TELEMETRY_DISABLED=1 \
     COPILOTKIT_TELEMETRY_DISABLED=true
 
 FROM base AS deps
-COPY package.json package-lock.json ./
+# .npmrc carries legacy-peer-deps, which npm ci needs to accept the test tooling's peer ranges.
+COPY package.json package-lock.json .npmrc ./
 RUN npm ci
 
 FROM base AS build

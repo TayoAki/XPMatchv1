@@ -1,7 +1,11 @@
 node_modules
 .next
+.next-*
 .data
 .git
+tests
+test-results
+playwright-report
 .gitignore
 .env*
 !.env.example
