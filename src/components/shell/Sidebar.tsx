@@ -7,6 +7,7 @@ import clsx from "clsx";
 import {
   Bell,
   Briefcase,
+  ChevronDown,
   Compass,
   Heart,
   MessageCircle,
@@ -17,7 +18,9 @@ import {
   X,
 } from "lucide-react";
 import { useTravelStore, firstName } from "@/lib/store";
+import { useChatsExpanded } from "@/lib/ui-prefs";
 import { useUiState } from "@/components/providers/UiState";
+import { ChatNavList } from "./ChatNavList";
 
 const NAV = [
   { href: "/", label: "Chats", icon: MessageCircle, badge: "chats" as const },
@@ -42,6 +45,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const { chats, updates, profile, user, logout } = useTravelStore();
   const { openAssistant, startNewChat } = useUiState();
+  const [chatsExpanded, setChatsExpanded] = useChatsExpanded();
   const [promoDismissed, setPromoDismissed] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -57,7 +61,7 @@ export function Sidebar() {
         <span className="text-[22px] font-bold tracking-tight">xpmatch.</span>
       </Link>
 
-      <nav className="mt-6 flex flex-col gap-0.5">
+      <nav className="xp-scroll mt-6 flex min-h-0 flex-col gap-0.5 overflow-y-auto">
         {NAV.map((item) => {
           const active =
             pathname === item.href ||
@@ -65,23 +69,33 @@ export function Sidebar() {
             (item.href === "/inspiration" && pathname.startsWith("/guides"));
           const Icon = item.icon;
           const badge = item.badge === "chats" ? chats.length : item.badge === "updates" ? unread : 0;
+          const isChats = item.href === "/";
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={clsx(
-                "flex h-11 items-center gap-3 rounded-xl px-3 text-[15px] font-medium transition-colors hover:bg-surface",
-                active ? "text-foreground" : "text-neutral-800",
-              )}
-            >
-              <Icon className="h-5 w-5" strokeWidth={1.9} />
-              <span className="flex-1">{item.label}</span>
-              {badge > 0 ? (
-                <span className="rounded-full bg-surface px-2 py-0.5 text-xs font-semibold text-neutral-700">
-                  {badge}
-                </span>
-              ) : null}
-            </Link>
+            <div key={item.href}>
+              <div className={clsx("flex items-center rounded-xl transition-colors hover:bg-surface", isChats && chatsExpanded && "bg-surface/60")}>
+                <Link
+                  href={item.href}
+                  onClick={isChats ? () => setChatsExpanded(true) : undefined}
+                  className={clsx("flex h-11 min-w-0 flex-1 items-center gap-3 px-3 text-[15px] font-medium", active ? "text-foreground" : "text-neutral-800")}
+                >
+                  <Icon className="h-5 w-5 shrink-0" strokeWidth={1.9} />
+                  <span className="flex-1 truncate">{item.label}</span>
+                  {badge > 0 ? <span className="rounded-full bg-surface px-2 py-0.5 text-xs font-semibold text-neutral-700">{badge}</span> : null}
+                </Link>
+                {isChats ? (
+                  <button
+                    type="button"
+                    onClick={() => setChatsExpanded(!chatsExpanded)}
+                    aria-label={chatsExpanded ? "Collapse chats" : "Expand chats"}
+                    aria-expanded={chatsExpanded}
+                    className="mr-1 rounded-full p-1.5 text-neutral-500 hover:bg-white hover:text-foreground"
+                  >
+                    <ChevronDown className={clsx("h-4 w-4 transition-transform", chatsExpanded && "rotate-180")} />
+                  </button>
+                ) : null}
+              </div>
+              {isChats && chatsExpanded ? <ChatNavList /> : null}
+            </div>
           );
         })}
       </nav>
@@ -89,7 +103,7 @@ export function Sidebar() {
       <button
         type="button"
         onClick={startNewChat}
-        className="mt-5 h-11 w-full rounded-full bg-surface text-[15px] font-medium text-foreground transition-colors hover:bg-surface-2"
+        className="mt-5 h-11 w-full shrink-0 rounded-full bg-surface text-[15px] font-medium text-foreground transition-colors hover:bg-surface-2"
       >
         New chat
       </button>
