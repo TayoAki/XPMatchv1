@@ -6,19 +6,43 @@ import type { ShowDestinationsArgs, Streaming } from "@/lib/travel/schemas";
 import { googleMapsSearchUrl } from "@/lib/travel/links";
 import { PlaceImage } from "@/components/ui/PlaceImage";
 import { useSendMessage } from "@/components/chat/useSendMessage";
-import { ActionButton, Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Tag, Text, usd } from "./shared";
+import { usePlacePin, useRegisterPlaces } from "@/components/map/useRegisterPlaces";
+import { ActionButton, Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Tag, Text, ViewOnMapButton, usd } from "./shared";
 
-export function DestinationCards({ args, status }: { args: Streaming<ShowDestinationsArgs>; status: ToolCallStatus }) {
-  const send = useSendMessage();
+export function DestinationCards({ args, status, toolCallId }: { args: Streaming<ShowDestinationsArgs>; status: ToolCallStatus; toolCallId: string }) {
   const items = (args.destinations ?? []).filter((d) => d && d.name);
+  useRegisterPlaces({
+    toolCallId,
+    status,
+    kind: "destination",
+    items: items.map((d) => ({ name: d.name, hint: d.country })),
+  });
   return (
     <div>
       <SectionHeader title={args.title || "Destinations for you"} status={status} />
       <CardGrid>
-        {items.map((d, i) => {
-          const label = [d.name, d.country].filter(Boolean).join(", ");
-          return (
-            <CardShell key={`${d.name}-${i}`}>
+        {items.map((d, i) => (
+          <DestinationCard key={`${d.name}-${i}`} destination={d} index={i} toolCallId={toolCallId} />
+        ))}
+      </CardGrid>
+    </div>
+  );
+}
+
+function DestinationCard({
+  destination: d,
+  index,
+  toolCallId,
+}: {
+  destination: Streaming<ShowDestinationsArgs>["destinations"] extends (infer U)[] | undefined ? U : never;
+  index: number;
+  toolCallId: string;
+}) {
+  const send = useSendMessage();
+  const pin = usePlacePin(toolCallId, index);
+  const label = [d.name, d.country].filter(Boolean).join(", ");
+  return (
+            <CardShell highlighted={pin.isSelected} onMouseEnter={() => pin.hover(true)} onMouseLeave={() => pin.hover(false)}>
               <PlaceImage queries={[d.name ?? "", label]} alt={label} className="aspect-[16/10]">
                 <SaveButton kind="destination" title={d.name} subtitle={d.country} destination={d.name} className="absolute right-2 top-2" />
                 <div className="absolute bottom-2 left-3 right-3 text-white drop-shadow">
@@ -50,16 +74,13 @@ export function DestinationCards({ args, status }: { args: Streaming<ShowDestina
               </Body>
               <Footer>
                 <ActionButton onClick={() => send(`Plan a trip to ${label} for me.`)}>Plan a trip</ActionButton>
-                {d.name ? (
+                <ViewOnMapButton pin={pin} />
+                {d.name && !pin.place ? (
                   <ExtLink href={googleMapsSearchUrl(label)}>
                     <MapPin className="h-3.5 w-3.5" /> Map
                   </ExtLink>
                 ) : null}
               </Footer>
             </CardShell>
-          );
-        })}
-      </CardGrid>
-    </div>
   );
 }

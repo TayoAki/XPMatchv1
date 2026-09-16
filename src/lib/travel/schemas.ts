@@ -130,6 +130,14 @@ export const updateTravelerProfileSchema = z.object({
   notes: z.string().optional().describe("Anything else worth remembering"),
 });
 
+export const focusMapSchema = z.object({
+  location: z
+    .string()
+    .describe("Canonical destination with region/country as it appears on Google Maps, e.g. 'Rome, Italy' (fix typos: 'roam' → 'Rome, Italy')"),
+  reason: z.string().optional().describe("Short note on why the map moved, e.g. 'traveler wants to visit'"),
+});
+
+export type FocusMapArgs = z.infer<typeof focusMapSchema>;
 export type Destination = z.infer<typeof destinationSchema>;
 export type ShowDestinationsArgs = z.infer<typeof showDestinationsSchema>;
 export type Hotel = z.infer<typeof hotelSchema>;

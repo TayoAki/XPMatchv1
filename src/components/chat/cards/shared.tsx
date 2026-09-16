@@ -1,8 +1,8 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 import clsx from "clsx";
-import { ExternalLink, Heart } from "lucide-react";
+import { ExternalLink, Heart, MapPin } from "lucide-react";
 import { ToolCallStatus } from "@copilotkit/core";
 import { useTravelStore, type SavedKind } from "@/lib/store";
 
@@ -10,16 +10,37 @@ export function CardGrid({ children, className }: { children: ReactNode; classNa
   return <div className={clsx("mt-2 grid gap-3 sm:grid-cols-2", className)}>{children}</div>;
 }
 
-export function CardShell({ children, className }: { children: ReactNode; className?: string }) {
+export function CardShell({
+  children,
+  className,
+  highlighted,
+  ...rest
+}: { children: ReactNode; className?: string; highlighted?: boolean } & HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       className={clsx(
-        "flex flex-col overflow-hidden rounded-2xl border border-border bg-white text-[14px] leading-snug shadow-sm",
+        "flex flex-col overflow-hidden rounded-2xl border bg-white text-[14px] leading-snug shadow-sm transition-shadow",
+        highlighted ? "border-neutral-900 shadow-md" : "border-border",
         className,
       )}
+      {...rest}
     >
       {children}
     </div>
+  );
+}
+
+/** Opens the place sheet on the map when the card's pin has been resolved. */
+export function ViewOnMapButton({ pin }: { pin: { place?: unknown; open: () => void } }) {
+  if (!pin.place) return null;
+  return (
+    <button
+      type="button"
+      onClick={pin.open}
+      className="inline-flex h-8 items-center gap-1.5 rounded-full bg-surface px-3 text-[13px] font-medium transition-colors hover:bg-surface-2"
+    >
+      <MapPin className="h-3.5 w-3.5" /> View on map
+    </button>
   );
 }
 

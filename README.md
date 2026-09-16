@@ -23,6 +23,12 @@ default model through the AI SDK.
 - **Human-in-the-loop trips** — `create_trip` proposes a day-by-day itinerary the traveler confirms
   in chat; confirmed trips land on the Trips page.
 - **Save anything** — heart any card; saved items feed back into the agent's context.
+- **Live map with pinned recommendations** — as soon as the chat is about a place (the model calls
+  `focus_map`, fixing typos like "roam" → Rome), the right panel becomes a Google Map centered on
+  it. Every hotel, restaurant and attraction card is resolved through the Places API and pinned;
+  clicking a marker or "View on map" opens a place sheet with photos, rating, Google reviews,
+  hours, Save and Add to trip. A weather chip, search-and-pin and a satellite toggle round it out.
+  Without Google keys the panel degrades to estimated pins from a small gazetteer.
 - **Live grounding tools (server-side)** — weather outlook (Open-Meteo) and destination facts
   (Wikipedia), both keyless.
 - **Mindtrip-style shell** — left navigation (Chats, Trips, Explore, Saved, Updates, Inspiration,
@@ -51,9 +57,26 @@ Without a key the app starts in demo mode. Model selection lives in `src/server/
 | `COPILOT_MODEL` | Force a `provider/model` (any model the AI SDK knows) or `demo`. |
 | `COPILOT_EFFORT` | Claude effort level for 4.6+/5 models (`low` … `max`, default `medium`). |
 | `NEXT_PUBLIC_COPILOTKIT_INSPECTOR` | `true` shows the CopilotKit dev inspector. |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Browser key for the Maps JavaScript API (restrict to your referrers). |
+| `GOOGLE_MAPS_API_KEY` | Server key for the Places API (New): geocoding, ratings, photos, reviews. |
+| `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID` | Optional Map ID for custom styling; defaults to `DEMO_MAP_ID`. |
 
 Note: CopilotKit generates follow-up suggestions with a forced tool call, which Claude Fable 5.1
 rejects; keep `COPILOT_MODEL` on the Opus/Sonnet families.
+
+### Google Maps setup
+
+1. In Google Cloud, enable **Maps JavaScript API** and **Places API (New)** on the project.
+2. Create two keys: a browser key (`NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`) restricted to your HTTP
+   referrers and to the Maps JavaScript API, and a server key (`GOOGLE_MAPS_API_KEY`) restricted to
+   the Places API. The server key never reaches the browser: photos are served through the
+   `/api/places/photo` redirect and lookups go through `/api/places/resolve`.
+3. Optional: create a Map ID for custom styling and set `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID`
+   (advanced markers require a Map ID; the default `DEMO_MAP_ID` works for development).
+4. Set `PLACES_DEBUG=1` to log every place lookup the assistant triggers.
+
+Without the keys the map panel still appears, using estimated pins from a small built-in
+gazetteer, and says what is missing.
 
 ## How it is wired
 
@@ -70,7 +93,11 @@ src/components/chat/TravelCopilot.tsx        useAgentContext / useFrontendTool /
 src/components/chat/TravelChat.tsx           <CopilotChat> with the welcome hero and input slots
 src/components/chat/cards/*                  Destination, hotel, flight, restaurant, attraction,
                                              trip-proposal cards
+src/components/panel/RightPanel.tsx          Discovery feed ⇄ map switch
 src/components/panel/DiscoveryPanel.tsx      Right-hand discovery panel
+src/components/map/*                         Google Map panel, markers, place sheet, card ↔ pin hook
+src/lib/map-store.ts                         Per-thread map state (focus, pins, selection)
+src/server/places.ts + src/app/api/places/*  Places API (New) resolution, details, photo proxy
 src/components/shell/*                       Sidebar, top bar, app shell
 ```
 

@@ -5,19 +5,46 @@ import { ToolCallStatus } from "@copilotkit/core";
 import type { ShowRestaurantsArgs, Streaming } from "@/lib/travel/schemas";
 import { googleMapsSearchUrl, openTableSearchUrl } from "@/lib/travel/links";
 import { PlaceImage } from "@/components/ui/PlaceImage";
-import { Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Tag, Text } from "./shared";
+import { usePlacePin, useRegisterPlaces } from "@/components/map/useRegisterPlaces";
+import { Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Tag, Text, ViewOnMapButton } from "./shared";
 
-export function RestaurantCards({ args, status }: { args: Streaming<ShowRestaurantsArgs>; status: ToolCallStatus }) {
+export function RestaurantCards({ args, status, toolCallId }: { args: Streaming<ShowRestaurantsArgs>; status: ToolCallStatus; toolCallId: string }) {
   const items = (args.restaurants ?? []).filter((r) => r && r.name);
   const dest = args.destination ?? "";
+  useRegisterPlaces({
+    toolCallId,
+    status,
+    kind: "restaurant",
+    destination: dest,
+    items: items.map((r) => ({ name: r.name, hint: r.neighborhood })),
+  });
   return (
     <div>
       <SectionHeader title={dest ? `Where to eat in ${dest}` : "Where to eat"} status={status} />
       <CardGrid>
-        {items.map((r, i) => {
-          const query = `${r.name} ${dest}`.trim();
-          return (
-            <CardShell key={`${r.name}-${i}`}>
+        {items.map((r, i) => (
+          <RestaurantCard key={`${r.name}-${i}`} restaurant={r} index={i} dest={dest} toolCallId={toolCallId} />
+        ))}
+      </CardGrid>
+    </div>
+  );
+}
+
+function RestaurantCard({
+  restaurant: r,
+  index,
+  dest,
+  toolCallId,
+}: {
+  restaurant: Streaming<ShowRestaurantsArgs>["restaurants"] extends (infer U)[] | undefined ? U : never;
+  index: number;
+  dest: string;
+  toolCallId: string;
+}) {
+  const pin = usePlacePin(toolCallId, index);
+  const query = `${r.name} ${dest}`.trim();
+  return (
+            <CardShell highlighted={pin.isSelected} onMouseEnter={() => pin.hover(true)} onMouseLeave={() => pin.hover(false)}>
               <div className="flex gap-3 p-3">
                 <PlaceImage queries={[r.neighborhood ? `${r.neighborhood}, ${dest}` : "", dest]} alt={r.name ?? "Restaurant"} className="h-24 w-24 shrink-0 rounded-xl" />
                 <div className="min-w-0 flex-1">
@@ -49,11 +76,8 @@ export function RestaurantCards({ args, status }: { args: Streaming<ShowRestaura
                   <MapPin className="h-3.5 w-3.5" /> Map & hours
                 </ExtLink>
                 {r.reservationRecommended ? <ExtLink href={openTableSearchUrl(query)}>Reserve</ExtLink> : null}
+                <ViewOnMapButton pin={pin} />
               </Footer>
             </CardShell>
-          );
-        })}
-      </CardGrid>
-    </div>
   );
 }

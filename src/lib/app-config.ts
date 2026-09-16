@@ -5,9 +5,10 @@ import { useEffect, useState } from "react";
 export interface AppConfig {
   mode: "live" | "demo";
   model: string;
+  places?: "google" | "fallback";
 }
 
-const FALLBACK: AppConfig = { mode: "live", model: "unknown" };
+const FALLBACK: AppConfig = { mode: "live", model: "unknown", places: "fallback" };
 
 let cached: Promise<AppConfig> | null = null;
 

@@ -6,6 +6,7 @@ import { CopilotChat, UseAgentUpdate, useAgent, useCopilotKit } from "@copilotki
 import type { Message } from "@ag-ui/core";
 import { AlertTriangle } from "lucide-react";
 import { newId, useTravelStore } from "@/lib/store";
+import { mapActions } from "@/lib/map-store";
 import { useAppConfig } from "@/lib/app-config";
 import { useUiState } from "@/components/providers/UiState";
 import { WelcomeHero } from "@/components/chat/WelcomeHero";
@@ -23,7 +24,7 @@ function messageText(m: Message): string {
 }
 
 export function TravelChat({ threadId, initialPrompt }: { threadId?: string; initialPrompt?: string }) {
-  const { upsertChat } = useTravelStore();
+  const { chats, upsertChat } = useTravelStore();
   const { openAssistant, openPlanner } = useUiState();
   const { copilotkit } = useCopilotKit();
   const { agent, isReady } = useAgent({ updates: [UseAgentUpdate.OnMessagesChanged, UseAgentUpdate.OnRunStatusChanged] });
@@ -31,15 +32,27 @@ export function TravelChat({ threadId, initialPrompt }: { threadId?: string; ini
   const router = useRouter();
   const sentRef = useRef(false);
 
-  // Keep the local chat list in sync: first user message becomes the title.
+  // Tell the map panel which thread is on screen.
+  const activeThreadId = agent.threadId;
+  useEffect(() => {
+    mapActions.setActiveThread(activeThreadId ?? null);
+    return () => mapActions.setActiveThread(null);
+  }, [activeThreadId]);
+
+  // Keep the local chat list in sync. The first user message names a new chat;
+  // later renames (e.g. "Exploring Rome" from the map) are preserved.
   const messageCount = agent.messages.length;
+  const knownChat = chats.some((c) => c.id === agent.threadId);
   useEffect(() => {
     if (!agent.threadId || messageCount === 0) return;
     const firstUser = agent.messages.find((m) => m.role === "user");
     if (!firstUser) return;
-    const title = messageText(firstUser).slice(0, 70) || "New chat";
-    upsertChat({ id: agent.threadId, title });
-  }, [agent, agent.threadId, messageCount, upsertChat]);
+    if (knownChat) {
+      upsertChat({ id: agent.threadId });
+      return;
+    }
+    upsertChat({ id: agent.threadId, title: messageText(firstUser).slice(0, 70) || "New chat" });
+  }, [agent, agent.threadId, messageCount, knownChat, upsertChat]);
 
   // A prompt carried over from another page is sent once the chat is ready.
   useEffect(() => {

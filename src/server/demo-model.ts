@@ -4,6 +4,7 @@ import type {
   LanguageModelV3StreamPart,
 } from "@ai-sdk/provider";
 import { MockLanguageModelV3, simulateReadableStream } from "ai/test";
+import { fuzzyCity } from "@/lib/places/gazetteer";
 
 /**
  * Offline demo model. It speaks the same tool protocol as a real model so the
@@ -11,7 +12,7 @@ import { MockLanguageModelV3, simulateReadableStream } from "ai/test";
  * works without an API key. Responses are canned and clearly labeled as demo.
  */
 
-type Scenario = "destinations" | "hotels" | "flights" | "restaurants" | "attractions" | "trip";
+type Scenario = "destinations" | "hotels" | "flights" | "restaurants" | "attractions" | "trip" | "focus";
 
 const USAGE = {
   inputTokens: { total: 0, noCache: 0, cacheRead: 0, cacheWrite: 0 },
@@ -71,11 +72,29 @@ const STOP_WORDS = new Set([
   "things",
 ]);
 
+const titleCase = (s: string) => s.replace(/\b\w/g, (c) => c.toUpperCase());
+
+const TRAVEL_VERBS = new Set(["visit", "visiting", "go", "going", "travel", "traveling", "travelling", "explore", "exploring", "see", "seeing", "about", "want", "like"]);
+
 function extractDestination(text: string): string | null {
   const m = text.match(/\b(?:to|in|for|around|near|visit(?:ing)?|about)\s+([A-Z][\w'.-]*(?:\s+[A-Z][\w'.-]*){0,2})/);
   if (m) {
     const words = m[1].split(/\s+/).filter((w) => !STOP_WORDS.has(w.toLowerCase()));
     if (words.length) return words.join(" ").replace(/[.,!?]+$/, "");
+  }
+  // Lowercase / misspelled place after a travel verb ("i want to visit roam") → nearest known city.
+  const loose = text.match(/\b(?:to|in|visit(?:ing)?|about|explore|exploring|towards?)\s+([a-z][\w'.-]*(?:\s+[a-z][\w'.-]*){0,2})/i);
+  if (loose) {
+    const words = loose[1]
+      .split(/\s+/)
+      .map((w) => w.replace(/[.,!?]+$/, ""))
+      .filter((w) => w && !STOP_WORDS.has(w.toLowerCase()) && !TRAVEL_VERBS.has(w.toLowerCase()));
+    for (const w of words) {
+      const city = fuzzyCity(w);
+      if (city) return city.name;
+    }
+    const candidate = words.join(" ");
+    if (candidate) return fuzzyCity(candidate)?.name ?? titleCase(candidate);
   }
   const caps = text.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b/g);
   if (caps) {
@@ -89,6 +108,8 @@ function pickScenario(text: string): Scenario {
   const t = text.toLowerCase();
   // An explicit request to plan wins over incidental keywords ("food", "hotels") inside it.
   if (/\b(plan|itinerary)\b/.test(t)) return "trip";
+  // "I want to visit roam" → just put the place on the map and ask what to do next.
+  if (/\b(visit|going to|headed to|heading to|explore|exploring|thinking about|thinking of)\b/.test(t) && !/\b(hotels?|flights?|restaurants?|things to do|attractions?)\b/.test(t)) return "focus";
   if (/\b(hotels?|stays?|accommodations?|where to sleep|airbnb|resorts?|lodging)\b/.test(t)) return "hotels";
   if (/\b(flights?|fly|airfares?|planes?)\b/.test(t)) return "flights";
   if (/\b(restaurants?|eat|food|dinner|lunch|brunch|tacos?|coffee|bars?)\b/.test(t)) return "restaurants";
@@ -98,6 +119,10 @@ function pickScenario(text: string): Scenario {
 }
 
 const cannedArgs: Record<Scenario, (dest: string, origin: string) => unknown> = {
+  focus: (dest) => {
+    const city = fuzzyCity(dest);
+    return { location: city ? `${city.name}, ${city.country}` : dest, reason: "traveler wants to visit" };
+  },
   destinations: () => ({
     title: "Demo picks that match your style",
     destinations: [
@@ -313,6 +338,7 @@ const cannedArgs: Record<Scenario, (dest: string, origin: string) => unknown> = 
 };
 
 const intro: Record<Scenario, (dest: string) => string> = {
+  focus: (d) => `${d} it is. I can start with where to stay, what to do, or a full plan — which would you like first?\n\n`,
   destinations: () => "Demo mode: here are a few destinations that match a food-and-culture traveler.\n\n",
   hotels: (d) => `Demo mode: three places to stay in ${d} across a couple of price points.\n\n`,
   flights: (d) => `Demo mode: two sensible flight options to ${d}. Check live fares with the links.\n\n`,
@@ -385,7 +411,7 @@ export function createDemoTravelModel(): LanguageModelV3 {
         chunks = textOnlyStream(followUps[Math.floor(Math.random() * followUps.length)]);
       } else {
         const scenario = pickScenario(userText);
-        const toolName = scenario === "trip" ? "create_trip" : `show_${scenario}`;
+        const toolName = scenario === "trip" ? "create_trip" : scenario === "focus" ? "focus_map" : `show_${scenario}`;
         if (toolNames.has(toolName)) {
           chunks = toolCallStream(intro[scenario](dest), toolName, cannedArgs[scenario](dest, "ATL"));
         } else {

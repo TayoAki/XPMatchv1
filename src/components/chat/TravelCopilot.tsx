@@ -1,12 +1,15 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAgentContext, useConfigureSuggestions, useFrontendTool, useHumanInTheLoop } from "@copilotkit/react-core/v2";
 import type { ToolCallStatus } from "@copilotkit/core";
 import { travelActions, useTravelStore, type TravelerProfile, type Trip, type TripPlanner } from "@/lib/store";
 import { useAppConfig } from "@/lib/app-config";
+import { mapActions, useMapView } from "@/lib/map-store";
+import { resolvePlaces } from "@/lib/places/client";
 import {
   createTripSchema,
+  focusMapSchema,
   showAttractionsSchema,
   showDestinationsSchema,
   showFlightsSchema,
@@ -14,6 +17,7 @@ import {
   showRestaurantsSchema,
   updateTravelerProfileSchema,
   type CreateTripArgs,
+  type FocusMapArgs,
   type ShowAttractionsArgs,
   type ShowDestinationsArgs,
   type ShowFlightsArgs,
@@ -29,27 +33,31 @@ import { RestaurantCards } from "@/components/chat/cards/RestaurantCards";
 import { AttractionCards } from "@/components/chat/cards/AttractionCards";
 import { TripProposalCard } from "@/components/chat/cards/TripProposalCard";
 import { ProfileUpdatedChip } from "@/components/chat/cards/ProfileUpdatedChip";
+import { FocusCallout } from "@/components/chat/cards/FocusCallout";
 
-type RenderProps<T> = { args: Partial<T> | T; status: ToolCallStatus; result?: string };
+type RenderProps<T> = { args: Partial<T> | T; status: ToolCallStatus; result?: string; toolCallId: string };
 
 const CARDS_DONE =
   "Cards are now displayed to the traveler. Do not repeat their contents; add at most two short sentences of guidance or a natural next step.";
 
 // Stable renderer components (defined once so React keeps card state across re-renders).
-const DestinationsRenderer = ({ args, status }: RenderProps<ShowDestinationsArgs>) => (
-  <DestinationCards args={args as Streaming<ShowDestinationsArgs>} status={status} />
+const DestinationsRenderer = ({ args, status, toolCallId }: RenderProps<ShowDestinationsArgs>) => (
+  <DestinationCards args={args as Streaming<ShowDestinationsArgs>} status={status} toolCallId={toolCallId} />
 );
-const HotelsRenderer = ({ args, status }: RenderProps<ShowHotelsArgs>) => (
-  <HotelCards args={args as Streaming<ShowHotelsArgs>} status={status} />
+const HotelsRenderer = ({ args, status, toolCallId }: RenderProps<ShowHotelsArgs>) => (
+  <HotelCards args={args as Streaming<ShowHotelsArgs>} status={status} toolCallId={toolCallId} />
 );
 const FlightsRenderer = ({ args, status }: RenderProps<ShowFlightsArgs>) => (
   <FlightCards args={args as Streaming<ShowFlightsArgs>} status={status} />
 );
-const RestaurantsRenderer = ({ args, status }: RenderProps<ShowRestaurantsArgs>) => (
-  <RestaurantCards args={args as Streaming<ShowRestaurantsArgs>} status={status} />
+const RestaurantsRenderer = ({ args, status, toolCallId }: RenderProps<ShowRestaurantsArgs>) => (
+  <RestaurantCards args={args as Streaming<ShowRestaurantsArgs>} status={status} toolCallId={toolCallId} />
 );
-const AttractionsRenderer = ({ args, status }: RenderProps<ShowAttractionsArgs>) => (
-  <AttractionCards args={args as Streaming<ShowAttractionsArgs>} status={status} />
+const AttractionsRenderer = ({ args, status, toolCallId }: RenderProps<ShowAttractionsArgs>) => (
+  <AttractionCards args={args as Streaming<ShowAttractionsArgs>} status={status} toolCallId={toolCallId} />
+);
+const FocusRenderer = ({ args, status }: RenderProps<FocusMapArgs>) => (
+  <FocusCallout args={args as Streaming<FocusMapArgs>} status={status} />
 );
 const ProfileRenderer = ({ args, status }: RenderProps<UpdateTravelerProfileArgs>) => (
   <ProfileUpdatedChip args={args as Streaming<UpdateTravelerProfileArgs>} status={status} />
@@ -103,6 +111,16 @@ export function buildStaticSuggestions(profile: TravelerProfile, planner: TripPl
   ];
 }
 
+/** Trails `value` by `delayMs`; used to keep suggestion configs stable while a run is in flight. */
+function useDebounced<T>(value: T, delayMs: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(t);
+  }, [value, delayMs]);
+  return debounced;
+}
+
 /**
  * Registers everything the assistant knows and can do on the client:
  * traveler context, generative-UI tools, the human-in-the-loop trip flow and
@@ -112,6 +130,7 @@ export function TravelCopilot() {
   const { profile, planner, saved, trips } = useTravelStore();
   const config = useAppConfig();
   const demo = config?.mode === "demo";
+  const mapView = useMapView();
 
   useAgentContext({
     description: "Traveler profile: who the recommendations are for",
@@ -157,6 +176,14 @@ export function TravelCopilot() {
   });
 
   useAgentContext({
+    description: "Map panel: destination in focus and places already pinned (do not repeat pinned places unless asked)",
+    value: {
+      focus: mapView.focus ? { name: mapView.focus.name, locality: mapView.focus.locality ?? "" } : "none",
+      pinned: mapView.placeList.slice(0, 25).map((p) => ({ name: p.name, kind: p.kind })),
+    },
+  });
+
+  useAgentContext({
     description: "Current date and timezone for the traveler",
     value: {
       date: new Date().toISOString().slice(0, 10),
@@ -164,6 +191,33 @@ export function TravelCopilot() {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     },
   });
+
+  useFrontendTool(
+    {
+      name: "focus_map",
+      description:
+        "Center the live map on the destination the traveler is talking about. Call it as soon as a place is clear (correct typos, e.g. 'roam' → 'Rome, Italy') and again whenever the destination changes. Use 'City, Country' as it appears on Google Maps.",
+      parameters: focusMapSchema,
+      followUp: true,
+      handler: async ({ location }) => {
+        const threadId = mapActions.activeThreadId();
+        // Resolve in the background so the tool result is appended right away; the map, chat title
+        // and planner update as soon as the lookup returns.
+        void resolvePlaces({ items: [{ key: "focus", query: location, kind: "destination" }] }).then((res) => {
+          const place = res?.items[0]?.place ?? null;
+          if (!place) return;
+          if (threadId) {
+            mapActions.setFocus(threadId, place);
+            travelActions.upsertChat({ id: threadId, title: `Exploring ${place.name}` });
+          }
+          if (travelActions.getPlanner().where !== place.name) travelActions.updatePlanner({ where: place.name });
+        });
+        return `Centering the map on ${location}. Recommendations you show will be pinned there. Continue.`;
+      },
+      render: FocusRenderer,
+    },
+    [],
+  );
 
   useFrontendTool(
     {
@@ -261,7 +315,11 @@ export function TravelCopilot() {
     [],
   );
 
-  const staticSuggestions = useMemo(() => buildStaticSuggestions(profile, planner, trips), [profile, planner, trips]);
+  const debouncedPlanner = useDebounced(planner, 1500);
+  const staticSuggestions = useMemo(
+    () => buildStaticSuggestions(profile, debouncedPlanner, trips),
+    [profile, debouncedPlanner, trips],
+  );
 
   useConfigureSuggestions(
     {

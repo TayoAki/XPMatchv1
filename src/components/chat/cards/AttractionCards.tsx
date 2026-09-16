@@ -5,19 +5,46 @@ import { ToolCallStatus } from "@copilotkit/core";
 import type { ShowAttractionsArgs, Streaming } from "@/lib/travel/schemas";
 import { getYourGuideSearchUrl, googleMapsSearchUrl } from "@/lib/travel/links";
 import { PlaceImage } from "@/components/ui/PlaceImage";
-import { Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Tag, Text } from "./shared";
+import { usePlacePin, useRegisterPlaces } from "@/components/map/useRegisterPlaces";
+import { Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Tag, Text, ViewOnMapButton } from "./shared";
 
-export function AttractionCards({ args, status }: { args: Streaming<ShowAttractionsArgs>; status: ToolCallStatus }) {
+export function AttractionCards({ args, status, toolCallId }: { args: Streaming<ShowAttractionsArgs>; status: ToolCallStatus; toolCallId: string }) {
   const items = (args.attractions ?? []).filter((a) => a && a.name);
   const dest = args.destination ?? "";
+  useRegisterPlaces({
+    toolCallId,
+    status,
+    kind: "attraction",
+    destination: dest,
+    items: items.map((a) => ({ name: a.name, hint: a.neighborhood })),
+  });
   return (
     <div>
       <SectionHeader title={dest ? `Things to do in ${dest}` : "Things to do"} status={status} />
       <CardGrid>
-        {items.map((a, i) => {
-          const query = `${a.name} ${dest}`.trim();
-          return (
-            <CardShell key={`${a.name}-${i}`}>
+        {items.map((a, i) => (
+          <AttractionCard key={`${a.name}-${i}`} attraction={a} index={i} dest={dest} toolCallId={toolCallId} />
+        ))}
+      </CardGrid>
+    </div>
+  );
+}
+
+function AttractionCard({
+  attraction: a,
+  index,
+  dest,
+  toolCallId,
+}: {
+  attraction: Streaming<ShowAttractionsArgs>["attractions"] extends (infer U)[] | undefined ? U : never;
+  index: number;
+  dest: string;
+  toolCallId: string;
+}) {
+  const pin = usePlacePin(toolCallId, index);
+  const query = `${a.name} ${dest}`.trim();
+  return (
+            <CardShell highlighted={pin.isSelected} onMouseEnter={() => pin.hover(true)} onMouseLeave={() => pin.hover(false)}>
               <PlaceImage queries={[a.name ?? "", dest]} alt={a.name ?? "Attraction"} className="aspect-[16/9]">
                 <SaveButton kind="attraction" title={a.name} subtitle={[a.category, dest].filter(Boolean).join(" · ")} destination={dest} url={googleMapsSearchUrl(query)} className="absolute right-2 top-2" />
                 {a.category ? <span className="absolute left-3 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[12px] font-semibold">{a.category}</span> : null}
@@ -50,11 +77,8 @@ export function AttractionCards({ args, status }: { args: Streaming<ShowAttracti
                   <MapPin className="h-3.5 w-3.5" /> Map
                 </ExtLink>
                 <ExtLink href={getYourGuideSearchUrl(query)}>Tickets & tours</ExtLink>
+                <ViewOnMapButton pin={pin} />
               </Footer>
             </CardShell>
-          );
-        })}
-      </CardGrid>
-    </div>
   );
 }

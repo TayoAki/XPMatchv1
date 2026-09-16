@@ -1,7 +1,7 @@
 "use client";
 
 import { TravelChat } from "@/components/chat/TravelChat";
-import { DiscoveryPanel } from "@/components/panel/DiscoveryPanel";
+import { RightPanel } from "@/components/panel/RightPanel";
 import { useUiState } from "@/components/providers/UiState";
 
 export function HomeClient({ threadId, initialPrompt }: { threadId?: string; initialPrompt?: string }) {
@@ -13,7 +13,7 @@ export function HomeClient({ threadId, initialPrompt }: { threadId?: string; ini
         <TravelChat key={chatKey} threadId={threadId} initialPrompt={initialPrompt} />
       </section>
       <aside className="hidden w-[44%] min-w-[420px] max-w-[900px] shrink-0 border-l border-border/60 bg-white xl:block">
-        <DiscoveryPanel />
+        <RightPanel />
       </aside>
     </div>
   );

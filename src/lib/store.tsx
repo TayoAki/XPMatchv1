@@ -204,6 +204,9 @@ function withUpdate(prev: TravelStoreState, update: Omit<UpdateItem, "id" | "at"
 const sameTitle = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
 
 export const travelActions = {
+  getPlanner(): TripPlanner {
+    return readSnapshot().planner;
+  },
   updateProfile(patch: Partial<TravelerProfile>) {
     commit((prev) => ({
       ...prev,

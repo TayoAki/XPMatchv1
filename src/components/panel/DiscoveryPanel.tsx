@@ -27,7 +27,7 @@ function relativeTripPhrase(trip: Trip): string {
   return `${trip.destination} in ${start.toLocaleDateString("en-US", { month: "long" })}`;
 }
 
-export function DiscoveryPanel() {
+export function DiscoveryPanel({ showMapButton = false, onShowMap }: { showMapButton?: boolean; onShowMap?: () => void }) {
   const { profile, planner, trips, chats, saved, proactiveDismissedAt, dismissProactive } = useTravelStore();
   const { openAssistant } = useUiState();
   const send = useSendMessage();
@@ -87,7 +87,18 @@ export function DiscoveryPanel() {
   }, [homeCity, profile.travelStyles]);
 
   return (
-    <div className="xp-scroll h-full overflow-y-auto px-6 py-4">
+    <div className="xp-scroll relative h-full overflow-y-auto px-6 py-4">
+      {showMapButton ? (
+        <div className="mb-4 flex justify-end">
+          <button
+            type="button"
+            onClick={onShowMap}
+            className="inline-flex h-9 items-center gap-2 rounded-full bg-neutral-900 px-4 text-[13px] font-semibold text-white shadow hover:bg-neutral-800"
+          >
+            <Map className="h-4 w-4" /> Show map
+          </button>
+        </div>
+      ) : null}
       {showProactive ? (
         <div className="relative rounded-3xl bg-surface p-5">
           <button type="button" onClick={dismissProactive} aria-label="Dismiss" className="absolute right-4 top-4 rounded-full p-1 text-neutral-500 hover:bg-white">

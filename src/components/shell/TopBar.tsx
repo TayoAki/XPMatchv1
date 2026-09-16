@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import { ChevronDown, Luggage } from "lucide-react";
 import { useTravelStore, formatDateRange } from "@/lib/store";
+import { useMapView } from "@/lib/map-store";
 import { useUiState, type PlannerTab } from "@/components/providers/UiState";
 
 const BUDGET_LABEL: Record<string, string> = {
@@ -17,6 +18,9 @@ const BUDGET_LABEL: Record<string, string> = {
 export function TopBar() {
   const { planner, chats } = useTravelStore();
   const { openPlanner, startNewChat } = useUiState();
+  const { threadId } = useMapView();
+  const activeChat = chats.find((c) => c.id === threadId);
+  const chatLabel = activeChat ? (activeChat.title.length > 34 ? `${activeChat.title.slice(0, 34)}…` : activeChat.title) : "New chat";
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -47,12 +51,12 @@ export function TopBar() {
         <button
           type="button"
           onClick={() => setMenuOpen((v) => !v)}
-          className="flex items-center gap-1 rounded-lg px-2 py-1 text-[15px] font-semibold hover:bg-surface"
+          className="flex max-w-[320px] items-center gap-1 rounded-lg px-2 py-1 text-[15px] font-semibold hover:bg-surface"
           aria-haspopup="menu"
           aria-expanded={menuOpen}
         >
-          New chat
-          <ChevronDown className="h-4 w-4" />
+          <span className="truncate">{chatLabel}</span>
+          <ChevronDown className="h-4 w-4 shrink-0" />
         </button>
         {menuOpen ? (
           <div role="menu" className="absolute left-0 top-9 z-30 w-72 rounded-xl border border-border bg-white p-1 shadow-xl">

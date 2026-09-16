@@ -1,0 +1,322 @@
+import { findCity } from "@/lib/places/gazetteer";
+import type { LatLng, PlaceDetails, PlaceKind, PlaceReview, ResolvedPlace } from "@/lib/places/types";
+
+/**
+ * Server-side place resolution. Uses the Google Places API (New) when a key is
+ * configured and degrades to Open-Meteo geocoding / a small gazetteer so the
+ * map still works (with estimated pins) without one.
+ */
+
+const PLACES_BASE = "https://places.googleapis.com/v1";
+
+const SEARCH_FIELDS = [
+  "places.id",
+  "places.displayName",
+  "places.formattedAddress",
+  "places.addressComponents",
+  "places.location",
+  "places.viewport",
+  "places.rating",
+  "places.userRatingCount",
+  "places.primaryTypeDisplayName",
+  "places.photos.name",
+  "places.editorialSummary",
+  "places.googleMapsUri",
+  "places.websiteUri",
+  "places.priceLevel",
+].join(",");
+
+const DETAIL_FIELDS = [
+  "id",
+  "displayName",
+  "formattedAddress",
+  "addressComponents",
+  "location",
+  "viewport",
+  "rating",
+  "userRatingCount",
+  "primaryTypeDisplayName",
+  "photos.name",
+  "editorialSummary",
+  "googleMapsUri",
+  "websiteUri",
+  "priceLevel",
+  "regularOpeningHours.weekdayDescriptions",
+  "internationalPhoneNumber",
+  "reviews",
+].join(",");
+
+interface GooglePlace {
+  id: string;
+  displayName?: { text?: string };
+  formattedAddress?: string;
+  addressComponents?: { longText?: string; shortText?: string; types?: string[] }[];
+  location?: { latitude: number; longitude: number };
+  viewport?: { low: { latitude: number; longitude: number }; high: { latitude: number; longitude: number } };
+  rating?: number;
+  userRatingCount?: number;
+  primaryTypeDisplayName?: { text?: string };
+  photos?: { name: string }[];
+  editorialSummary?: { text?: string };
+  googleMapsUri?: string;
+  websiteUri?: string;
+  priceLevel?: string;
+  regularOpeningHours?: { weekdayDescriptions?: string[] };
+  internationalPhoneNumber?: string;
+  reviews?: {
+    rating?: number;
+    relativePublishTimeDescription?: string;
+    text?: { text?: string };
+    originalText?: { text?: string };
+    authorAttribution?: { displayName?: string; photoUri?: string };
+  }[];
+}
+
+export function placesApiKey(): string | undefined {
+  return process.env.GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || undefined;
+}
+
+export function placesProvider(): "google" | "fallback" {
+  return placesApiKey() ? "google" : "fallback";
+}
+
+const PRICE_LEVEL: Record<string, string> = {
+  PRICE_LEVEL_FREE: "Free",
+  PRICE_LEVEL_INEXPENSIVE: "$",
+  PRICE_LEVEL_MODERATE: "$$",
+  PRICE_LEVEL_EXPENSIVE: "$$$",
+  PRICE_LEVEL_VERY_EXPENSIVE: "$$$$",
+};
+
+export function photoProxyUrl(photoName: string, width = 800): string {
+  return `/api/places/photo?name=${encodeURIComponent(photoName)}&w=${width}`;
+}
+
+function localityOf(place: GooglePlace): string | undefined {
+  const comps = place.addressComponents ?? [];
+  const pick = (...types: string[]) =>
+    comps.find((c) => c.types?.some((t) => types.includes(t)))?.longText;
+  const city = pick("locality", "postal_town", "administrative_area_level_3", "sublocality_level_1");
+  const region = pick("administrative_area_level_1");
+  const country = pick("country");
+  const parts = [city, region ?? country].filter((p, i, arr) => p && arr.indexOf(p) === i);
+  return parts.length ? parts.join(", ") : undefined;
+}
+
+function toResolved(place: GooglePlace, kind: PlaceKind): ResolvedPlace | null {
+  if (!place.location) return null;
+  return {
+    id: place.id,
+    name: place.displayName?.text ?? "Unknown place",
+    kind,
+    lat: place.location.latitude,
+    lng: place.location.longitude,
+    address: place.formattedAddress,
+    locality: localityOf(place),
+    category: place.primaryTypeDisplayName?.text,
+    rating: place.rating,
+    userRatingCount: place.userRatingCount,
+    priceLevel: place.priceLevel ? PRICE_LEVEL[place.priceLevel] ?? undefined : undefined,
+    summary: place.editorialSummary?.text,
+    photos: (place.photos ?? []).slice(0, 6).map((p) => photoProxyUrl(p.name)),
+    googleMapsUri: place.googleMapsUri,
+    websiteUri: place.websiteUri,
+    viewport: place.viewport
+      ? {
+          north: place.viewport.high.latitude,
+          east: place.viewport.high.longitude,
+          south: place.viewport.low.latitude,
+          west: place.viewport.low.longitude,
+        }
+      : undefined,
+    source: "google",
+  };
+}
+
+async function googleFetch<T>(url: string, init: RequestInit, fieldMask: string): Promise<T> {
+  const key = placesApiKey();
+  if (!key) throw new Error("No Google Places API key configured");
+  const res = await fetch(url, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      "X-Goog-Api-Key": key,
+      "X-Goog-FieldMask": fieldMask,
+      ...(init.headers ?? {}),
+    },
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Places API ${res.status}: ${body.slice(0, 200)}`);
+  }
+  return (await res.json()) as T;
+}
+
+/* ---------------------------- caching ---------------------------- */
+
+const searchCache = new Map<string, Promise<ResolvedPlace | null>>();
+const detailCache = new Map<string, Promise<PlaceDetails | null>>();
+const MAX_CACHE = 500;
+
+function remember<T>(cache: Map<string, Promise<T>>, key: string, make: () => Promise<T>): Promise<T> {
+  const hit = cache.get(key);
+  if (hit) return hit;
+  const p = make().catch((err) => {
+    cache.delete(key);
+    throw err;
+  });
+  if (cache.size >= MAX_CACHE) cache.delete(cache.keys().next().value as string);
+  cache.set(key, p);
+  return p;
+}
+
+/* ---------------------------- google ---------------------------- */
+
+async function googleTextSearch(query: string, kind: PlaceKind, bias?: LatLng): Promise<ResolvedPlace | null> {
+  const body: Record<string, unknown> = { textQuery: query, maxResultCount: 1, languageCode: "en" };
+  if (bias && kind !== "destination") {
+    body.locationBias = { circle: { center: { latitude: bias.lat, longitude: bias.lng }, radius: 40000 } };
+  }
+  const data = await googleFetch<{ places?: GooglePlace[] }>(
+    `${PLACES_BASE}/places:searchText`,
+    { method: "POST", body: JSON.stringify(body) },
+    SEARCH_FIELDS,
+  );
+  const first = data.places?.[0];
+  return first ? toResolved(first, kind) : null;
+}
+
+/* --------------------------- fallbacks --------------------------- */
+
+async function openMeteoGeocode(query: string): Promise<ResolvedPlace | null> {
+  try {
+    const res = await fetch(
+      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query.split(",")[0])}&count=1&language=en&format=json`,
+      { signal: AbortSignal.timeout(6000) },
+    );
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      results?: { name: string; latitude: number; longitude: number; country?: string; admin1?: string }[];
+    };
+    const hit = data.results?.[0];
+    if (!hit) return null;
+    return {
+      id: `est:${hit.name.toLowerCase().replace(/\s+/g, "-")}`,
+      name: hit.name,
+      kind: "destination",
+      lat: hit.latitude,
+      lng: hit.longitude,
+      locality: [hit.admin1, hit.country].filter(Boolean).join(", "),
+      photos: [],
+      source: "estimate",
+    };
+  } catch {
+    return null;
+  }
+}
+
+function gazetteerPlace(query: string): ResolvedPlace | null {
+  const city = findCity(query);
+  if (!city) return null;
+  return {
+    id: `est:${city.name.toLowerCase().replace(/\s+/g, "-")}`,
+    name: city.name,
+    kind: "destination",
+    lat: city.lat,
+    lng: city.lng,
+    locality: city.country,
+    photos: [],
+    source: "estimate",
+  };
+}
+
+/** Deterministic pseudo-random offset so estimated pins spread around the city center. */
+function jitter(seed: string, center: LatLng, kind: PlaceKind): LatLng {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619) >>> 0;
+  const a = ((h % 3600) / 3600) * Math.PI * 2;
+  const r = 0.006 + ((h >>> 8) % 1000) / 1000 * (kind === "attraction" ? 0.03 : 0.02);
+  return { lat: center.lat + Math.sin(a) * r, lng: center.lng + (Math.cos(a) * r) / Math.cos((center.lat * Math.PI) / 180) };
+}
+
+/* ----------------------------- api ------------------------------ */
+
+export async function resolveDestination(query: string): Promise<ResolvedPlace | null> {
+  const key = `dest|${query.trim().toLowerCase()}`;
+  return remember(searchCache, key, async () => {
+    if (placesApiKey()) {
+      try {
+        const hit = await googleTextSearch(query, "destination");
+        if (hit) return hit;
+      } catch (err) {
+        console.warn("[places] destination search failed, using fallback:", err instanceof Error ? err.message : err);
+      }
+    }
+    return (await openMeteoGeocode(query)) ?? gazetteerPlace(query);
+  });
+}
+
+export async function resolvePointOfInterest(
+  query: string,
+  kind: PlaceKind,
+  destination: ResolvedPlace | null,
+): Promise<ResolvedPlace | null> {
+  const key = `poi|${kind}|${query.trim().toLowerCase()}|${destination?.id ?? ""}`;
+  return remember(searchCache, key, async () => {
+    if (placesApiKey()) {
+      try {
+        const hit = await googleTextSearch(query, kind, destination ?? undefined);
+        if (hit) return hit;
+      } catch (err) {
+        console.warn("[places] search failed, using estimate:", err instanceof Error ? err.message : err);
+      }
+    }
+    if (!destination) return null;
+    const pos = jitter(query, destination, kind);
+    return {
+      id: `est:${kind}:${query.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+      name: query.split(",")[0].trim(),
+      kind,
+      lat: pos.lat,
+      lng: pos.lng,
+      locality: destination.name,
+      photos: [],
+      source: "estimate",
+    };
+  });
+}
+
+export async function getPlaceDetails(id: string): Promise<PlaceDetails | null> {
+  if (!placesApiKey() || id.startsWith("est:")) return null;
+  return remember(detailCache, id, async () => {
+    const place = await googleFetch<GooglePlace>(`${PLACES_BASE}/places/${encodeURIComponent(id)}`, { method: "GET" }, DETAIL_FIELDS);
+    const base = toResolved(place, "attraction");
+    if (!base) return null;
+    const reviews: PlaceReview[] = (place.reviews ?? []).slice(0, 5).map((r) => ({
+      author: r.authorAttribution?.displayName ?? "Google user",
+      authorPhoto: r.authorAttribution?.photoUri,
+      rating: r.rating,
+      text: r.text?.text ?? r.originalText?.text ?? "",
+      relativeTime: r.relativePublishTimeDescription,
+    }));
+    return {
+      ...base,
+      photos: (place.photos ?? []).slice(0, 10).map((p) => photoProxyUrl(p.name, 1200)),
+      reviews,
+      openingHours: place.regularOpeningHours?.weekdayDescriptions,
+      phone: place.internationalPhoneNumber,
+    };
+  });
+}
+
+/** Resolves a Places photo reference to its temporary googleusercontent URL. */
+export async function resolvePhotoUri(photoName: string, width: number): Promise<string | null> {
+  const key = placesApiKey();
+  if (!key) return null;
+  const url = `${PLACES_BASE}/${photoName}/media?maxWidthPx=${Math.min(Math.max(width, 100), 1600)}&skipHttpRedirect=true&key=${key}`;
+  const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+  if (!res.ok) return null;
+  const data = (await res.json()) as { photoUri?: string };
+  return data.photoUri ?? null;
+}

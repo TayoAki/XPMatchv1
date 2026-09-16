@@ -6,12 +6,20 @@ import type { ShowHotelsArgs, Streaming } from "@/lib/travel/schemas";
 import { bookingSearchUrl, googleHotelsUrl, googleMapsSearchUrl } from "@/lib/travel/links";
 import { formatDateRange } from "@/lib/store";
 import { PlaceImage } from "@/components/ui/PlaceImage";
-import { Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Stars, Tag, Text, usd } from "./shared";
+import { usePlacePin, useRegisterPlaces } from "@/components/map/useRegisterPlaces";
+import { Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Stars, Tag, Text, ViewOnMapButton, usd } from "./shared";
 
-export function HotelCards({ args, status }: { args: Streaming<ShowHotelsArgs>; status: ToolCallStatus }) {
+export function HotelCards({ args, status, toolCallId }: { args: Streaming<ShowHotelsArgs>; status: ToolCallStatus; toolCallId: string }) {
   const items = (args.hotels ?? []).filter((h) => h && h.name);
   const dates = formatDateRange(args.checkIn, args.checkOut);
   const dest = args.destination ?? "";
+  useRegisterPlaces({
+    toolCallId,
+    status,
+    kind: "hotel",
+    destination: dest,
+    items: items.map((h) => ({ name: h.name, hint: h.area })),
+  });
   return (
     <div>
       <SectionHeader
@@ -20,10 +28,31 @@ export function HotelCards({ args, status }: { args: Streaming<ShowHotelsArgs>; 
         status={status}
       />
       <CardGrid>
-        {items.map((h, i) => {
-          const query = `${h.name} ${dest}`.trim();
-          return (
-            <CardShell key={`${h.name}-${i}`}>
+        {items.map((h, i) => (
+          <HotelCard key={`${h.name}-${i}`} hotel={h} index={i} args={args} dest={dest} toolCallId={toolCallId} />
+        ))}
+      </CardGrid>
+    </div>
+  );
+}
+
+function HotelCard({
+  hotel: h,
+  index,
+  args,
+  dest,
+  toolCallId,
+}: {
+  hotel: Streaming<ShowHotelsArgs>["hotels"] extends (infer U)[] | undefined ? U : never;
+  index: number;
+  args: Streaming<ShowHotelsArgs>;
+  dest: string;
+  toolCallId: string;
+}) {
+  const pin = usePlacePin(toolCallId, index);
+  const query = `${h.name} ${dest}`.trim();
+  return (
+            <CardShell highlighted={pin.isSelected} onMouseEnter={() => pin.hover(true)} onMouseLeave={() => pin.hover(false)}>
               <PlaceImage queries={[h.area ? `${h.area}, ${dest}` : "", dest]} alt={h.name ?? "Hotel"} className="aspect-[16/9]">
                 <SaveButton
                   kind="hotel"
@@ -69,14 +98,13 @@ export function HotelCards({ args, status }: { args: Streaming<ShowHotelsArgs>; 
                   Check rates
                 </ExtLink>
                 <ExtLink href={googleHotelsUrl(query)}>Google Hotels</ExtLink>
-                <ExtLink href={googleMapsSearchUrl(query)}>
-                  <MapPin className="h-3.5 w-3.5" /> Map
-                </ExtLink>
+                <ViewOnMapButton pin={pin} />
+                {!pin.place ? (
+                  <ExtLink href={googleMapsSearchUrl(query)}>
+                    <MapPin className="h-3.5 w-3.5" /> Map
+                  </ExtLink>
+                ) : null}
               </Footer>
             </CardShell>
-          );
-        })}
-      </CardGrid>
-    </div>
   );
 }
