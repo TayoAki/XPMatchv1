@@ -1,5 +1,13 @@
 # Wave 2 plan: review Q&A, itinerary board, taste profile, inspiration import
 
+> **Status: shipped.** All five steps below are built, unit- and end-to-end-tested and documented in
+> `docs/USER_FLOWS.md`. Deviations from the plan, all deliberate: travel times are straight-line estimates
+> (the Routes API decision is still open); pointer drops land where the pointer is and keyboard drags use
+> nearest corners (live re-parenting while dragging fought dnd-kit's measuring); "Add to Day N" is the
+> Ideas tray's select rather than a separate stops endpoint (the whole itinerary is saved on every change);
+> screenshots shipped in the same step as links; a Places result counts as the mentioned place only when
+> its name matches; "Not for me" hides a card immediately; no nightly real-API CI job.
+
 How to build and test the next four features from `docs/GAP_ANALYSIS.md`, in the order that makes each
 one cheaper to build than the last. Every design below reuses what Wave 1 put in place (the `preferences`
 table, the chip / compare / heads-up cards, persisted transcripts) and keeps the rule that made Wave 1

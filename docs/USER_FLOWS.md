@@ -63,22 +63,43 @@ delete, "Show all", "+ New chat") so no horizontal space is spent on a separate 
    Nothing is stored until a button is pressed; the choice is stored under Update my assistant (or the
    trip's preferences) and sent to the assistant on every later message.
 7. **Place sheet** — clicking a pin or "View on map" opens the Mindtrip-style sheet: photos, rating and
-   review count, category, price, description, hours, Google reviews, location, Save, Add to trip, and
-   a follow-up button ("Restaurants nearby"). A **destination's** sheet has **Stays**, **Restaurants**
-   and **Things to do** tabs that fill in beside the map: the assistant's own picks from this chat
-   ("Picked for you") first, then places near the destination queried with the traveler's preferences
-   (accommodation style, dietary needs, budget tier, first travel style — shown as chips). Each row has a
-   photo, rating, category and price, Save and Add to trip; tapping it pins the place and opens its
-   sheet. "Ask XPMatch for personalized picks" sends the matching prompt to the chat.
-8. **Map tools** — hide the map (the discovery feed returns with a "Show map" button), search-and-pin
-   any place near the destination, satellite toggle, weather chip.
-9. **Trip proposal** — when the traveler asks for a plan the assistant calls `create_trip` and a
-   proposal card appears (title, dates, travelers, budget, summary, day-by-day itinerary). **Save to my
-   trips** stores it on the server; **Not yet** tells the assistant to adjust.
-10. **Follow-ups** — after each answer the assistant proposes 2–3 next steps as chips. While a proposal or
+   review count, category, price, description, hours, Google reviews, location, **Rate** (see 12), Save,
+   Add to trip, and a follow-up button ("Restaurants nearby"). A **destination's** sheet has **Stays**,
+   **Restaurants** and **Things to do** tabs that fill in beside the map: the assistant's own picks from
+   this chat ("Picked for you") first, then places near the destination queried with the traveler's
+   preferences (accommodation style, dietary needs, budget tier, first travel style — shown as chips).
+   Each row has a photo, rating, category and price, Save and Add to trip; tapping it pins the place and
+   opens its sheet. "Ask XPMatch for personalized picks" sends the matching prompt to the chat.
+   **Ask about this place** (Overview tab of a hotel, restaurant or attraction) answers a question
+   ("Is it noisy at night?") from Google's reviews, review summary and attributes with verbatim quotes and
+   a confidence label; suggested questions are one tap away and the Reviews tab filters by topic
+   (noise, cleanliness, service…). Typing the question in chat ("is the Artemide noisy?") calls
+   `ask_about_place` and renders the same answer card.
+8. **Reactions and taste** — every hotel, restaurant, attraction and destination card, the place sheet,
+   trip ideas, board stops and saved places have **Rate**: *Loved it / It was fine / Not for me*, then
+   reason chips (stays: Quiet, Location, Design… or Noisy, Dated, Overpriced…; food, things to do and
+   destinations have their own) and an optional note. The verdict saves on click; **Not for me** hides
+   the card at once (with **Undo**). A **Fits your taste** line appears on a card when it shares a
+   category with a place you loved ("Like Trattoria Da Enzo, which you loved") or matches a reason you keep
+   liking. Saying it in chat ("the Artemide was too noisy") records it through `record_feedback` with a
+   small chip.
+9. **Import inspiration** — paste a link (blog post, Reddit thread, YouTube page, article) and the
+   assistant calls `import_inspiration`: the page is read server-side, the places it names are extracted
+   and verified through Google Places, and "Imported from <site>" cards appear (photo, rating, category,
+   "Mentioned as…", Save, Add to trip, Rate) pinned on the map, with **Couldn't verify** for mentions that
+   did not resolve. Below: **Add all to a trip**, **Plan a trip from these** and **Save as a collection**
+   (a private guide). Instagram and TikTok links cannot be read; the composer's **+** menu has **Import
+   inspiration** for a screenshot instead (also on Create › Import).
+10. **Map tools** — hide the map (the discovery feed returns with a "Show map" button), search-and-pin
+    any place near the destination, satellite toggle, weather chip.
+11. **Trip proposal** — when the traveler asks for a plan the assistant calls `create_trip` and a
+    proposal card appears (title, dates, travelers, budget, summary, day-by-day itinerary whose stops are
+    real places with a kind, resolved and pinned when the trip is saved). **Save to my trips** stores it
+    on the server; **Not yet** tells the assistant to adjust.
+12. **Follow-ups** — after each answer the assistant proposes 2–3 next steps as chips. While a proposal or
     "Remember this?" card is waiting for a click the chips pause (a suggestions run would otherwise send the
     model an unanswered tool call).
-11. **History** — expand **Chats** in the sidebar and click a conversation to reopen it (`/?thread=…`),
+13. **History** — expand **Chats** in the sidebar and click a conversation to reopen it (`/?thread=…`),
     including its cards and map pins, which are rebuilt from the stored transcript; transcripts live in
     Postgres, so chats survive deploys and restarts. Chats started from a trip show the trip name and keep
     the trip in context when reopened. The top-bar chat menu ("New chat ⌄") is the quick switcher; "All
@@ -107,16 +128,35 @@ Trip tab; or **Add to trip → New trip** from any place.
   Build the itinerary / Neighborhood guide.
 - **Ask anything else** — opens a new chat attached to the trip. In that chat the assistant sees the
   trip (dates, members, ideas, itinerary, preferences), the map opens on the destination with the trip's
-  ideas pinned, and two extra tools are available: `update_trip_plan` (dates, travelers, budget,
-  summary, itinerary, preferences) and `add_trip_ideas` (adds places to the Ideas list).
+  ideas pinned, and three extra tools are available: `update_trip_plan` (dates, travelers, budget,
+  summary, the whole itinerary as structured stops, preferences), `add_trip_ideas` (adds places to the
+  Ideas list) and `schedule_stops` ("put the Colosseum on day 2": places are resolved and pinned; the chip
+  links to the board).
 - **Chats** — every conversation attached to this trip, newest first.
-- Tiles (right column): **Ideas** (places added from chat, map, Explore or by searching here; each with
-  note, Save, Show on map, remove), **Itinerary** (day-by-day; "Build it with the assistant" or write it
-  yourself; edit/reorder days), **Bookings** and **Media** (title, link, note; image links preview),
-  **Trip preferences** (free text the assistant reads for this trip, plus **Learned for this trip**: the
-  "For this trip" answers from its chats, each removable), **Calendar** (dates, travelers, budget plus a
-  month view), **Members** (add by email, role Can edit / Can view; remove; leave).
-- **Map** — destination pin plus every idea/booking/media item with a place; click a pin for its sheet.
+- **Board | Tiles** toggle (right column; the choice is remembered per browser, `?view=board` opens the
+  board from chat).
+- **Board** — Wanderlog-style: dates, travelers, bookings and ideas chips; then each **Day** (color dot,
+  date, editable theme) as a list of numbered stops with photo, name, rating, category, start time,
+  duration and note, an estimated travel leg between placed stops ("12 min walk · 0.9 km · est.") and
+  **Directions** (Google Maps through the day's stops); **Optimize order** (nearest neighbor from the first
+  stop); a per-stop pencil for time, duration and note; **Move to… / Back to ideas / Remove**; **Rate**;
+  an **Add a stop** form per day (a place kind gets it resolved and pinned, "Note only" stays text); **Add
+  day**, **Remove day**; and the **Ideas** tray of unscheduled places with **Add to day…**. Stops drag
+  within a day, across days and from Ideas with the pointer (drop where the pointer is) or the keyboard
+  (space, arrows, space); every change saves as it happens ("Saving…").
+- Tiles: **Ideas** (places added from chat, map, Explore or by searching here; each with note, Rate, Save,
+  Show on map, remove), **Itinerary** (read view with **Open the board**, **Edit as text**, or "Build it
+  with the assistant"), **Bookings** and **Media** (title, link, note; image links preview), **Trip
+  preferences** (free text the assistant reads for this trip, plus **Learned for this trip**: the "For
+  this trip" answers from its chats, each removable), **Calendar** (dates, travelers, budget plus a month
+  view), **Members** (add by email, role Can edit / Can view; remove; leave).
+- **Map** — destination pin, unscheduled ideas/bookings/media with a place, and the itinerary's stops as
+  numbered pins colored per day with a line through each day; chips **All · Day 1 · Day 2…** show one day
+  at a time; hovering a board card highlights its pin and vice versa; click a pin for its sheet.
+- **How was Rome?** — from the day after the trip's end date (for about six weeks) a banner offers to
+  rate the trip's placed ideas and stops: three buckets per place with reason chips, then up to three
+  "Which did you prefer?" pairs against places already rated in the same domain, which turn into 0–10
+  scores; the same prompt sits under Updates (`?rate=1` opens it).
 
 **Members and notifications** — adding a member requires an XPMatch account with that email. The member
 gets an Update ("Tayo added you to the trip…") and the trip appears in their Trips. Adding ideas,
@@ -146,7 +186,7 @@ the trip's Ideas and pinned on its map; the dialog offers **Open trip**.
 
 ## 7. Create (guides and trips)
 
-`/create` has **Guide | Trip** tabs.
+`/create` has **Guide | Trip | Import** tabs.
 
 **Guide editor** — title, destination (resolved for the cover photo and map center), description, tags
 (presets + custom), then places: search a place ("Colosseum", kind Thing to do / Restaurant / Stay) and
@@ -156,6 +196,15 @@ one place and lists it under Inspiration. Authors reopen a guide with **Edit** o
 (`/create?guide=…`).
 
 **Trip tab** — the same planner form as the dialog: Create trip or Start planning.
+
+**Import tab** — paste a link or upload a screenshot / photo (PNG, JPEG, WebP up to 6 MB). The server
+reads the page (Reddit through its JSON form, YouTube through its metadata; scripts, styles and navigation
+removed; 15k characters at most; http(s) only, no private addresses, three re-checked redirects, 2 MB and
+8 s limits) or sends the image to a vision model, extracts up to 20 named places, verifies each through
+Google Places (a result counts only when its name matches the mention) and shows the same "Imported from"
+cards as the chat, plus **Chat about these** and **Import another**. Instagram and TikTok links get the
+screenshot hint before anything is fetched. A link imported within the last seven days is served from the
+traveler's history without a new fetch or model call.
 
 ## 8. Inspiration and guide pages
 
@@ -169,15 +218,18 @@ trip. Authors see **Edit** and **Delete** instead of Save.
 
 ## 9. Saved
 
-`/saved` has **Places | Guides** tabs. Places are grouped by type (Destinations, Stays, Flights,
-Restaurants, Things to do) with photo, Add to trip, Open and remove; "Turn saved places into a trip"
-sends them to the assistant. Guides show as cards linking to the guide, with remove.
+`/saved` has **Places | Guides | Imports** tabs. Places are grouped by type (Destinations, Stays, Flights,
+Restaurants, Things to do) with photo, Rate, Add to trip, Open and remove; "Turn saved places into a trip"
+sends them to the assistant. Guides show as cards linking to the guide, with remove. Imports list every
+link or screenshot imported (title, site, date, places, unverified count) with **Open in chat** (re-imports
+the link from history, or lists the screenshot's places), the source link and remove.
 
 ## 10. Updates
 
 `/updates` is the notification feed (unread count badge in the sidebar; opening the page marks all as
 read): you were added to a trip, a member added an idea/booking/media or edited the plan, someone saved
-your guide. Each item links to the trip or guide.
+your guide. Each item links to the trip or guide. Trips that ended recently show a "How was Rome?" card
+on top with **Rate places** (opens the post-trip rating on the trip page) and **Not now**.
 
 ## 11. Routes
 
@@ -185,7 +237,7 @@ your guide. Each item links to the trip or guide.
 | --- | --- |
 | `/login`, `/signup` | Account |
 | `/` (`?thread=`, `?trip=`, `?prompt=`) | Chat and map; history expands under Chats in the sidebar; `/chats` redirects here |
-| `/trips`, `/trips/[id]` | Trips list and trip page |
+| `/trips`, `/trips/[id]` (`?view=board`, `?rate=1`) | Trips list and trip page (board view, post-trip rating) |
 | `/explore` | Things near you |
 | `/create` (`?guide=`) | Guide editor / trip form |
 | `/inspiration`, `/guides/[id]` | Community guides |
@@ -193,9 +245,22 @@ your guide. Each item links to the trip or guide.
 
 ## 12. What is stored per user
 
-Profile, dealbreakers and learned preferences (profile-wide or per trip), trips (with members, items,
-itinerary, preferences), saved places and guides, guides they authored, the chat list (titles, trip links),
-chat transcripts (every message, tool call and card, written by the runtime after each run and restored
-when a chat is reopened) and notifications — all in Postgres. Live runs stream from the runtime's memory;
-the planner bar values, the compare selection, constraint chips of the current session and small UI
-preferences (e.g. whether Chats is expanded in the sidebar) stay in the browser.
+Profile, dealbreakers and learned preferences (profile-wide or per trip; reasons that repeat in reactions
+become preferences with source "feedback"), the computed taste profile, reactions to places (one row per
+place: verdict, reasons, note, score, trip), trips (with members, items, structured itinerary stops,
+preferences), saved places and guides, guides they authored (including private import collections),
+imports (source, verified places, unverified mentions), the chat list (titles, trip links), chat
+transcripts (every message, tool call and card, written by the runtime after each run and restored when a
+chat is reopened) and notifications — all in Postgres. A shared 30-day cache of Place Details (reviews,
+summaries, attributes) backs "Ask about a place". Live runs stream from the runtime's memory; the planner
+bar values, the compare selection, constraint chips of the current session, the Board | Tiles choice, which
+post-trip prompts were dismissed and small UI preferences (e.g. whether Chats is expanded in the sidebar)
+stay in the browser.
+
+## 13. Your taste (Update my assistant)
+
+The assistant settings dialog ends with **Your taste**: per domain (Stays, Food, Things to do,
+Destinations) the number of ratings, liked and disliked reasons with counts, the ranked places with their
+scores and the usual price level, then every reaction with a delete button. The assistant receives the same
+summary plus the ten latest reactions on every message and is told to lean toward what you loved, avoid
+what you disliked and never re-recommend a place marked not for you unless asked.

@@ -20,6 +20,8 @@ const NEW = "__new__";
 
 function AddToTripForm({ request }: { request: AddToTripRequest }) {
   const { place } = request;
+  const places = request.places?.length ? request.places : [place];
+  const many = places.length > 1;
   const { trips, addTrip, addTripItem } = useTravelStore();
   const { closeAddToTrip } = useUiState();
   const today = new Date().toISOString().slice(0, 10);
@@ -54,13 +56,15 @@ function AddToTripForm({ request }: { request: AddToTripRequest }) {
         tripId = created.id;
         title = created.title;
       }
-      await addTripItem(tripId, {
-        kind: "idea",
-        title: place.name,
-        note: note.trim(),
-        url: place.googleMapsUri,
-        place,
-      });
+      for (const p of places) {
+        await addTripItem(tripId, {
+          kind: "idea",
+          title: p.name,
+          note: note.trim(),
+          url: p.googleMapsUri,
+          place: p,
+        });
+      }
       setDone({ tripId, title });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not add this place");
@@ -89,7 +93,7 @@ function AddToTripForm({ request }: { request: AddToTripRequest }) {
         <div className="flex items-center gap-3 rounded-2xl bg-emerald-50 px-4 py-3 text-[14px] text-emerald-800">
           <Check className="h-5 w-5" />
           <span>
-            <span className="font-semibold">{place.name}</span> is now in the ideas for <span className="font-semibold">{done.title}</span>.
+            <span className="font-semibold">{many ? `${places.length} places` : place.name}</span> {many ? "are" : "is"} now in the ideas for <span className="font-semibold">{done.title}</span>.
           </span>
         </div>
       </Modal>
@@ -101,7 +105,7 @@ function AddToTripForm({ request }: { request: AddToTripRequest }) {
       open
       onClose={closeAddToTrip}
       title="Add to trip"
-      description={[place.name, place.locality].filter(Boolean).join(" · ")}
+      description={many ? `${places.length} places: ${places.map((p) => p.name).join(", ")}` : [place.name, place.locality].filter(Boolean).join(" · ")}
       footer={
         <div className="flex items-center justify-between gap-2">
           <span className="text-[13px] text-red-600">{error}</span>

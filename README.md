@@ -31,6 +31,26 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   card: your priorities as rows with strong / ok / weak / unknown verdicts, Price, Rating (Google's
   numbers when the option is pinned), Location, Strengths, Compromises and Couldn't verify, with Map,
   Save, Add to trip and Pick this one per column.
+- **Questions answered from reviews** — "Is it noisy at night?" on a place sheet or in chat
+  (`ask_about_place`) is answered from Google's reviews, review summary and attributes with verbatim
+  quotes picked by index (never retyped by the model), a confidence label and topic filters on the
+  Reviews tab; Place Details are cached for 30 days in a shared `place_facts` table.
+- **Itinerary board with the map** — a trip's itinerary is structured stops linked to real places:
+  a Wanderlog-style Board (days as sortable lists with numbered stops, estimated travel legs,
+  Directions, Optimize order, Move to…, time and note edits, an Ideas tray, Add a stop) with
+  drag-and-drop (pointer or keyboard, dnd-kit), numbered per-day pins and route lines on the map with
+  Day chips as layers; `schedule_stops` puts a place on a day from chat.
+- **Taste profile that learns from reactions** — Rate any place (Loved it / It was fine / Not for me
+  with reason chips) on cards, the sheet, trips and Saved; "Not for me" hides the card. Reactions
+  feed a per-domain taste profile (Your taste in Update my assistant), repeated reasons become
+  learned preferences, cards show "Fits your taste" from real overlap, and finished trips ask "How
+  was Rome?" with Beli-style pairwise questions that rank places 0–10. `record_feedback` captures
+  reactions said in chat.
+- **Inspiration import** — paste a link (blog, Reddit, YouTube, article) in chat or use Import
+  inspiration (composer + menu, Create › Import) with a link or a screenshot: places are extracted by
+  the model, verified through Google Places and shown as cards with Add all to a trip, Plan a trip and
+  Save as a collection; unverified mentions are listed honestly. SSRF-guarded fetching, seven-day
+  cache per link, history under Saved › Imports.
 - **Generative UI recommendations** — the agent calls frontend tools that render streaming cards:
   `show_destinations`, `show_hotels`, `show_flights`, `show_restaurants`, `show_attractions`.
 - **Actionable, not just descriptive** — every card links out to live inventory: Google Flights,
@@ -104,6 +124,10 @@ Without a model key the app starts in demo mode. Model selection lives in `src/s
 | `ANTHROPIC_API_KEY` | Enables Claude directly (`anthropic/claude-opus-5` by default). |
 | `OPENAI_API_KEY`, `GOOGLE_API_KEY` | Used when no Anthropic key is present (`openai/gpt-5`, `google/gemini-2.5-pro`). |
 | `COPILOT_MODEL` | Force a `provider/model` (any model the AI SDK knows) or `demo`. |
+| `HELPER_MODEL` | OpenRouter model for small structured jobs (review answers, import extraction); defaults to the agent's model. |
+| `HELPER_VISION_MODEL` | OpenRouter model that reads screenshots for imports (default `openai/gpt-4o-mini`). |
+| `PLACES_BASE_URL` | Override the Places API base URL (the end-to-end suite points it at a stub). |
+| `IMPORT_ALLOW_LOOPBACK` | `1` lets imports fetch `localhost` (test fixture site only; never set in production). |
 | `COPILOT_EFFORT` | Claude effort level for 4.6+/5 models (`low` … `max`, default `medium`). |
 | `NEXT_PUBLIC_COPILOTKIT_INSPECTOR` | `true` shows the CopilotKit dev inspector. |
 | `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Browser key for the Maps JavaScript API (restrict to your referrers). |
@@ -203,8 +227,17 @@ preferences stay in the browser.
 ## Scripts
 
 ```bash
-npm run dev     # start locally
-npm run lint    # eslint
-npm run build   # production build
-npm start       # serve the production build
+npm run dev        # start locally
+npm run lint       # eslint
+npm run typecheck  # tsc --noEmit
+npm test           # vitest unit tests (parsers, evidence, itinerary, taste, ranking, import guard)
+npm run test:e2e   # Playwright end-to-end suite against a stand-in model, a Places stub and a fixture site
+npm run build      # production build
+npm start          # serve the production build
 ```
+
+The end-to-end suite (`tests/e2e`) needs no API keys or network: `start-app.mjs` launches the app with
+`mock-openrouter.mjs` (scripted tool calls and JSON-mode answers), `mock-places.mjs` (Rome and Austell
+fixtures) and `mock-site.mjs` (the import fixture site). GitHub Actions runs lint, typecheck, unit tests,
+the build and the suite on every push (`.github/workflows/ci.yml`). Set `PW_CHROMIUM` to a Chromium
+binary when Playwright's own download is unavailable.

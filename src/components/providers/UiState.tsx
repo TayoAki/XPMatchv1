@@ -9,6 +9,8 @@ export type PlannerTab = "where" | "when" | "who" | "budget";
 /** A place the traveler wants to add to one of their trips (opens the trip picker). */
 export interface AddToTripRequest {
   place: ResolvedPlace;
+  /** Several places at once (an import's "Add all to a trip"); `place` is the first of them. */
+  places?: ResolvedPlace[];
   /** Preselected trip, e.g. the trip whose page or chat is open. */
   tripId?: string;
   note?: string;
@@ -18,6 +20,9 @@ interface UiStateValue {
   assistantOpen: boolean;
   openAssistant: () => void;
   closeAssistant: () => void;
+  importOpen: boolean;
+  openImport: () => void;
+  closeImport: () => void;
   plannerOpen: boolean;
   plannerTab: PlannerTab;
   openPlanner: (tab?: PlannerTab) => void;
@@ -33,6 +38,7 @@ const UiStateContext = createContext<UiStateValue | null>(null);
 
 export function UiStateProvider({ children }: { children: ReactNode }) {
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [plannerOpen, setPlannerOpen] = useState(false);
   const [plannerTab, setPlannerTab] = useState<PlannerTab>("where");
   const [addToTrip, setAddToTrip] = useState<AddToTripRequest | null>(null);
@@ -41,6 +47,8 @@ export function UiStateProvider({ children }: { children: ReactNode }) {
 
   const openAssistant = useCallback(() => setAssistantOpen(true), []);
   const closeAssistant = useCallback(() => setAssistantOpen(false), []);
+  const openImport = useCallback(() => setImportOpen(true), []);
+  const closeImport = useCallback(() => setImportOpen(false), []);
   const openPlanner = useCallback((tab: PlannerTab = "where") => {
     setPlannerTab(tab);
     setPlannerOpen(true);
@@ -58,6 +66,9 @@ export function UiStateProvider({ children }: { children: ReactNode }) {
       assistantOpen,
       openAssistant,
       closeAssistant,
+      importOpen,
+      openImport,
+      closeImport,
       plannerOpen,
       plannerTab,
       openPlanner,
@@ -68,7 +79,7 @@ export function UiStateProvider({ children }: { children: ReactNode }) {
       newChatNonce,
       startNewChat,
     }),
-    [assistantOpen, openAssistant, closeAssistant, plannerOpen, plannerTab, openPlanner, closePlanner, addToTrip, openAddToTrip, closeAddToTrip, newChatNonce, startNewChat],
+    [assistantOpen, openAssistant, closeAssistant, importOpen, openImport, closeImport, plannerOpen, plannerTab, openPlanner, closePlanner, addToTrip, openAddToTrip, closeAddToTrip, newChatNonce, startNewChat],
   );
 
   return <UiStateContext.Provider value={value}>{children}</UiStateContext.Provider>;

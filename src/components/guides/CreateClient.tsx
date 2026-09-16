@@ -14,8 +14,10 @@ import { Chip, Field, TextInput } from "@/components/ui/Field";
 import { useSendMessage } from "@/components/chat/useSendMessage";
 import { buildPlanPrompt } from "@/components/profile/TripPlannerDialog";
 import { GuideEditor } from "./GuideEditor";
+import { ImportForm } from "@/components/import/ImportDialog";
 
-type Tab = "guide" | "trip";
+type Tab = "guide" | "trip" | "import";
+const TAB_LABEL: Record<Tab, string> = { guide: "Guide", trip: "Trip", import: "Import" };
 const BUDGETS: BudgetTier[] = ["budget", "mid-range", "premium", "luxury"];
 
 function TripCreateForm() {
@@ -124,24 +126,33 @@ export function CreateClient({ guideId }: { guideId?: string }) {
   return (
     <PageFrame
       title={guideId ? "Edit guide" : "Create"}
-      description={guideId ? "Update your guide; changes are visible to the community right away." : "Share a guide with the community, or set up a trip."}
+      description={guideId ? "Update your guide; changes are visible to the community right away." : "Share a guide with the community, set up a trip, or import inspiration from a link or screenshot."}
     >
       {!guideId ? (
         <div className="mb-6 flex gap-6 border-b border-border text-[16px]">
-          {(["guide", "trip"] as Tab[]).map((t) => (
+          {(["guide", "trip", "import"] as Tab[]).map((t) => (
             <button
               key={t}
               type="button"
               onClick={() => setTab(t)}
               className={clsx("-mb-px border-b-2 pb-3 font-medium", tab === t ? "border-neutral-900 text-foreground" : "border-transparent text-neutral-500 hover:text-foreground")}
             >
-              {t === "guide" ? "Guide" : "Trip"}
+              {TAB_LABEL[t]}
             </button>
           ))}
         </div>
       ) : null}
 
       {tab === "trip" && !guideId ? <TripCreateForm /> : null}
+
+      {tab === "import" && !guideId ? (
+        <div className="max-w-3xl">
+          <p className="mb-4 text-[14px] text-neutral-700">Paste a blog post, Reddit thread, YouTube page or article, or upload a screenshot of a post or a saved list. The places it names come back verified, ready to save, add to a trip or keep as a collection.</p>
+          <div className="rounded-3xl border border-border p-5">
+            <ImportForm />
+          </div>
+        </div>
+      ) : null}
 
       {tab === "guide" || guideId ? (
         guideId && !editing ? (

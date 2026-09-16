@@ -12,10 +12,11 @@ import type { PlaceKind } from "@/lib/places/types";
 import { useSendMessage } from "@/components/chat/useSendMessage";
 import { useUiState } from "@/components/providers/UiState";
 import { ReactionControl } from "@/components/feedback/ReactionControl";
+import { ImportHistory } from "@/components/import/ImportHistory";
 
 const RATEABLE: SavedKind[] = ["destination", "hotel", "restaurant", "attraction"];
 
-type Tab = "places" | "guides";
+type Tab = "places" | "guides" | "imports";
 
 const ORDER: SavedKind[] = ["destination", "hotel", "flight", "restaurant", "attraction"];
 const LABEL: Record<SavedKind, string> = {
@@ -39,7 +40,7 @@ function Thumb({ item }: { item: SavedItem }) {
 
 export default function SavedPage() {
   const { saved, removeSaved } = useTravelStore();
-  const { openAddToTrip } = useUiState();
+  const { openAddToTrip, openImport } = useUiState();
   const send = useSendMessage();
   const [tab, setTab] = useState<Tab>("places");
   const places = saved.filter((s) => s.kind !== "guide");
@@ -48,7 +49,7 @@ export default function SavedPage() {
   return (
     <PageFrame
       title="Saved"
-      description="Places you hearted in chat, on the map or in Explore, and guides you saved from Inspiration."
+      description="Places you hearted in chat, on the map or in Explore, guides you saved from Inspiration, and links or screenshots you imported."
       actions={
         places.length ? (
           <Button variant="outline" onClick={() => send("Look at my saved items and suggest how to turn them into a trip.")}>
@@ -58,17 +59,19 @@ export default function SavedPage() {
       }
     >
       <div className="flex gap-6 border-b border-border text-[16px]">
-        {(["places", "guides"] as Tab[]).map((t) => (
+        {(["places", "guides", "imports"] as Tab[]).map((t) => (
           <button
             key={t}
             type="button"
             onClick={() => setTab(t)}
             className={clsx("-mb-px border-b-2 pb-3 font-medium capitalize", tab === t ? "border-neutral-900 text-foreground" : "border-transparent text-neutral-500 hover:text-foreground")}
           >
-            {t} <span className="text-[13px] text-muted">{t === "places" ? places.length : guides.length}</span>
+            {t} {t !== "imports" ? <span className="text-[13px] text-muted">{t === "places" ? places.length : guides.length}</span> : null}
           </button>
         ))}
       </div>
+
+      {tab === "imports" ? <ImportHistory onImport={openImport} /> : null}
 
       {tab === "places" ? (
         places.length === 0 ? (
@@ -117,7 +120,7 @@ export default function SavedPage() {
             ))}
           </div>
         )
-      ) : guides.length === 0 ? (
+      ) : tab === "imports" ? null : guides.length === 0 ? (
         <div className="mt-6">
           <EmptyState
             title="No saved guides yet"

@@ -27,7 +27,7 @@ function messageText(m: Message): string {
 
 export function TravelChat({ threadId, initialPrompt, tripId }: { threadId?: string; initialPrompt?: string; tripId?: string }) {
   const { chats, upsertChat } = useTravelStore();
-  const { openAssistant, openPlanner } = useUiState();
+  const { openAssistant, openPlanner, openImport } = useUiState();
   const { copilotkit } = useCopilotKit();
   const { agent, isReady } = useAgent({ updates: [UseAgentUpdate.OnMessagesChanged, UseAgentUpdate.OnRunStatusChanged] });
   const config = useAppConfig();
@@ -68,10 +68,11 @@ export function TravelChat({ threadId, initialPrompt, tripId }: { threadId?: str
 
   const toolsMenu = useMemo(
     () => [
+      { label: "Import inspiration (link or screenshot)", action: () => openImport() },
       { label: "Set trip details (where, when, who, budget)", action: () => openPlanner("where") },
       { label: "Update my assistant", action: () => openAssistant() },
     ],
-    [openPlanner, openAssistant],
+    [openImport, openPlanner, openAssistant],
   );
 
   return (

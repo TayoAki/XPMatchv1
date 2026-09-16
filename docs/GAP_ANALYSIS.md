@@ -37,6 +37,19 @@ the next four features (review Q&A, itinerary board, taste profile, inspiration 
 | 8 | `remember_preference` human-in-the-loop card (Always / For this trip / No thanks), "What XPMatch has learned" panel with delete and a "Learn from our chats" switch, trip-scoped list on the trip page, profile-wide and trip-scoped preferences in the agent's context | learning from clicks and trip ratings |
 | — | Foundations: `preferences` table + API + store; chat transcripts persisted in Postgres by the runtime runner (chats survive deploys); follow-up suggestions paused while a card waits for a click (fixes the `AI_MissingToolResultsError` seen in production) | place facts layer, evidence rendering, notification channels, instrumentation |
 
+## Wave 2 status: shipped
+
+Built and tested per `docs/WAVE2_PLAN.md` (test foundation, review Q&A, itinerary board, taste profile,
+inspiration import); flows in `docs/USER_FLOWS.md`, beta notes in `docs/BETA_READINESS.md`.
+
+| # | What shipped | Left for later |
+| --- | --- | --- |
+| 5 | `ask_about_place` + Ask box on the sheet: answers from Google reviews, review summary and attributes with verbatim quotes chosen by index, confidence, suggested questions, topic filters; shared 30-day `place_facts` cache | Yelp Fusion as a second source; review-grounded heads-ups and comparison cells |
+| 3 | Structured itinerary stops linked to places (old trips normalize on read); Board view with days, numbered stops, estimated travel legs, Directions, Optimize order, Move to…, inline edits, Ideas tray, Add a stop, pointer and keyboard drag-and-drop; per-day colored pins, route lines and Day chips on the map; `schedule_stops` | Real travel times by mode (Routes API), budget and reservation lines |
+| 1 | Rate (Loved / Fine / Not for me + reasons + note) on cards, sheet, trips, Saved; hidden cards with Undo; per-domain taste profile with ranked places and "Your taste"; repeated reasons become preferences; "Fits your taste" from real overlap; post-trip "How was Rome?" with pairwise questions and 0–10 scores; `record_feedback` | Sharing scores with friends, collaborative filtering |
+| 2 | `import_inspiration` and Import inspiration (composer + menu, Create › Import): links (blog, Reddit, YouTube, article) and screenshots → verified place cards with Add all to a trip, Plan a trip, Save as a collection; unverified mentions listed; SSRF guard; 7-day cache; Saved › Imports | Documents and email confirmations (Wanderlog-style bookings), itineraries |
+| — | Test foundation: Vitest unit tests, in-repo Playwright suite with a stand-in model, a Places stub and a fixture site, CI on every push | Nightly runs against the real Google API |
+
 ## Where the research says we can beat the originals
 
 The competitor teardowns in `docs/COMPETITIVE_RESEARCH.md` expose four gaps none of the nine currently

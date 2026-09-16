@@ -13,6 +13,7 @@ import {
   compareOptionsSchema,
   createTripSchema,
   focusMapSchema,
+  importInspirationSchema,
   recordFeedbackSchema,
   rememberPreferenceSchema,
   setSearchConstraintsSchema,
@@ -26,6 +27,7 @@ import {
   type CompareOptionsArgs,
   type CreateTripArgs,
   type FocusMapArgs,
+  type ImportInspirationArgs,
   type RecordFeedbackArgs,
   type RememberPreferenceArgs,
   type SetSearchConstraintsArgs,
@@ -51,6 +53,8 @@ import { ComparisonCard } from "@/components/chat/cards/ComparisonCard";
 import { RememberPreferenceCard } from "@/components/chat/cards/RememberPreferenceCard";
 import { PlaceAnswerCard } from "@/components/chat/cards/PlaceAnswerCard";
 import { FeedbackChip } from "@/components/chat/cards/FeedbackChip";
+import { ImportToolCard } from "@/components/import/ImportToolCard";
+import type { ImportRecord } from "@/lib/import/types";
 import { tasteForContext } from "@/lib/feedback/taste";
 import type { ResolvedPlace } from "@/lib/places/types";
 import { api } from "@/lib/api";
@@ -110,6 +114,7 @@ const RememberRenderer = ({
   <RememberPreferenceCard args={args as Streaming<RememberPreferenceArgs>} status={status} result={result} toolCallId={toolCallId} respond={respond} />
 );
 const FeedbackRenderer = ({ args, status }: RenderProps<RecordFeedbackArgs>) => <FeedbackChip args={args as Streaming<RecordFeedbackArgs>} status={status} />;
+const ImportRenderer = ({ args, status, result }: RenderProps<ImportInspirationArgs>) => <ImportToolCard args={args as Streaming<ImportInspirationArgs>} status={status} result={result} />;
 
 function nextMonthName(): string {
   const d = new Date();
@@ -494,6 +499,38 @@ export function TravelCopilot() {
         }
       },
       render: FeedbackRenderer,
+    },
+    [],
+  );
+
+  useFrontendTool(
+    {
+      name: "import_inspiration",
+      description:
+        "Read a link the traveler pasted (blog post, Reddit thread, YouTube page, article), extract the places it names and verify them through Google Places. The app shows the verified places as cards pinned on the map; you get the names back. Instagram/TikTok links cannot be read and need a screenshot instead.",
+      parameters: importInspirationSchema,
+      followUp: true,
+      handler: async ({ url }) => {
+        try {
+          const { import: record } = await api<{ import: ImportRecord }>("/api/import", { method: "POST", json: { url } });
+          return JSON.stringify({
+            importId: record.id,
+            site: record.site,
+            destination: record.destination ?? "",
+            places: record.places.map((p) => `${p.place.name} (${p.kind})`),
+            unverified: record.unverified.map((u) => u.name),
+            guidance: "The cards are displayed and pinned. In one or two sentences, offer to add them to a trip or plan a trip around them; do not list the places again.",
+          });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Import failed";
+          return JSON.stringify({
+            error: message,
+            screenshot: /screenshot/i.test(message),
+            guidance: "Tell the traveler briefly why the link could not be read and, if the message mentions a screenshot, point them to Import inspiration in the composer's + menu.",
+          });
+        }
+      },
+      render: ImportRenderer,
     },
     [],
   );

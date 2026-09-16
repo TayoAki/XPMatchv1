@@ -16,6 +16,7 @@ assumptions are stated so the model can be re-run with real numbers.
 | Google Place Photos | Every card image, sheet gallery, Explore card | $7 per 1,000 | 1 per card, up to 5–10 per sheet, 12 per Explore tab |
 | Maps JavaScript API | Every page that shows a map | $7 per 1,000 map loads | One load per page view with a map |
 | Open-Meteo, Wikipedia | Weather chip, destination blurbs, fallback photos | Free | — |
+| Helper model calls (`HELPER_MODEL`, default the agent's model) | Review answers ("Ask about a place"), import extraction, screenshot reading (`HELPER_VISION_MODEL`) | Same per-token prices as chat | One short JSON-mode call each; imports cached per link |
 
 Google applies monthly free tiers per SKU (roughly 10,000 calls for Essentials, 5,000 for Pro, 1,000 for
 Enterprise-class SKUs), which cover early usage entirely.
@@ -31,6 +32,10 @@ Enterprise-class SKUs), which cover early usage entirely.
 | Explore tab view (fresh, uncached) | 1–2 Nearby + 12 photos | $0.12–0.15 |
 | Page view with a map | 1 map load | $0.007 |
 | Creating a trip / guide place lookup | 1 Text Search (+ photos on display) | $0.04–0.08 |
+| Ask about a place | 1 Place Details (shared 30-day cache, so usually $0) + 1 small model call | $0.001–0.03 |
+| Itinerary board (drag, reorder, travel legs, day pins, post-trip rating, reactions, taste profile) | No external calls; a typed stop with a kind costs 1 Text Search | $0–0.04 |
+| Import a link (typical 7 places) | 1 page fetch + 1 model call (~$0.002) + 1 Text Search per candidate | **≈ $0.30**, cached per link for 7 days |
+| Import a screenshot | 1 vision model call (~$0.01) + 1 Text Search per candidate | ≈ $0.30 |
 
 ## Monthly picture
 

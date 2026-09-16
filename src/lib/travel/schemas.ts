@@ -312,3 +312,11 @@ export const recordFeedbackSchema = z.object({
 });
 
 export type RecordFeedbackArgs = z.infer<typeof recordFeedbackSchema>;
+
+/* --------------------- Wave 2: inspiration import --------------------- */
+
+export const importInspirationSchema = z.object({
+  url: z.string().describe("The link the traveler pasted, exactly as written (blog post, Reddit thread, YouTube page, article)"),
+});
+
+export type ImportInspirationArgs = z.infer<typeof importInspirationSchema>;

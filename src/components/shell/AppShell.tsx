@@ -6,12 +6,13 @@ import { TopBar } from "@/components/shell/TopBar";
 import { AssistantSettingsDialog } from "@/components/profile/AssistantSettingsDialog";
 import { TripPlannerDialog } from "@/components/profile/TripPlannerDialog";
 import { AddToTripDialog } from "@/components/trips/AddToTripDialog";
+import { ImportDialog } from "@/components/import/ImportDialog";
 import { useTravelStore } from "@/lib/store";
 import { useUiState } from "@/components/providers/UiState";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { hydrated, profile } = useTravelStore();
-  const { openAssistant } = useUiState();
+  const { openAssistant, importOpen, closeImport } = useUiState();
 
   // First visit: ask for the basics so recommendations are personal from message one.
   useEffect(() => {
@@ -28,6 +29,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <AssistantSettingsDialog />
       <TripPlannerDialog />
       <AddToTripDialog />
+      <ImportDialog open={importOpen} onClose={closeImport} />
     </div>
   );
 }
