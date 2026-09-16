@@ -23,6 +23,22 @@ Effort: **S** = days, **M** = 1–2 weeks, **L** = 3+ weeks or a new vendor cont
 Waves: **1** ships in the next 2–3 weeks with no new vendors; **2** adds data/UX depth; **3** adds content
 import; **4** waits on a fare API and email.
 
+## Where the research says we can beat the originals
+
+The competitor teardowns in `docs/COMPETITIVE_RESEARCH.md` expose four gaps none of the nine currently
+fill, and our versions should be built around them:
+
+1. **Show what was understood.** Booking.com maps text to filters but never shows or lets you edit the
+   result; our constraint chips do both, and say what could not be mapped.
+2. **Compare as a structured artifact.** Tripadvisor answers "compare these two hotels" in prose and was
+   caught giving unhedged verdicts; our comparison card has explicit priorities, evidence, negative-mention
+   counts and a "missing information" row.
+3. **Confirm before remembering, and choose the scope.** Layla infers preferences silently and offers only
+   an account-wide opt-out; our "Remember this? For this trip / Always / No" is the trust story.
+4. **Evidence with confidence.** StayMatch scores how much review evidence sits behind each flag and Yelp
+   cites passages inline; we do both on every heads-up, answer and comparison cell, and are honest that
+   Google supplies at most five reviews per place.
+
 ## Foundations shared by several features
 
 1. **Unified preference model.** One table `preferences` (user_id, domain: stays|food|flights|activities|
@@ -43,6 +59,12 @@ import; **4** waits on a fare API and email.
 
 ## 1. Personal taste profile (Beli)
 
+**How Beli does it.** A three-bucket reaction ("I liked it / It was fine / I didn't like it") seeds a
+handful of pairwise comparisons against places you already ranked, which insert the place into a
+per-category ranked list; the 0–10 score is derived from list position, never typed. "Good for" labels,
+notes and favorite dishes capture the why, separately from the score. Every unvisited place gets a
+predicted score for you and a friends' average.
+
 **Today.** The profile captures stated preferences at onboarding and through `update_traveler_profile`.
 Saved hearts are positive-only, un-reasoned signals. Past trips are not used as evidence.
 
@@ -60,13 +82,20 @@ Saved hearts are positive-only, un-reasoned signals. Past trips are not used as 
   design; disliked noise twice. Food: loves markets and tasting menus; dislikes long waits."
 - **On cards:** a "Fits you" line grounded in the taste profile ("You rated two quiet design hotels
   highly") and a "Not for me" action that records a dislike and hides the card.
-- **Post-trip prompt:** after a trip's end date, Updates asks "How was Rome?" → quick rating of each idea
-  and booking (Beli-style pairwise "which did you prefer?" can follow later).
+- **Post-trip prompt:** after a trip's end date, Updates asks "How was Rome?" → the three-bucket reaction
+  for each idea and booking, then at most three "which did you prefer?" comparisons against places
+  already rated in the same domain (Beli's local insertion), which yields a per-domain ranked list and a
+  derived score without asking anyone to type a number.
 - **Update my assistant** gains a "Your taste" section listing learned preferences with delete.
 - **Metrics:** % of shown cards with feedback, % of users with ≥5 feedback events, repeat-save rate.
 - **Effort:** M. No vendors. Model prompt updated to use the taste profile and explain fit.
 
 ## 2. Turn inspiration into a plan (Mindtrip)
+
+**How Mindtrip does it.** "Start Anywhere": paste a link, upload a screenshot, photo, PDF or notes list,
+share from the iOS share sheet, or email a booking confirmation; OpenAI models extract places against
+Mindtrip's own POI database and the user picks the output shape (chat, collection or trip). Known limits:
+TikTok needs text overlays, one input yields one output, no browser extension.
 
 **Today.** Users can save places and community guides, add them to trips and ask the assistant to plan
 from a guide or from saved places. There is no way to bring in outside inspiration.
@@ -92,6 +121,12 @@ from a guide or from saved places. There is no way to bring in outside inspirati
 
 ## 3. Itinerary and map together (Wanderlog)
 
+**How Wanderlog does it.** One scrolling plan (reservations, notes, lists, days, budget) beside a map;
+every place is pinned on add; pins are colored per list or day with a layers toggle and lines in itinerary
+order; travel time and distance between stops by mode; a per-trip email address and an optional Gmail
+scan import flight and hotel confirmations; checkbox multi-select "Move to day" as well as drag-and-drop;
+"Optimize route" for one day between a chosen start and end.
+
 **Today.** The trip page has tiles for Ideas, Itinerary, Bookings and Media next to a map of every place
 attached to the trip. The itinerary is text lines per day, not linked to places; bookings are links.
 
@@ -108,13 +143,21 @@ mixes flights, stays, restaurants and experiences; no travel times or route line
 - **Map by day:** numbered, color-coded pins per day, "All / Day 1 / Day 2" chips, and a light route line
   between consecutive stops. Travel time between stops via the Google Routes API comes later (cost per
   call; cache per pair).
-- **Drag-and-drop** with `@dnd-kit` between days and within a day; keyboard reordering for accessibility.
+- **Move first, drag later:** checkbox multi-select → "Move to Day N / Ideas" (Wanderlog's keyboard-free
+  path) ships with the board; drag-and-drop with `@dnd-kit` follows.
+- **Reservation inbox:** a per-trip forwarding address (e.g. trip-<id>@in.xpmatch.app via an inbound email
+  provider) turns forwarded confirmations into Bookings automatically; a Gmail scan is out of scope.
 - **Reservation import:** paste a confirmation email or PDF text → model parses provider, dates,
   confirmation number → Bookings entry with a date, shown on the board and the calendar.
 - **Metrics:** % of trips with ≥1 scheduled stop, stops per trip, share of ideas that get scheduled.
 - **Effort:** M for stops + board + day pins; L including DnD polish, routes and import.
 
 ## 4. Natural-language Smart Filters (Booking.com)
+
+**How Booking.com does it.** A free-text box in the app ("Hotels in Amsterdam with a great gym, a rooftop
+bar, and canal views"); GPT models map it onto Booking's existing filter taxonomy (property type,
+facilities, distance) and return the filtered list. Nothing shows what was understood or lets the user
+edit it, and unmappable parts fail silently.
 
 **Today.** Constraints the traveler states ("quiet, near restaurants, under $250") live only in the
 model's head; hotel cards reflect them implicitly. Explore's search box runs a free-text Places query.
@@ -137,6 +180,11 @@ silently.
 
 ## 5. Questions answered through reviews (Yelp)
 
+**How Yelp does it.** "Ask Yelp Assistant" on business pages with per-business suggested questions; a
+safety classifier runs first; retrieval over reviews, photos, business info and the business website;
+the answer streams with inline citations and highlighted review passages plus photos. Review Insights
+adds per-topic sentiment scores (1–100) that open the underlying reviews when tapped.
+
 **Today.** The place sheet shows up to five Google reviews and an editorial summary; the model can look up
 Wikipedia facts. Nobody can ask "Is it quiet enough for a conversation?"
 
@@ -148,9 +196,11 @@ five reviews per place, so depth is limited by design.
   `generativeSummary`, attributes), answers the question with a model call that must cite which review
   or attribute supports each claim, and returns "not enough evidence" when it cannot.
 - **Sheet UI:** "Ask about this place" input with suggested questions per kind ("Is it noisy?", "Good
-  for a work day?", "Kid-friendly?"), an answer card and an `EvidenceList` of quotes with author and
-  date, plus attribute badges. A line explains the evidence base ("based on Google's review summary and
-  the 5 most relevant reviews").
+  for a work day?", "Kid-friendly?"), an answer card that streams with inline citations, and an
+  `EvidenceList` of quotes with author and date plus attribute badges. A line explains the evidence base
+  ("based on Google's review summary and the 5 most relevant reviews"), and each evidence item carries a
+  confidence hint (how many reviews mention the topic). A small classifier step (cheap model call)
+  rejects off-topic or unsafe questions with a templated reply before any retrieval, as Yelp does.
 - **Optional second source:** the Yelp Fusion AI API for restaurants in the US, if its terms and price fit;
   it would deepen restaurant evidence beyond five reviews.
 - **Compliance:** display reviews unmodified with attribution, cache derived facts ≤30 days, no bulk
@@ -159,6 +209,11 @@ five reviews per place, so depth is limited by design.
 - **Effort:** M.
 
 ## 6. Side-by-side comparison (Tripadvisor)
+
+**How Tripadvisor does it.** There is no comparison table. The AI Assistant accepts "Compare these two
+hotels for a couples' trip", answers in prose grounded in reviews, shows live prices and a map, and
+selects reviews by detail and recency. A 2026 Which? investigation found unhedged verdicts that ignored
+over a hundred negative mentions, which is the failure mode our structured version must avoid.
 
 **Today.** Cards list options; comparing means reading them one by one.
 
@@ -169,15 +224,21 @@ five reviews per place, so depth is limited by design.
   "Compare" button; the assistant can also call `compare_options` when asked ("compare these two").
 - **Comparison card:** columns are options, rows are the traveler's priorities (from the preference
   model, the trip's preferences, active constraint chips and the question asked), then Price, Rating and
-  reviews, Location (distance to the destination center or the trip's stops), Amenities/attributes,
-  Strengths, Compromises, and **Missing information** (explicitly listed). Data rows come from the place
-  facts layer; judgement rows come from the model with evidence links; price differences use the cards'
-  estimates and Booking/Google Hotels links.
+  reviews (with the count of negative mentions on the traveler's priorities and their recency), Location
+  (distance to the destination center or the trip's stops), Amenities/attributes, Strengths,
+  Compromises, and **Missing information** (explicitly listed). Data rows come from the place facts
+  layer; judgement rows come from the model with evidence links and are phrased as hedged findings, never
+  verdicts; price differences use the cards' estimates and Booking/Google Hotels links.
 - **Outcome actions:** Save, Add to trip, "Pick this one" (records a like with reasons → feature 1).
 - **Metrics:** compares per session, decision rate after compare.
 - **Effort:** M (S once features 5 and 7 exist).
 
 ## 7. Find hidden tradeoffs (StayMatch)
+
+**How StayMatch does it.** The traveler picks what matters (quiet, usable desk, natural light, nearby
+supermarket…); one scan reads Airbnb and Booking.com reviews for per-criterion signals and inspects
+listing photos against claims; each of the 5–10 shortlisted stays shows strengths, tradeoffs and keep/skip
+reasons with a review-confidence score (4 relevant reviews vs 40). Metered by scan, one free.
 
 **Today.** Every card explains why a pick fits; nothing says what might disappoint.
 
@@ -192,12 +253,19 @@ five reviews per place, so depth is limited by design.
   workspace, stairs/mobility, crowds, early starts, long transfers, spicy food…) stored as
   `polarity = dealbreaker` preferences; the model must check picks against them.
 - **Grounded flags (M):** with the place facts layer, a server job scores review text and attributes for
-  noise, walls, elevator, wifi/desk, cleanliness, crowds, distance, service hours, physical demand; flags
-  render with evidence quotes and are used to rank options down for travelers with the matching
-  dealbreaker.
+  noise, walls, elevator, wifi/desk, cleanliness, crowds, distance, service hours, physical demand; each
+  flag renders with evidence quotes and a confidence hint (StayMatch's "4 reviews vs 40"), and ranks
+  options down for travelers with the matching dealbreaker. Photo-versus-claim checks (a vision call on
+  the Places photos) are a later add-on.
 - **Metrics:** % cards with a heads-up, dislike rate on flagged vs unflagged picks.
 
 ## 8. Learn preferences through conversation (Layla)
+
+**How Layla does it.** Preferences are inferred from chats, clicks and trip ratings into an account-wide
+travel profile; nothing is confirmed with the user and there is no per-trip memory. Control is a single
+"Travel profiling" opt-out; memory notes live in a separate store from transcripts with shorter
+retention; the policy states model vendors do not train on user data and deletion completes within about
+24 hours. Expedia acquired Layla in July 2026.
 
 **Today.** When the traveler states a lasting preference the model calls `update_traveler_profile`, which
 saves immediately and shows "Preferences remembered". Trip-level preferences exist as free text on the
@@ -214,12 +282,21 @@ what has been learned from chat.
 - **Memory panel:** "Update my assistant" lists learned preferences (statement, scope, when, from which
   chat) with edit and delete; the agent context includes both profile-wide and trip-scoped items,
   labeled.
-- **Guardrail:** never store sensitive categories (health, religion) without an explicit "Always" click;
-  document this in the privacy notes.
+- **Guardrails and trust:** never store sensitive categories (health, religion) without an explicit
+  "Always" click; add a "Travel profiling" switch in Update my assistant that stops learning from chat;
+  keep learned preferences in their own table with their own retention, separate from chat transcripts;
+  state in the privacy notes that model vendors do not train on user data and that deletion completes
+  within a day.
 - **Metrics:** confirmations per week, ratio of trip vs always, deletions.
 - **Effort:** S/M.
 
 ## 9. Flight price tracking (Google Travel)
+
+**How Google does it.** "Track prices" on a Google Flights result (exact dates) or "Any dates" for a
+route (alert when the monthly minimum drops significantly); email and mobile alerts including "likely to
+rise" and "fare expiring" predictions; low/typical/high labels against the route's history; a price
+guarantee on badged fares; since April 2026 "track these flight prices for me" works in AI Mode chat with
+an explicit confirmation before the alert is saved.
 
 **Today.** Flight cards carry model estimates and Google Flights deep links. There is no live fare access,
 no scheduler and no email or push channel.
@@ -227,12 +304,14 @@ no scheduler and no email or push channel.
 **Gap.** Live prices, a watch list, periodic checks and notifications.
 
 **Close it (after 1–8).**
-- **Phase A — watch intent (S):** "Track this route" on flight cards stores a `flight_watch` (origin,
-  destination, dates or month, cabin, travelers, target price) shown under the trip's Bookings and on the
-  Trips page; it deep-links to Google Flights with the same parameters.
+- **Phase A — watch intent (S):** "Track this route" on flight cards, or "track these flights for me" in
+  chat with an explicit confirmation card, stores a `flight_watch` in one of two modes — exact dates, or
+  "any dates" for a route and month — shown under the trip's Bookings and on the Trips page; it deep-links
+  to Google Flights with the same parameters.
 - **Phase B — live fares (L):** a fare API (Amadeus Self-Service Flight Offers, Duffel, or Kiwi Tequila)
   queried by a Railway cron service hitting `/api/jobs/flight-watch` daily; prices stored per watch;
-  Updates + email when the price drops by a threshold or a cheaper date appears.
+  Updates + email when the price drops by a threshold or a cheaper date appears, plus a weekly "nothing
+  dropped" digest so silence is never ambiguous; low/typical/high labels once a watch has enough history.
 - **Phase C — insights:** "typical range" from stored history, book handoff to the airline/OTA.
 - **Metrics:** watches created, notification click-through, bookings attributed.
 
