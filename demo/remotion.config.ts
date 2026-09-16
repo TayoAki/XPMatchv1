@@ -1,7 +1,8 @@
 import { Config } from "@remotion/cli/config";
 
-// The sandbox and CI ship Chromium already; never download another one.
-const browser = process.env.PW_CHROMIUM || process.env.REMOTION_BROWSER || "/opt/pw-browsers/chromium";
+// Remotion drives Chrome's old headless mode, which only the headless shell still offers; Playwright
+// ships one next to its Chromium. Point REMOTION_BROWSER elsewhere to override.
+const browser = process.env.REMOTION_BROWSER || "/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell";
 Config.setBrowserExecutable(browser);
 Config.setVideoImageFormat("jpeg");
 Config.setOverwriteOutput(true);

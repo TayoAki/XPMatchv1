@@ -18,5 +18,7 @@ npm run preview                       # Remotion Studio to tweak titles and capt
 
 `capture.mjs` starts its own app instance on port 3300 (override with `DEMO_APP_PORT`) and writes one
 timeline mark per chapter; `src/timeline.ts` maps those marks to the titles and captions shown around
-the recording. Chromium comes from `PW_CHROMIUM` (default `/opt/pw-browsers/chromium`); Remotion never
-downloads its own browser here.
+the recording. The recording uses Playwright's Chromium (`PW_CHROMIUM`, default
+`/opt/pw-browsers/chromium`); the render uses Playwright's headless shell (`REMOTION_BROWSER`, default
+`/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell`), because Remotion drives
+Chrome's old headless mode. Remotion never downloads a browser here.
