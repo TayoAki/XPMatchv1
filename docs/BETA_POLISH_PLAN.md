@@ -1,5 +1,12 @@
 # Beta polish plan: deeper personalization, home picks, match scores, itinerary detail, bug reports
 
+**Status: shipped.** Flows in `docs/USER_FLOWS.md`, costs in `docs/COGS.md`, beta notes in
+`docs/BETA_READINESS.md`; tests in `tests/unit/match.test.ts` (match model, calibration, quality stats,
+home-pick queries and kind check, top-three picking, hours) and `tests/e2e/onboarding.spec.ts` (the
+six-step wizard → home rows with match badges → thumbs down with a reason lowers the score → trip
+proposal with resolved stops → board stop details and the Itinerary tile → Jump back in photos → Update
+my assistant → a bug report with a screenshot → the admin page with the report and the hit rate).
+
 Asked for after Wave 3, before inviting beta testers: "Jump back in" has no images; onboarding should go
 deeper so the home page can offer three picks per category (things to do, where to stay, where to eat);
 itinerary stops should carry the full card information; a bug icon lets testers report problems; every
