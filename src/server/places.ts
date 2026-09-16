@@ -310,6 +310,111 @@ export async function getPlaceDetails(id: string): Promise<PlaceDetails | null> 
   });
 }
 
+/* ----------------------------- nearby ----------------------------- */
+
+export type NearbyCategory = "for-you" | "restaurants" | "experiences" | "stays";
+export const NEARBY_CATEGORIES: NearbyCategory[] = ["for-you", "restaurants", "experiences", "stays"];
+
+const NEARBY_TYPES: Record<Exclude<NearbyCategory, "for-you">, { types: string[]; kind: PlaceKind }> = {
+  restaurants: { types: ["restaurant", "cafe", "bakery", "bar"], kind: "restaurant" },
+  experiences: {
+    types: ["tourist_attraction", "museum", "park", "art_gallery", "historical_landmark", "amusement_park", "zoo", "aquarium", "performing_arts_theater", "hiking_area"],
+    kind: "attraction",
+  },
+  stays: { types: ["lodging"], kind: "hotel" },
+};
+
+// Same fields as search minus the editorial summary (keeps Explore on a cheaper SKU).
+const NEARBY_FIELDS = SEARCH_FIELDS.split(",").filter((f) => f !== "places.editorialSummary").join(",");
+const NEARBY_RADIUS_M = 25000;
+const NEARBY_TTL_MS = 10 * 60_000;
+const nearbyCache = new Map<string, { at: number; promise: Promise<ResolvedPlace[]> }>();
+
+const present = (p: ResolvedPlace | null): p is ResolvedPlace => p !== null;
+
+async function googleNearby(center: LatLng, types: string[], kind: PlaceKind, limit: number): Promise<ResolvedPlace[]> {
+  const data = await googleFetch<{ places?: GooglePlace[] }>(
+    `${PLACES_BASE}/places:searchNearby`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        includedTypes: types,
+        maxResultCount: Math.min(Math.max(limit, 1), 20),
+        rankPreference: "POPULARITY",
+        languageCode: "en",
+        locationRestriction: { circle: { center: { latitude: center.lat, longitude: center.lng }, radius: NEARBY_RADIUS_M } },
+      }),
+    },
+    NEARBY_FIELDS,
+  );
+  return (data.places ?? []).map((p) => toResolved(p, kind)).filter(present);
+}
+
+async function googleTextMany(query: string, kind: PlaceKind, center: LatLng, limit: number): Promise<ResolvedPlace[]> {
+  const data = await googleFetch<{ places?: GooglePlace[] }>(
+    `${PLACES_BASE}/places:searchText`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        textQuery: query,
+        pageSize: Math.min(Math.max(limit, 1), 20),
+        languageCode: "en",
+        locationBias: { circle: { center: { latitude: center.lat, longitude: center.lng }, radius: NEARBY_RADIUS_M } },
+      }),
+    },
+    NEARBY_FIELDS,
+  );
+  return (data.places ?? []).map((p) => toResolved(p, kind)).filter(present);
+}
+
+function interleave(a: ResolvedPlace[], b: ResolvedPlace[]): ResolvedPlace[] {
+  const out: ResolvedPlace[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    for (const p of [a[i], b[i]]) {
+      if (p && !seen.has(p.id)) {
+        seen.add(p.id);
+        out.push(p);
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * Places around a point for the Explore page. Category tabs use Nearby Search (by type,
+ * ranked by popularity); a free-text query uses Text Search biased to the area.
+ * Results are cached for ten minutes per area/category/query.
+ */
+export async function searchNearby(center: LatLng, category: NearbyCategory, query?: string, limit = 12): Promise<ResolvedPlace[]> {
+  if (!placesApiKey()) return [];
+  const q = query?.trim().toLowerCase() ?? "";
+  const key = `${category}|${q}|${center.lat.toFixed(3)}|${center.lng.toFixed(3)}|${limit}`;
+  const hit = nearbyCache.get(key);
+  if (hit && Date.now() - hit.at < NEARBY_TTL_MS) return hit.promise;
+  const promise = (async () => {
+    if (q) {
+      const kind: PlaceKind = category === "restaurants" ? "restaurant" : category === "stays" ? "hotel" : "attraction";
+      return googleTextMany(q, kind, center, limit);
+    }
+    if (category === "for-you") {
+      const [experiences, restaurants] = await Promise.all([
+        googleNearby(center, NEARBY_TYPES.experiences.types, "attraction", Math.ceil(limit / 2)),
+        googleNearby(center, NEARBY_TYPES.restaurants.types, "restaurant", Math.floor(limit / 2)),
+      ]);
+      return interleave(experiences, restaurants);
+    }
+    const cfg = NEARBY_TYPES[category];
+    return googleNearby(center, cfg.types, cfg.kind, limit);
+  })().catch((err: unknown) => {
+    nearbyCache.delete(key);
+    throw err;
+  });
+  if (nearbyCache.size >= 300) nearbyCache.delete(nearbyCache.keys().next().value as string);
+  nearbyCache.set(key, { at: Date.now(), promise });
+  return promise;
+}
+
 /** Resolves a Places photo reference to its temporary googleusercontent URL. */
 export async function resolvePhotoUri(photoName: string, width: number): Promise<string | null> {
   const key = placesApiKey();
