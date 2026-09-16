@@ -1,4 +1,5 @@
 import type { PlaceKind, ResolvedPlace } from "@/lib/places/types";
+import type { PlaceFeedback, TasteProfile } from "@/lib/feedback/types";
 
 export type BudgetTier = "budget" | "mid-range" | "premium" | "luxury";
 export type Pace = "relaxed" | "balanced" | "packed";
@@ -219,6 +220,9 @@ export interface UserState {
   chats: ChatSummary[];
   updates: UpdateItem[];
   preferences: LearnedPreference[];
+  /** Reactions to places and the taste profile computed from them (Wave 2). */
+  feedback?: PlaceFeedback[];
+  taste?: TasteProfile | null;
 }
 
 export const DEFAULT_PROFILE: TravelerProfile = {

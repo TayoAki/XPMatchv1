@@ -35,6 +35,7 @@ import { PlaceImage } from "@/components/ui/PlaceImage";
 import { useSendMessage } from "@/components/chat/useSendMessage";
 import { TripCalendar } from "./TripCalendar";
 import { tripItemKey } from "./TripMap";
+import { ReactionControl } from "@/components/feedback/ReactionControl";
 
 export type TripSection = "ideas" | "itinerary" | "bookings" | "media" | "preferences" | "calendar" | "members";
 
@@ -288,7 +289,8 @@ function IdeaRow({
               {meta ? <span>{meta}</span> : null}
             </div>
           </div>
-          <div className="flex shrink-0 items-center">
+          <div className="flex shrink-0 items-center gap-1">
+            <ReactionControl name={item.title} kind={kind} place={place} destination={trip.destination} tripId={trip.id} source="trip" size="sm" />
             <IconButton
               label={isSaved ? `Remove ${item.title} from saved` : `Save ${item.title}`}
               onClick={() => toggleSaved({ kind, title: item.title, subtitle: place?.locality, destination: trip.destination, url: item.url, place, refId: place?.id })}

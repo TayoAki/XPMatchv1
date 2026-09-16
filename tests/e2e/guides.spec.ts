@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { login, signup, signupApi, uniqueEmail } from "./helpers";
+import { eventually, login, signup, signupApi, uniqueEmail } from "./helpers";
 
 test("community guides and Explore near you", async ({ page, browser, request, baseURL }) => {
   const author = uniqueEmail("ada");
@@ -69,6 +69,11 @@ test("community guides and Explore near you", async ({ page, browser, request, b
     await expect(card).toBeVisible();
     await card.getByRole("button", { name: `Save ${title}` }).click();
     await expect(card.getByRole("button", { name: `Remove ${title} from saved` })).toBeVisible();
+    // The save is optimistic; make sure the server has it before navigating away.
+    await eventually(
+      () => readerPage.request.get("/api/saved").then((r) => r.json() as Promise<{ saved: { kind: string; title: string }[] }>),
+      (d) => d.saved.some((s) => s.kind === "guide" && s.title === title),
+    );
     await readerPage.getByRole("navigation").getByRole("link", { name: "Saved", exact: true }).click();
     await readerPage.getByRole("button", { name: /^guides/i }).click();
     await expect(readerPage.getByText(title).first()).toBeVisible();

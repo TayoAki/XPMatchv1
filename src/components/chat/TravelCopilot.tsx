@@ -13,6 +13,7 @@ import {
   compareOptionsSchema,
   createTripSchema,
   focusMapSchema,
+  recordFeedbackSchema,
   rememberPreferenceSchema,
   setSearchConstraintsSchema,
   showAttractionsSchema,
@@ -25,6 +26,7 @@ import {
   type CompareOptionsArgs,
   type CreateTripArgs,
   type FocusMapArgs,
+  type RecordFeedbackArgs,
   type RememberPreferenceArgs,
   type SetSearchConstraintsArgs,
   type ShowAttractionsArgs,
@@ -48,6 +50,9 @@ import { ConstraintChips } from "@/components/chat/cards/ConstraintChips";
 import { ComparisonCard } from "@/components/chat/cards/ComparisonCard";
 import { RememberPreferenceCard } from "@/components/chat/cards/RememberPreferenceCard";
 import { PlaceAnswerCard } from "@/components/chat/cards/PlaceAnswerCard";
+import { FeedbackChip } from "@/components/chat/cards/FeedbackChip";
+import { tasteForContext } from "@/lib/feedback/taste";
+import type { ResolvedPlace } from "@/lib/places/types";
 import { api } from "@/lib/api";
 
 type RenderProps<T> = { args: Partial<T> | T; status: ToolCallStatus; result?: string; toolCallId: string };
@@ -104,6 +109,7 @@ const RememberRenderer = ({
 }: RenderProps<RememberPreferenceArgs> & { respond?: (result: unknown) => Promise<void> }) => (
   <RememberPreferenceCard args={args as Streaming<RememberPreferenceArgs>} status={status} result={result} toolCallId={toolCallId} respond={respond} />
 );
+const FeedbackRenderer = ({ args, status }: RenderProps<RecordFeedbackArgs>) => <FeedbackChip args={args as Streaming<RecordFeedbackArgs>} status={status} />;
 
 function nextMonthName(): string {
   const d = new Date();
@@ -172,7 +178,7 @@ export function preferencesForContext(preferences: LearnedPreference[], tripId?:
 }
 
 export function TravelCopilot() {
-  const { profile, planner, saved, trips, preferences } = useTravelStore();
+  const { profile, planner, saved, trips, preferences, feedback, taste } = useTravelStore();
   const config = useAppConfig();
   const demo = config?.mode === "demo";
   const mapView = useMapView();
@@ -199,6 +205,13 @@ export function TravelCopilot() {
     description:
       "Learned preferences (profile-wide). Dealbreakers must never be violated silently: check every pick against them and call out any conflict in the card's tradeoffs. Likes and dislikes steer picks.",
     value: learned,
+  });
+
+  const tasteContext = useMemo(() => tasteForContext(taste, feedback), [taste, feedback]);
+  useAgentContext({
+    description:
+      "Taste profile: places the traveler loved or found not for them, the reasons that keep coming up per domain, and their latest reactions. Lean toward what they loved (say so in whyItFits), avoid disliked patterns, and never re-recommend a place marked not for them unless asked.",
+    value: tasteContext,
   });
 
   useAgentContext({
@@ -443,6 +456,44 @@ export function TravelCopilot() {
         }
       },
       render: AskRenderer,
+    },
+    [],
+  );
+
+  useFrontendTool(
+    {
+      name: "record_feedback",
+      description:
+        "Record how a specific place was for the traveler ('the Artemide was too noisy', 'we loved Da Enzo'): a verdict (loved / fine / disliked) with short reasons. Saved immediately; it shapes future picks. Not for hypotheticals or places they have not been to.",
+      parameters: recordFeedbackSchema,
+      followUp: true,
+      handler: async (args) => {
+        const threadId = mapActions.activeThreadId();
+        const thread = threadId ? mapActions.getState().threads[threadId] : undefined;
+        const pinned = thread ? Object.values(thread.places) : [];
+        let place: ResolvedPlace | undefined = pinned.find((p) => p.name.toLowerCase() === args.name.toLowerCase());
+        const destination = args.destination ?? thread?.focus?.name;
+        if (!place) {
+          const res = await resolvePlaces({ destination, items: [{ key: "0", query: [args.name, destination].filter(Boolean).join(", "), kind: args.kind }] }).catch(() => null);
+          place = res?.items[0]?.place ?? undefined;
+        }
+        try {
+          const saved = await travelActions.recordFeedback({
+            name: place?.name ?? args.name,
+            kind: args.kind,
+            place,
+            destination,
+            verdict: args.verdict,
+            reasons: args.reasons ?? [],
+            note: args.note ?? "",
+            source: "chat",
+          });
+          return `Recorded: ${saved.name} — ${saved.verdict}${saved.reasons.length ? ` (${saved.reasons.join(", ")})` : ""}. Acknowledge in one short line; do not repeat the details.`;
+        } catch (err) {
+          return `Could not record the reaction (${err instanceof Error ? err.message : "error"}). Apologize briefly.`;
+        }
+      },
+      render: FeedbackRenderer,
     },
     [],
   );

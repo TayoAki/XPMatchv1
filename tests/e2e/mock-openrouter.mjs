@@ -190,7 +190,24 @@ const server = http.createServer((req, res) => {
       if (toolName === "ask_about_place") return streamReply(res, { text: "Front rooms hear the buses early; a courtyard room fixes that." });
       if (toolName === "compare_options") return streamReply(res, { text: "Artemide is the safer pick for a quiet night at that budget." });
       if (toolName === "schedule_stops") return streamReply(res, { text: "Done — it's on the board." });
+      if (toolName === "record_feedback") return streamReply(res, { text: "Noted — I'll steer away from that next time." });
+      if (toolName === "import_inspiration") return streamReply(res, { text: "Those are on the cards above. Want them in a trip?" });
       return streamReply(res, { text: "Done — those are on the cards above. Want stays or things to do next?" });
+    }
+    const link = textOf(lastUser?.content).match(/https?:\/\/\S+/);
+    if (link && tools.includes("import_inspiration")) {
+      return streamReply(res, { text: "Let me pull the places out of that.", toolCall: { name: "import_inspiration", args: { url: link[0].replace(/[.,)]+$/, "") } } });
+    }
+    const reaction = text.match(/^(?:the )?(.+?) was (too noisy|great|fine|not for me)/);
+    if (reaction && tools.includes("record_feedback")) {
+      const raw = reaction[1].trim();
+      const name = /artemide/.test(raw) ? "Hotel Artemide" : /russie/.test(raw) ? "Hotel de Russie" : /enzo/.test(raw) ? "Trattoria Da Enzo al 29" : raw.replace(/\b\w/g, (c) => c.toUpperCase());
+      const verdict = reaction[2] === "great" ? "loved" : reaction[2] === "fine" ? "fine" : "disliked";
+      const reasons = reaction[2] === "too noisy" ? ["Noisy"] : reaction[2] === "great" ? ["Location"] : [];
+      return streamReply(res, {
+        text: "Sorry to hear that.",
+        toolCall: { name: "record_feedback", args: { name, kind: /hotel|artemide|russie/.test(raw) ? "hotel" : "restaurant", verdict, reasons, destination: "Rome, Italy" } },
+      });
     }
     const schedule = text.match(/put (?:the )?(.+?) on day (\d+)/);
     if (schedule && tools.includes("schedule_stops")) {

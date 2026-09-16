@@ -7,6 +7,8 @@ import { getYourGuideSearchUrl, googleMapsSearchUrl } from "@/lib/travel/links";
 import { placeKey, usePlacePin, useRegisterPlaces } from "@/components/map/useRegisterPlaces";
 import { CardPhoto, AddToTripButton, Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Tag, Text, Tradeoffs, ViewOnMapButton } from "./shared";
 import { CompareToggle } from "./CompareControls";
+import { HiddenPlaceCard, ReactionControl, useReaction } from "@/components/feedback/ReactionControl";
+import { TasteFit } from "@/components/feedback/TasteFit";
 
 export function AttractionCards({ args, status, toolCallId }: { args: Streaming<ShowAttractionsArgs>; status: ToolCallStatus; toolCallId: string }) {
   const items = (args.attractions ?? []).filter((a) => a && a.name);
@@ -42,7 +44,9 @@ function AttractionCard({
   toolCallId: string;
 }) {
   const pin = usePlacePin(toolCallId, index);
+  const reaction = useReaction({ name: a.name, kind: "attraction", place: pin.place, destination: dest });
   const query = `${a.name} ${dest}`.trim();
+  if (reaction.current?.verdict === "disliked" && a.name) return <HiddenPlaceCard name={a.name} feedbackId={reaction.current.id} />;
   return (
             <CardShell highlighted={pin.isSelected} onMouseEnter={() => pin.hover(true)} onMouseLeave={() => pin.hover(false)}>
               <CardPhoto place={pin.place} queries={[a.name ?? "", dest]} alt={a.name ?? "Attraction"} className="aspect-[16/9]">
@@ -71,6 +75,7 @@ function AttractionCard({
                     </Tag>
                   ) : null}
                 </div>
+                <TasteFit kind="attraction" name={a.name} category={pin.place?.category ?? a.category} text={[a.description, a.whyItFits, a.category].filter(Boolean).join(" ")} />
                 <Tradeoffs items={a.tradeoffs} />
               </Body>
               <Footer>
@@ -80,6 +85,7 @@ function AttractionCard({
                 <ExtLink href={getYourGuideSearchUrl(query)}>Tickets & tours</ExtLink>
                 <ViewOnMapButton pin={pin} />
                 <AddToTripButton place={pin.place} />
+                <ReactionControl name={a.name} kind="attraction" place={pin.place} destination={dest} source="card" />
                 <CompareToggle
                   pinKey={placeKey(toolCallId, index)}
                   name={a.name}

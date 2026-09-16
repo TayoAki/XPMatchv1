@@ -10,6 +10,7 @@ const root = path.resolve(here, "..", "..");
 const appPort = Number(process.env.APP_PORT || 3000);
 const modelPort = Number(process.env.MODEL_PORT || 4545);
 const placesPort = Number(process.env.PLACES_PORT || 4546);
+const sitePort = Number(process.env.SITE_PORT || 4547);
 const dataDir = process.env.PGLITE_DIR || path.join(root, ".data", `e2e-${appPort}`);
 const startMocks = process.env.START_MOCKS !== "0";
 const production = process.env.E2E_PRODUCTION === "1";
@@ -25,8 +26,10 @@ const spawnChild = (cmd, args, env, name) => {
 };
 
 if (startMocks) {
-  spawnChild("node", [path.join(here, "mock-openrouter.mjs")], { PORT: String(modelPort) }, "mock model");
+  // The stand-in model logs one line per request (tests assert on what the app sent it).
+  spawnChild("node", [path.join(here, "mock-openrouter.mjs")], { PORT: String(modelPort), LOG: path.join(dataDir, "model-requests.log") }, "mock model");
   spawnChild("node", [path.join(here, "mock-places.mjs")], { PORT: String(placesPort) }, "mock places");
+  spawnChild("node", [path.join(here, "mock-site.mjs")], { PORT: String(sitePort) }, "mock site");
 }
 
 const appEnv = {
@@ -37,6 +40,8 @@ const appEnv = {
   OPENROUTER_BASE_URL: `http://localhost:${modelPort}/api/v1`,
   GOOGLE_MAPS_API_KEY: "e2e-places-stub",
   PLACES_BASE_URL: `http://localhost:${placesPort}/v1`,
+  // The import fixture site runs on localhost, which the import guard otherwise refuses.
+  IMPORT_ALLOW_LOOPBACK: "1",
   COPILOTKIT_TELEMETRY_DISABLED: "true",
   NEXT_TELEMETRY_DISABLED: "1",
   PORT: String(appPort),

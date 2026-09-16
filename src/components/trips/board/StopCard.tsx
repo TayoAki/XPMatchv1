@@ -9,6 +9,7 @@ import type { ItineraryStop } from "@/lib/types";
 import { stopPinKey } from "@/lib/itinerary";
 import { Button } from "@/components/ui/Button";
 import { TextArea, TextInput } from "@/components/ui/Field";
+import { ReactionControl } from "@/components/feedback/ReactionControl";
 
 export type StopMove = `day:${number}` | "ideas" | "remove";
 
@@ -140,6 +141,7 @@ export function StopCard({ stop, index, color, dayIndex, dayCount, canEdit, hove
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-0.5">
+            {place ? <ReactionControl name={stop.title} kind={place.kind} place={place} source="trip" size="sm" className="mr-1" /> : null}
             {place ? (
               <button type="button" aria-label={`Show ${stop.title} on the map`} title="Show on the map" onClick={() => onSelectPlace(key)} className="rounded-full p-1.5 text-neutral-500 hover:bg-surface hover:text-foreground">
                 <MapPin className="h-4 w-4" />

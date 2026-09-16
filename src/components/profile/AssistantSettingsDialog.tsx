@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Brain, Trash2 } from "lucide-react";
+import { Brain, Sparkles, Trash2 } from "lucide-react";
+import { YourTaste } from "@/components/feedback/YourTaste";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Chip, Field, Select, TextArea, TextInput } from "@/components/ui/Field";
@@ -201,6 +202,14 @@ function AssistantSettingsForm() {
             ))}
           </ul>
         )}
+      </div>
+
+      <div className="mt-4 rounded-2xl border border-border p-4" data-testid="taste-panel">
+        <div className="flex items-center gap-2 text-[14px] font-semibold">
+          <Sparkles className="h-4 w-4" /> Your taste
+        </div>
+        <p className="mb-3 mt-0.5 text-[12px] text-muted">Built from your reactions to places (Loved it / It was fine / Not for me). Reasons that repeat become learned preferences above.</p>
+        <YourTaste />
       </div>
     </Modal>
   );

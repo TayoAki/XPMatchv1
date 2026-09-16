@@ -8,8 +8,12 @@ import { PageFrame, EmptyState } from "@/components/PageFrame";
 import { Button } from "@/components/ui/Button";
 import { PlaceImage } from "@/components/ui/PlaceImage";
 import { useTravelStore, type SavedItem, type SavedKind } from "@/lib/store";
+import type { PlaceKind } from "@/lib/places/types";
 import { useSendMessage } from "@/components/chat/useSendMessage";
 import { useUiState } from "@/components/providers/UiState";
+import { ReactionControl } from "@/components/feedback/ReactionControl";
+
+const RATEABLE: SavedKind[] = ["destination", "hotel", "restaurant", "attraction"];
 
 type Tab = "places" | "guides";
 
@@ -86,6 +90,9 @@ export default function SavedPage() {
                           <div className="truncate text-[15px] font-medium">{s.title}</div>
                           {s.subtitle ? <div className="truncate text-[12px] text-muted">{s.subtitle}</div> : null}
                         </div>
+                        {RATEABLE.includes(s.kind) ? (
+                          <ReactionControl name={s.title} kind={s.kind as PlaceKind} place={s.place} destination={s.destination} source="card" size="sm" />
+                        ) : null}
                         {s.place ? (
                           <button
                             type="button"

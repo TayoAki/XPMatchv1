@@ -299,3 +299,16 @@ export const rememberPreferenceSchema = z.object({
 });
 
 export type RememberPreferenceArgs = z.infer<typeof rememberPreferenceSchema>;
+
+/* ----------------------- Wave 2: taste profile ----------------------- */
+
+export const recordFeedbackSchema = z.object({
+  name: z.string().describe("The place exactly as named on its card or on Google Maps"),
+  kind: z.enum(["hotel", "restaurant", "attraction", "destination"]),
+  verdict: z.enum(["loved", "fine", "disliked"]).describe("loved = would go back, fine = okay, disliked = not for them"),
+  reasons: z.array(z.string()).max(4).optional().describe("Short reasons in the traveler's words, e.g. 'Noisy', 'Great location'"),
+  note: z.string().optional().describe("One line to remember, in the traveler's words"),
+  destination: z.string().optional().describe("City the place is in, when known"),
+});
+
+export type RecordFeedbackArgs = z.infer<typeof recordFeedbackSchema>;

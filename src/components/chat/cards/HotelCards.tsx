@@ -8,6 +8,8 @@ import { formatDateRange } from "@/lib/store";
 import { placeKey, usePlacePin, useRegisterPlaces } from "@/components/map/useRegisterPlaces";
 import { CardPhoto, AddToTripButton, Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Stars, Tag, Text, Tradeoffs, ViewOnMapButton, usd } from "./shared";
 import { CompareToggle } from "./CompareControls";
+import { HiddenPlaceCard, ReactionControl, useReaction } from "@/components/feedback/ReactionControl";
+import { TasteFit } from "@/components/feedback/TasteFit";
 
 export function HotelCards({ args, status, toolCallId }: { args: Streaming<ShowHotelsArgs>; status: ToolCallStatus; toolCallId: string }) {
   const items = (args.hotels ?? []).filter((h) => h && h.name);
@@ -50,7 +52,9 @@ function HotelCard({
   toolCallId: string;
 }) {
   const pin = usePlacePin(toolCallId, index);
+  const reaction = useReaction({ name: h.name, kind: "hotel", place: pin.place, destination: dest });
   const query = `${h.name} ${dest}`.trim();
+  if (reaction.current?.verdict === "disliked" && h.name) return <HiddenPlaceCard name={h.name} feedbackId={reaction.current.id} />;
   return (
             <CardShell highlighted={pin.isSelected} onMouseEnter={() => pin.hover(true)} onMouseLeave={() => pin.hover(false)}>
               <CardPhoto place={pin.place} queries={[h.area ? `${h.area}, ${dest}` : "", dest]} alt={h.name ?? "Hotel"} className="aspect-[16/9]">
@@ -93,6 +97,7 @@ function HotelCard({
                     <Tag key={a}>{a}</Tag>
                   ))}
                 </div>
+                <TasteFit kind="hotel" name={h.name} category={pin.place?.category ?? h.style} text={[h.whyItFits, h.style, ...(h.amenities ?? [])].filter(Boolean).join(" ")} />
                 <Tradeoffs items={h.tradeoffs} />
               </Body>
               <Footer>
@@ -102,6 +107,7 @@ function HotelCard({
                 <ExtLink href={googleHotelsUrl(query)}>Google Hotels</ExtLink>
                 <ViewOnMapButton pin={pin} />
                 <AddToTripButton place={pin.place} />
+                <ReactionControl name={h.name} kind="hotel" place={pin.place} destination={dest} source="card" />
                 <CompareToggle
                   pinKey={placeKey(toolCallId, index)}
                   name={h.name}

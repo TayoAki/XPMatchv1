@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { DndContext, closestCorners } from "@dnd-kit/core";
+import { DndContext } from "@dnd-kit/core";
 import { Calendar, Lightbulb, Plus, Sparkles, Ticket, Users } from "lucide-react";
 import { formatDateRange, useTravelStore } from "@/lib/store";
 import type { ItineraryDay, ItineraryStop, TripDetail, TripItem } from "@/lib/types";
@@ -12,7 +12,7 @@ import { useSendMessage } from "@/components/chat/useSendMessage";
 import { DayColumn } from "./DayColumn";
 import { IdeasTray } from "./IdeasTray";
 import type { StopMove } from "./StopCard";
-import { useItineraryDnd } from "./useItineraryDnd";
+import { boardCollision, useItineraryDnd } from "./useItineraryDnd";
 
 function dayDate(startDate: string | undefined, index: number): string | null {
   if (!startDate) return null;
@@ -128,7 +128,7 @@ export function TripBoard({ trip, canEdit, onTrip, onSelectPlace, hoveredKey, on
       </div>
       {error ? <p className="text-[13px] text-red-600">{error}</p> : null}
 
-      <DndContext id="trip-board" sensors={sensors} collisionDetection={closestCorners} {...handlers}>
+      <DndContext id="trip-board" sensors={sensors} collisionDetection={boardCollision} {...handlers}>
         <div className="grid gap-3">
           {days.map((day, i) => (
             <DayColumn

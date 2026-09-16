@@ -15,6 +15,7 @@ import { iconSvg } from "./markerIcons";
 import { DestinationTab, type DestinationTabKind } from "./DestinationTab";
 import { AskAboutPlace } from "@/components/place/AskAboutPlace";
 import { TopicChips } from "@/components/place/TopicChips";
+import { ReactionControl } from "@/components/feedback/ReactionControl";
 import { reviewsOnTopic } from "@/lib/places/evidence";
 import type { EvidenceTopic } from "@/lib/places/facts";
 
@@ -134,6 +135,7 @@ export function PlaceDetailSheet({
           </button>
         </div>
         <div className="flex items-center gap-2">
+          <ReactionControl name={place.name} kind={place.kind} place={data} destination={focusName ?? (isDestination ? undefined : data.locality)} source="sheet" size="lg" />
           <button
             type="button"
             onClick={save}

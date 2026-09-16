@@ -2,7 +2,8 @@
 
 import { useMemo, useSyncExternalStore } from "react";
 import { api, ApiError } from "@/lib/api";
-import type { ResolvedPlace } from "@/lib/places/types";
+import type { PlaceKind, ResolvedPlace } from "@/lib/places/types";
+import { feedbackKey, type FeedbackSource, type FeedbackVerdict, type PlaceFeedback, type TasteProfile } from "@/lib/feedback/types";
 import {
   DEFAULT_PLANNER,
   DEFAULT_PROFILE,
@@ -74,6 +75,22 @@ export interface NewTripItem {
   place?: ResolvedPlace;
 }
 
+/** A reaction to a place; the same place gets one row that later reactions replace. */
+export interface NewFeedback {
+  placeId?: string;
+  name: string;
+  kind: PlaceKind;
+  destination?: string;
+  place?: ResolvedPlace;
+  verdict: FeedbackVerdict;
+  reasons?: string[];
+  note?: string;
+  tripId?: string | null;
+  source?: FeedbackSource;
+  /** Omit to keep the stored score, null to clear it. */
+  score?: number | null;
+}
+
 /** The list view only needs the summary fields of a trip. */
 function toTripSummary(detail: TripDetail): Trip {
   const { id, ownerId, role, title, destination, place, startDate, endDate, travelers, budgetTier, summary, itinerary, preferences, memberCount, createdAt, updatedAt } = detail;
@@ -96,6 +113,8 @@ export interface TravelStoreState {
   chats: ChatSummary[];
   updates: UpdateItem[];
   preferences: LearnedPreference[];
+  feedback: PlaceFeedback[];
+  taste: TasteProfile | null;
   proactiveDismissedAt: string | null;
   hydrated: boolean;
 }
@@ -116,6 +135,8 @@ const DEFAULT_STATE: TravelStoreState = {
   chats: [],
   updates: [],
   preferences: [],
+  feedback: [],
+  taste: null,
   proactiveDismissedAt: null,
   hydrated: false,
 };
@@ -212,6 +233,8 @@ export const travelActions = {
           chats: data.chats,
           updates: data.updates,
           preferences: data.preferences ?? [],
+          feedback: data.feedback ?? [],
+          taste: data.taste ?? null,
           hydrated: true,
         });
       } catch (err) {
@@ -287,6 +310,63 @@ export const travelActions = {
       report("removing a preference", err);
       set((s) => ({ preferences: [item, ...s.preferences] }));
     });
+  },
+
+  /** Records a reaction to a place (optimistically); resolves with the saved row. */
+  async recordFeedback(input: NewFeedback): Promise<PlaceFeedback> {
+    const prev = readSnapshot();
+    const placeId = input.placeId ?? feedbackKey(input.name, input.place);
+    const existing = prev.feedback.find((f) => f.placeId === placeId);
+    const now = new Date().toISOString();
+    const optimistic: PlaceFeedback = {
+      id: existing?.id ?? `temp-${newId()}`,
+      placeId,
+      kind: input.kind,
+      name: input.name,
+      destination: input.destination ?? existing?.destination,
+      place: input.place ?? existing?.place,
+      verdict: input.verdict,
+      reasons: input.reasons ?? [],
+      note: input.note ?? "",
+      tripId: input.tripId ?? existing?.tripId,
+      source: input.source ?? "card",
+      score: input.score === undefined ? existing?.score : (input.score ?? undefined),
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    };
+    set({ feedback: [optimistic, ...prev.feedback.filter((f) => f.placeId !== placeId)] });
+    try {
+      const res = await api<{ feedback: PlaceFeedback; taste: TasteProfile; preferences: LearnedPreference[] }>("/api/me/feedback", {
+        method: "POST",
+        json: { ...input, placeId, reasons: input.reasons ?? [], note: input.note ?? "", source: input.source ?? "card", tripId: input.tripId ?? null },
+      });
+      set((s) => ({
+        feedback: [res.feedback, ...s.feedback.filter((f) => f.placeId !== placeId)],
+        taste: res.taste,
+        preferences: res.preferences.length
+          ? [...res.preferences.filter((p) => !s.preferences.some((q) => q.id === p.id)), ...s.preferences.map((p) => res.preferences.find((q) => q.id === p.id) ?? p)]
+          : s.preferences,
+      }));
+      return res.feedback;
+    } catch (err) {
+      report("saving your reaction", err);
+      set((s) => ({ feedback: existing ? s.feedback.map((f) => (f.placeId === placeId ? existing : f)) : s.feedback.filter((f) => f.placeId !== placeId) }));
+      throw err;
+    }
+  },
+
+  removeFeedback(id: string) {
+    const prev = readSnapshot();
+    const item = prev.feedback.find((f) => f.id === id);
+    if (!item) return;
+    set({ feedback: prev.feedback.filter((f) => f.id !== id) });
+    if (id.startsWith("temp-")) return;
+    api<{ taste: TasteProfile }>(`/api/me/feedback/${encodeURIComponent(id)}`, { method: "DELETE" })
+      .then((res) => set({ taste: res.taste }))
+      .catch((err) => {
+        report("removing a reaction", err);
+        set((s) => ({ feedback: [item, ...s.feedback] }));
+      });
   },
 
   isSaved(kind: SavedKind, title: string, refId?: string): boolean {

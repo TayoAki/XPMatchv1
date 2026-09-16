@@ -7,6 +7,7 @@ import { googleMapsSearchUrl } from "@/lib/travel/links";
 import { useSendMessage } from "@/components/chat/useSendMessage";
 import { usePlacePin, useRegisterPlaces } from "@/components/map/useRegisterPlaces";
 import { CardPhoto, AddToTripButton, ActionButton, Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Tag, Text, ViewOnMapButton, usd } from "./shared";
+import { HiddenPlaceCard, ReactionControl, useReaction } from "@/components/feedback/ReactionControl";
 
 export function DestinationCards({ args, status, toolCallId }: { args: Streaming<ShowDestinationsArgs>; status: ToolCallStatus; toolCallId: string }) {
   const items = (args.destinations ?? []).filter((d) => d && d.name);
@@ -39,7 +40,9 @@ function DestinationCard({
 }) {
   const send = useSendMessage();
   const pin = usePlacePin(toolCallId, index);
+  const reaction = useReaction({ name: d.name, kind: "destination", place: pin.place, destination: d.name });
   const label = [d.name, d.country].filter(Boolean).join(", ");
+  if (reaction.current?.verdict === "disliked" && d.name) return <HiddenPlaceCard name={d.name} feedbackId={reaction.current.id} />;
   return (
             <CardShell highlighted={pin.isSelected} onMouseEnter={() => pin.hover(true)} onMouseLeave={() => pin.hover(false)}>
               <CardPhoto place={pin.place} queries={[d.name ?? "", label]} alt={label} className="aspect-[16/10]">
@@ -75,6 +78,7 @@ function DestinationCard({
                 <ActionButton onClick={() => send(`Plan a trip to ${label} for me.`)}>Plan a trip</ActionButton>
                 <ViewOnMapButton pin={pin} />
                 <AddToTripButton place={pin.place} />
+                <ReactionControl name={d.name} kind="destination" place={pin.place} destination={d.name} source="card" />
                 {d.name && !pin.place ? (
                   <ExtLink href={googleMapsSearchUrl(label)}>
                     <MapPin className="h-3.5 w-3.5" /> Map

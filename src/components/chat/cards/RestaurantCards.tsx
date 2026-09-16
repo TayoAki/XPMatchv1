@@ -7,6 +7,8 @@ import { googleMapsSearchUrl, openTableSearchUrl } from "@/lib/travel/links";
 import { placeKey, usePlacePin, useRegisterPlaces } from "@/components/map/useRegisterPlaces";
 import { CardPhoto, AddToTripButton, Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Tag, Text, Tradeoffs, ViewOnMapButton } from "./shared";
 import { CompareToggle } from "./CompareControls";
+import { HiddenPlaceCard, ReactionControl, useReaction } from "@/components/feedback/ReactionControl";
+import { TasteFit } from "@/components/feedback/TasteFit";
 
 export function RestaurantCards({ args, status, toolCallId }: { args: Streaming<ShowRestaurantsArgs>; status: ToolCallStatus; toolCallId: string }) {
   const items = (args.restaurants ?? []).filter((r) => r && r.name);
@@ -42,7 +44,9 @@ function RestaurantCard({
   toolCallId: string;
 }) {
   const pin = usePlacePin(toolCallId, index);
+  const reaction = useReaction({ name: r.name, kind: "restaurant", place: pin.place, destination: dest });
   const query = `${r.name} ${dest}`.trim();
+  if (reaction.current?.verdict === "disliked" && r.name) return <HiddenPlaceCard name={r.name} feedbackId={reaction.current.id} />;
   return (
             <CardShell highlighted={pin.isSelected} onMouseEnter={() => pin.hover(true)} onMouseLeave={() => pin.hover(false)}>
               <div className="flex gap-3 p-3">
@@ -70,6 +74,7 @@ function RestaurantCard({
                   {r.reservationRecommended === true ? <Tag tone="warn">Book ahead</Tag> : null}
                   {r.reservationRecommended === false ? <Tag tone="accent">Walk-ins OK</Tag> : null}
                 </div>
+                <TasteFit kind="restaurant" name={r.name} category={pin.place?.category ?? r.cuisine} text={[r.whyItFits, r.cuisine, r.bestFor, r.mustTry].filter(Boolean).join(" ")} />
                 <Tradeoffs items={r.tradeoffs} />
               </Body>
               <Footer>
@@ -79,6 +84,7 @@ function RestaurantCard({
                 {r.reservationRecommended ? <ExtLink href={openTableSearchUrl(query)}>Reserve</ExtLink> : null}
                 <ViewOnMapButton pin={pin} />
                 <AddToTripButton place={pin.place} />
+                <ReactionControl name={r.name} kind="restaurant" place={pin.place} destination={dest} source="card" />
                 <CompareToggle
                   pinKey={placeKey(toolCallId, index)}
                   name={r.name}

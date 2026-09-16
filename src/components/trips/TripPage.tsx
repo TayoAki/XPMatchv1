@@ -17,6 +17,8 @@ import { TripSections, type TripSection } from "./TripSections";
 import { TripMap } from "./TripMap";
 import { TripDetailsDialog } from "./TripDetailsDialog";
 import { TripBoard } from "./board/TripBoard";
+import { PostTripRating } from "@/components/feedback/PostTripRating";
+import { ratingCandidates, tripEnded } from "@/lib/feedback/post-trip";
 
 const BUDGET_LABEL: Record<string, string> = { budget: "Budget", "mid-range": "Mid-range", premium: "Premium", luxury: "Luxury" };
 
@@ -36,6 +38,15 @@ function readInitialView(): TripView {
     // Storage can be unavailable (private mode); the default view is fine.
   }
   return "tiles";
+}
+
+/** `?rate=1` (the link from Updates) opens the post-trip rating as soon as the trip loads. */
+function readRateParam(): boolean {
+  try {
+    return new URLSearchParams(window.location.search).get("rate") === "1";
+  } catch {
+    return false;
+  }
 }
 
 /** "Rome next week", "Rome in October", "Rome right now". */
@@ -86,13 +97,16 @@ function ViewToggle({ view, onChange }: { view: TripView; onChange: (view: TripV
 
 function TripPageInner({ tripId }: { tripId: string }) {
   const { trip, error, setTrip } = useTripDetail(tripId);
-  const { removeTrip } = useTravelStore();
+  const { removeTrip, feedback } = useTravelStore();
   const router = useRouter();
   const send = useSendMessage();
   const [section, setSection] = useState<TripSection | null>(null);
   const initialView = useSyncExternalStore(noSubscribe, readInitialView, () => "tiles" as TripView);
   const [chosenView, setChosenView] = useState<TripView | null>(null);
   const view = chosenView ?? initialView;
+  const rateFromUrl = useSyncExternalStore(noSubscribe, readRateParam, () => false);
+  const [ratingState, setRatingState] = useState<"auto" | "open" | "closed">("auto");
+  const ratingOpen = ratingState === "open" || (ratingState === "auto" && rateFromUrl);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
@@ -155,6 +169,7 @@ function TripPageInner({ tripId }: { tripId: string }) {
   const isOwner = trip.role === "owner";
   const dates = formatDateRange(trip.startDate, trip.endDate);
   const ideaCount = trip.items.filter((i) => i.kind === "idea").length;
+  const toRate = tripEnded(trip) ? ratingCandidates(trip, feedback) : [];
 
   const ask = (e: FormEvent) => {
     e.preventDefault();
@@ -265,6 +280,20 @@ function TripPageInner({ tripId }: { tripId: string }) {
 
           {trip.summary ? <p className="mt-4 text-[15px] leading-relaxed text-neutral-700">{trip.summary}</p> : null}
 
+          {toRate.length ? (
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3" data-testid="post-trip-banner">
+              <div>
+                <div className="text-[15px] font-semibold">How was {trip.destination}?</div>
+                <div className="text-[13px] text-neutral-700">
+                  Rate {toRate.length} place{toRate.length === 1 ? "" : "s"} from this trip so XPMatch learns what you love.
+                </div>
+              </div>
+              <Button size="sm" onClick={() => setRatingState("open")}>
+                Rate {toRate.length} place{toRate.length === 1 ? "" : "s"}
+              </Button>
+            </div>
+          ) : null}
+
           <div className="mt-6 rounded-3xl bg-surface p-5">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-900 text-white">
               <Sparkles className="h-4 w-4" />
@@ -358,6 +387,7 @@ function TripPageInner({ tripId }: { tripId: string }) {
       ) : null}
 
       {editOpen ? <TripDetailsDialog trip={trip} onClose={() => setEditOpen(false)} onSaved={setTrip} /> : null}
+      {ratingOpen ? <PostTripRating trip={trip} onClose={() => setRatingState("closed")} /> : null}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent, type UniqueIdentifier } from "@dnd-kit/core";
+import { closestCorners, KeyboardSensor, PointerSensor, pointerWithin, useSensor, useSensors, type CollisionDetection, type DragEndEvent, type UniqueIdentifier } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import type { ItineraryDay, TripItem } from "@/lib/types";
 import { findStop, insertStop, moveStop, removeStop, stopFromItem } from "@/lib/itinerary";
@@ -29,6 +29,12 @@ export function isOverDay(day: ItineraryDay, index: number, overId: UniqueIdenti
   const s = String(overId);
   return s === dayContainerId(index) || day.stops.some((stop) => stop.id === s);
 }
+
+/** Pointer drags drop where the pointer is (the card or list under it); keyboard drags fall back to the nearest corners. */
+export const boardCollision: CollisionDetection = (args) => {
+  const under = pointerWithin(args);
+  return under.length ? under : closestCorners(args);
+};
 
 interface Options {
   days: ItineraryDay[];

@@ -156,11 +156,11 @@ test("board: schedule ideas, keyboard reorder, day layers, chat scheduling", asy
       if (!moved) await page.keyboard.press("Escape");
     }
     expect(moved).toBe(true);
-    await expect(day(2).getByTestId("stop-card").first()).toContainText("Pantheon");
+    await expect(day(2)).toContainText("Pantheon");
     await expect(day(1).getByTestId("stop-card")).toHaveCount(0);
     await eventually(
       () => getTrip(page, tripId),
-      (t) => t.itinerary[1]?.stops[0]?.title === "Pantheon",
+      (t) => t.itinerary[1]?.stops.some((s) => s.title === "Pantheon") === true && t.itinerary[0]?.stops.length === 0,
     );
   });
 
