@@ -351,7 +351,7 @@ async function googleNearby(center: LatLng, types: string[], kind: PlaceKind, li
   return (data.places ?? []).map((p) => toResolved(p, kind)).filter(present);
 }
 
-async function googleTextMany(query: string, kind: PlaceKind, center: LatLng, limit: number): Promise<ResolvedPlace[]> {
+async function googleTextMany(query: string, kind: PlaceKind, center: LatLng, limit: number, priceLevels?: string[]): Promise<ResolvedPlace[]> {
   const data = await googleFetch<{ places?: GooglePlace[] }>(
     `${PLACES_BASE}/places:searchText`,
     {
@@ -361,6 +361,7 @@ async function googleTextMany(query: string, kind: PlaceKind, center: LatLng, li
         pageSize: Math.min(Math.max(limit, 1), 20),
         languageCode: "en",
         locationBias: { circle: { center: { latitude: center.lat, longitude: center.lng }, radius: NEARBY_RADIUS_M } },
+        ...(priceLevels?.length ? { priceLevels } : {}),
       }),
     },
     NEARBY_FIELDS,
@@ -387,16 +388,39 @@ function interleave(a: ResolvedPlace[], b: ResolvedPlace[]): ResolvedPlace[] {
  * ranked by popularity); a free-text query uses Text Search biased to the area.
  * Results are cached for ten minutes per area/category/query.
  */
-export async function searchNearby(center: LatLng, category: NearbyCategory, query?: string, limit = 12): Promise<ResolvedPlace[]> {
+/** Google price levels for a traveler budget tier (Text Search only). */
+export function priceLevelsFor(budgetTier?: string | null): string[] | undefined {
+  switch (budgetTier) {
+    case "budget":
+      return ["PRICE_LEVEL_INEXPENSIVE", "PRICE_LEVEL_MODERATE"];
+    case "mid-range":
+      return ["PRICE_LEVEL_MODERATE", "PRICE_LEVEL_EXPENSIVE"];
+    case "premium":
+      return ["PRICE_LEVEL_EXPENSIVE", "PRICE_LEVEL_VERY_EXPENSIVE"];
+    case "luxury":
+      return ["PRICE_LEVEL_VERY_EXPENSIVE", "PRICE_LEVEL_EXPENSIVE"];
+    default:
+      return undefined;
+  }
+}
+
+export async function searchNearby(
+  center: LatLng,
+  category: NearbyCategory,
+  query?: string,
+  limit = 12,
+  priceLevels?: string[],
+): Promise<ResolvedPlace[]> {
   if (!placesApiKey()) return [];
   const q = query?.trim().toLowerCase() ?? "";
-  const key = `${category}|${q}|${center.lat.toFixed(3)}|${center.lng.toFixed(3)}|${limit}`;
+  const key = `${category}|${q}|${(priceLevels ?? []).join("+")}|${center.lat.toFixed(3)}|${center.lng.toFixed(3)}|${limit}`;
   const hit = nearbyCache.get(key);
   if (hit && Date.now() - hit.at < NEARBY_TTL_MS) return hit.promise;
   const promise = (async () => {
     if (q) {
       const kind: PlaceKind = category === "restaurants" ? "restaurant" : category === "stays" ? "hotel" : "attraction";
-      return googleTextMany(q, kind, center, limit);
+      // Price levels are reliable for restaurants; hotels rarely carry them, so only apply there.
+      return googleTextMany(q, kind, center, limit, category === "restaurants" ? priceLevels : undefined);
     }
     if (category === "for-you") {
       const [experiences, restaurants] = await Promise.all([

@@ -1,5 +1,5 @@
 import { HttpError, json, requireUser, route } from "@/server/http";
-import { NEARBY_CATEGORIES, placesProvider, searchNearby, type NearbyCategory } from "@/server/places";
+import { NEARBY_CATEGORIES, placesProvider, priceLevelsFor, searchNearby, type NearbyCategory } from "@/server/places";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +13,7 @@ export const GET = route(async (request) => {
   const category = (url.searchParams.get("category") ?? "for-you") as NearbyCategory;
   if (!NEARBY_CATEGORIES.includes(category)) throw new HttpError(400, "Unknown category");
   const q = url.searchParams.get("q")?.trim().slice(0, 120) || undefined;
-  const items = await searchNearby({ lat, lng }, category, q, 12);
+  const priceLevels = priceLevelsFor(url.searchParams.get("price"));
+  const items = await searchNearby({ lat, lng }, category, q, 12, priceLevels);
   return json({ items, provider: placesProvider() });
 });

@@ -12,8 +12,9 @@ import { useSendMessage } from "@/components/chat/useSendMessage";
 import { useUiState } from "@/components/providers/UiState";
 import { useTripScope } from "@/components/trips/TripScope";
 import { iconSvg } from "./markerIcons";
+import { DestinationTab, type DestinationTabKind } from "./DestinationTab";
 
-type Tab = "overview" | "reviews" | "location";
+type Tab = "overview" | "reviews" | "location" | DestinationTabKind;
 
 const KIND_LABEL: Record<PlaceKind, string> = {
   destination: "Destination",
@@ -200,9 +201,9 @@ export function PlaceDetailSheet({
           {isDestination ? (
             <>
               <TabButton active={tab === "overview"} onClick={() => setTab("overview")}>Overview</TabButton>
-              <TabButton onClick={() => send(`Find hotels in ${place.name} for me.`)}>Stays</TabButton>
-              <TabButton onClick={() => send(`Recommend restaurants in ${place.name}.`)}>Restaurants</TabButton>
-              <TabButton onClick={() => send(`What are the top things to do in ${place.name}?`)}>Things to do</TabButton>
+              <TabButton active={tab === "stays"} onClick={() => setTab("stays")}>Stays</TabButton>
+              <TabButton active={tab === "restaurants"} onClick={() => setTab("restaurants")}>Restaurants</TabButton>
+              <TabButton active={tab === "experiences"} onClick={() => setTab("experiences")}>Things to do</TabButton>
               <TabButton active={tab === "location"} onClick={() => setTab("location")}>Location</TabButton>
             </>
           ) : (
@@ -237,6 +238,10 @@ export function PlaceDetailSheet({
                 {details?.phone ? <span className="inline-flex h-9 items-center rounded-full border border-border px-3">{details.phone}</span> : null}
               </div>
             </>
+          ) : null}
+
+          {isDestination && (tab === "stays" || tab === "restaurants" || tab === "experiences") ? (
+            <DestinationTab kind={tab} destination={data} />
           ) : null}
 
           {tab === "reviews" ? (
