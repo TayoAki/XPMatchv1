@@ -4,8 +4,9 @@ import { MapPin } from "lucide-react";
 import { ToolCallStatus } from "@copilotkit/core";
 import type { ShowRestaurantsArgs, Streaming } from "@/lib/travel/schemas";
 import { googleMapsSearchUrl, openTableSearchUrl } from "@/lib/travel/links";
-import { usePlacePin, useRegisterPlaces } from "@/components/map/useRegisterPlaces";
-import { CardPhoto, AddToTripButton, Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Tag, Text, ViewOnMapButton } from "./shared";
+import { placeKey, usePlacePin, useRegisterPlaces } from "@/components/map/useRegisterPlaces";
+import { CardPhoto, AddToTripButton, Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Tag, Text, Tradeoffs, ViewOnMapButton } from "./shared";
+import { CompareToggle } from "./CompareControls";
 
 export function RestaurantCards({ args, status, toolCallId }: { args: Streaming<ShowRestaurantsArgs>; status: ToolCallStatus; toolCallId: string }) {
   const items = (args.restaurants ?? []).filter((r) => r && r.name);
@@ -69,6 +70,7 @@ function RestaurantCard({
                   {r.reservationRecommended === true ? <Tag tone="warn">Book ahead</Tag> : null}
                   {r.reservationRecommended === false ? <Tag tone="accent">Walk-ins OK</Tag> : null}
                 </div>
+                <Tradeoffs items={r.tradeoffs} />
               </Body>
               <Footer>
                 <ExtLink primary href={googleMapsSearchUrl(query)}>
@@ -77,6 +79,13 @@ function RestaurantCard({
                 {r.reservationRecommended ? <ExtLink href={openTableSearchUrl(query)}>Reserve</ExtLink> : null}
                 <ViewOnMapButton pin={pin} />
                 <AddToTripButton place={pin.place} />
+                <CompareToggle
+                  pinKey={placeKey(toolCallId, index)}
+                  name={r.name}
+                  kind="restaurant"
+                  facts={[r.cuisine, r.neighborhood, r.priceTier].filter(Boolean).join(", ")}
+                  place={pin.place}
+                />
               </Footer>
             </CardShell>
   );

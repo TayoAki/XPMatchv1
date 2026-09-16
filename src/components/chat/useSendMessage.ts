@@ -28,6 +28,10 @@ export function useSendMessage() {
         router.push(`/?${params.toString()}`);
         return;
       }
+      // Sent from a card or chip while the assistant is still answering: wait for the run to end
+      // instead of dropping the message (the composer itself is disabled meanwhile).
+      const started = Date.now();
+      while (agent.isRunning && Date.now() - started < 30000) await new Promise((r) => setTimeout(r, 150));
       if (agent.isRunning) return;
       agent.addMessage({ id: newId(), role: "user", content: trimmed });
       try {

@@ -22,8 +22,53 @@ export interface TravelerProfile {
   dietary: string;
   accommodation: string;
   notes: string;
+  /** When false the assistant never offers to remember things said in chat. */
+  learnFromChat: boolean;
   onboarded: boolean;
 }
+
+export type PreferenceDomain = "stays" | "food" | "flights" | "activities" | "general";
+export type PreferencePolarity = "like" | "dislike" | "dealbreaker";
+export type PreferenceSource = "onboarding" | "chat" | "feedback";
+
+/** One thing XPMatch has learned about the traveler ("prefers boutique hotels", "no early flights"). */
+export interface LearnedPreference {
+  id: string;
+  /** Set when the preference only applies to one trip. */
+  tripId?: string;
+  domain: PreferenceDomain;
+  polarity: PreferencePolarity;
+  statement: string;
+  source: PreferenceSource;
+  createdAt: string;
+}
+
+export const PREFERENCE_DOMAINS: PreferenceDomain[] = ["stays", "food", "flights", "activities", "general"];
+export const PREFERENCE_POLARITIES: PreferencePolarity[] = ["like", "dislike", "dealbreaker"];
+
+export const DOMAIN_LABEL: Record<PreferenceDomain, string> = {
+  stays: "Stays",
+  food: "Food",
+  flights: "Flights",
+  activities: "Things to do",
+  general: "General",
+};
+
+/** Onboarding "what ruins a trip for you?" chips; stored as dealbreaker preferences. */
+export const DEALBREAKER_OPTIONS: { statement: string; domain: PreferenceDomain }[] = [
+  { statement: "Street noise at night", domain: "stays" },
+  { statement: "No desk or workspace in the room", domain: "stays" },
+  { statement: "Stairs with no elevator", domain: "stays" },
+  { statement: "Shared bathrooms", domain: "stays" },
+  { statement: "Far from the center", domain: "stays" },
+  { statement: "No air conditioning", domain: "stays" },
+  { statement: "Tiny rooms", domain: "stays" },
+  { statement: "Big crowds and tourist traps", domain: "activities" },
+  { statement: "Early starts", domain: "activities" },
+  { statement: "Long transfers and layovers", domain: "flights" },
+  { statement: "Red-eye flights", domain: "flights" },
+  { statement: "Very spicy food", domain: "food" },
+];
 
 export interface TripPlanner {
   where: string;
@@ -159,6 +204,7 @@ export interface UserState {
   trips: Trip[];
   chats: ChatSummary[];
   updates: UpdateItem[];
+  preferences: LearnedPreference[];
 }
 
 export const DEFAULT_PROFILE: TravelerProfile = {
@@ -172,6 +218,7 @@ export const DEFAULT_PROFILE: TravelerProfile = {
   dietary: "",
   accommodation: "",
   notes: "",
+  learnFromChat: true,
   onboarded: false,
 };
 

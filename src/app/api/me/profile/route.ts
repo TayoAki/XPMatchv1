@@ -14,6 +14,7 @@ const schema = z.object({
   dietary: z.string().max(300).default(""),
   accommodation: z.string().max(300).default(""),
   notes: z.string().max(2000).default(""),
+  learnFromChat: z.boolean().default(true),
   onboarded: z.boolean().default(true),
 });
 

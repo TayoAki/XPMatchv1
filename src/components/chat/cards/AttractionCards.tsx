@@ -4,8 +4,9 @@ import { Clock, MapPin, Ticket } from "lucide-react";
 import { ToolCallStatus } from "@copilotkit/core";
 import type { ShowAttractionsArgs, Streaming } from "@/lib/travel/schemas";
 import { getYourGuideSearchUrl, googleMapsSearchUrl } from "@/lib/travel/links";
-import { usePlacePin, useRegisterPlaces } from "@/components/map/useRegisterPlaces";
-import { CardPhoto, AddToTripButton, Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Tag, Text, ViewOnMapButton } from "./shared";
+import { placeKey, usePlacePin, useRegisterPlaces } from "@/components/map/useRegisterPlaces";
+import { CardPhoto, AddToTripButton, Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Tag, Text, Tradeoffs, ViewOnMapButton } from "./shared";
+import { CompareToggle } from "./CompareControls";
 
 export function AttractionCards({ args, status, toolCallId }: { args: Streaming<ShowAttractionsArgs>; status: ToolCallStatus; toolCallId: string }) {
   const items = (args.attractions ?? []).filter((a) => a && a.name);
@@ -70,6 +71,7 @@ function AttractionCard({
                     </Tag>
                   ) : null}
                 </div>
+                <Tradeoffs items={a.tradeoffs} />
               </Body>
               <Footer>
                 <ExtLink primary href={googleMapsSearchUrl(query)}>
@@ -78,6 +80,13 @@ function AttractionCard({
                 <ExtLink href={getYourGuideSearchUrl(query)}>Tickets & tours</ExtLink>
                 <ViewOnMapButton pin={pin} />
                 <AddToTripButton place={pin.place} />
+                <CompareToggle
+                  pinKey={placeKey(toolCallId, index)}
+                  name={a.name}
+                  kind="attraction"
+                  facts={[a.category, a.neighborhood, a.durationHours ? `${a.durationHours}h` : "", a.ticketNote].filter(Boolean).join(", ")}
+                  place={pin.place}
+                />
               </Footer>
             </CardShell>
   );

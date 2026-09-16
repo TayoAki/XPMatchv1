@@ -22,5 +22,6 @@ export const DELETE = route(async (request, ctx: Ctx) => {
   const user = await requireUser(request);
   const { threadId } = await resolveParams(ctx);
   await queryAll("DELETE FROM chats WHERE thread_id = $1 AND user_id = $2", [threadId, user.id]);
+  await queryAll("DELETE FROM chat_messages WHERE thread_id = $1 AND user_id = $2", [threadId, user.id]);
   return json({ ok: true });
 });

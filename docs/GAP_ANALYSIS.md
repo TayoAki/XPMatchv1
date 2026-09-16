@@ -23,6 +23,18 @@ Effort: **S** = days, **M** = 1–2 weeks, **L** = 3+ weeks or a new vendor cont
 Waves: **1** ships in the next 2–3 weeks with no new vendors; **2** adds data/UX depth; **3** adds content
 import; **4** waits on a fare API and email.
 
+## Wave 1 status: shipped
+
+Design and review in `docs/WAVE1_PLAN.md`; flows in `docs/USER_FLOWS.md`.
+
+| # | What shipped | Left for Wave 2 |
+| --- | --- | --- |
+| 4 | `set_search_constraints` → editable "Understood as" chips (must-have vs preference, "Not applied" for unmappable phrases, edits re-run the search, chips stay in the agent's context, "Save to trip"); Explore parses price words, "under $30", ratings, "open now" into Places `priceLevels` / `minRating` / `openNow` and shows the chips | review-checked post-filter for "quiet"-style constraints |
+| 6 | Compare toggles on hotel, restaurant and attraction cards → floating bar → `compare_options` card: priorities × options with strong/ok/weak/unknown verdicts and notes, Price, Rating (Google rating and review count replace the model's guess when the option is pinned), Location, Strengths, Compromises, Couldn't verify; Map / Save / Add to trip / Pick this one per column | negative-mention counts and review evidence per cell |
+| 7 | `tradeoffs` on hotel, restaurant, attraction and flight cards rendered as amber Heads-up chips; "What ruins a trip for you?" dealbreaker chips in onboarding stored as `polarity = dealbreaker` preferences and checked by the prompt | flags grounded in review text and Places attributes with confidence |
+| 8 | `remember_preference` human-in-the-loop card (Always / For this trip / No thanks), "What XPMatch has learned" panel with delete and a "Learn from our chats" switch, trip-scoped list on the trip page, profile-wide and trip-scoped preferences in the agent's context | learning from clicks and trip ratings |
+| — | Foundations: `preferences` table + API + store; chat transcripts persisted in Postgres by the runtime runner (chats survive deploys); follow-up suggestions paused while a card waits for a click (fixes the `AI_MissingToolResultsError` seen in production) | place facts layer, evidence rendering, notification channels, instrumentation |
+
 ## Where the research says we can beat the originals
 
 The competitor teardowns in `docs/COMPETITIVE_RESEARCH.md` expose four gaps none of the nine currently

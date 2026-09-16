@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { Brain, Trash2 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Chip, Field, Select, TextArea, TextInput } from "@/components/ui/Field";
 import { TRAVEL_STYLE_OPTIONS } from "@/lib/travel/inspiration";
-import { useTravelStore, type TravelerProfile } from "@/lib/store";
+import { DEALBREAKER_OPTIONS, DOMAIN_LABEL, useTravelStore, type LearnedPreference, type TravelerProfile } from "@/lib/store";
 import { useUiState } from "@/components/providers/UiState";
 
 export function AssistantSettingsDialog() {
@@ -14,10 +15,19 @@ export function AssistantSettingsDialog() {
   return assistantOpen ? <AssistantSettingsForm /> : null;
 }
 
+const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+
+const POLARITY_LABEL: Record<LearnedPreference["polarity"], string> = { like: "Likes", dislike: "Avoids", dealbreaker: "Dealbreaker" };
+const SOURCE_LABEL: Record<LearnedPreference["source"], string> = { onboarding: "from onboarding", chat: "learned in chat", feedback: "from your feedback" };
+
 function AssistantSettingsForm() {
-  const { profile, updateProfile } = useTravelStore();
+  const { profile, preferences, trips, updateProfile, addPreference, removePreference } = useTravelStore();
   const { closeAssistant } = useUiState();
   const [draft, setDraft] = useState<TravelerProfile>(() => profile);
+  // Dealbreaker chips start from the stored dealbreakers so the dialog is idempotent.
+  const [dealbreakers, setDealbreakers] = useState<string[]>(() =>
+    DEALBREAKER_OPTIONS.filter((o) => preferences.some((p) => !p.tripId && p.polarity === "dealbreaker" && same(p.statement, o.statement))).map((o) => o.statement),
+  );
 
   const set = <K extends keyof TravelerProfile>(key: K, value: TravelerProfile[K]) => setDraft((d) => ({ ...d, [key]: value }));
 
@@ -27,8 +37,21 @@ function AssistantSettingsForm() {
       draft.travelStyles.includes(style) ? draft.travelStyles.filter((s) => s !== style) : [...draft.travelStyles, style],
     );
 
+  const toggleDealbreaker = (statement: string) =>
+    setDealbreakers((list) => (list.includes(statement) ? list.filter((s) => s !== statement) : [...list, statement]));
+
+  const syncDealbreakers = () => {
+    for (const option of DEALBREAKER_OPTIONS) {
+      const stored = preferences.find((p) => !p.tripId && p.polarity === "dealbreaker" && same(p.statement, option.statement));
+      const wanted = dealbreakers.includes(option.statement);
+      if (wanted && !stored) void addPreference({ statement: option.statement, domain: option.domain, polarity: "dealbreaker", source: "onboarding" }).catch(() => undefined);
+      if (!wanted && stored) removePreference(stored.id);
+    }
+  };
+
   const save = () => {
     updateProfile({ ...draft, onboarded: true });
+    syncDealbreakers();
     closeAssistant();
   };
 
@@ -37,12 +60,15 @@ function AssistantSettingsForm() {
     closeAssistant();
   };
 
+  const learned = preferences.filter((p) => !DEALBREAKER_OPTIONS.some((o) => o.statement === p.statement && p.polarity === "dealbreaker" && !p.tripId));
+  const tripTitle = (id?: string) => (id ? trips.find((t) => t.id === id)?.title ?? "a trip" : null);
+
   return (
     <Modal
       open
       onClose={profile.onboarded ? closeAssistant : skip}
       title={profile.onboarded ? "Update my assistant" : "Let's personalize your assistant"}
-      description="XPMatch uses this to tailor destinations, stays, flights and food to you. Everything stays in your browser."
+      description="XPMatch uses this to tailor destinations, stays, flights and food to you. Saved to your account."
       size="lg"
       footer={
         <div className="flex items-center justify-between gap-3">
@@ -109,6 +135,18 @@ function AssistantSettingsForm() {
         </div>
       </div>
 
+      <div className="mt-5">
+        <div className="mb-1 text-[13px] font-medium">What ruins a trip for you?</div>
+        <p className="mb-2 text-[12px] text-muted">Dealbreakers. Every recommendation is checked against them and any conflict is called out on the card.</p>
+        <div className="flex flex-wrap gap-2" data-testid="dealbreaker-chips">
+          {DEALBREAKER_OPTIONS.map((o) => (
+            <Chip key={o.statement} active={dealbreakers.includes(o.statement)} onClick={() => toggleDealbreaker(o.statement)}>
+              {o.statement}
+            </Chip>
+          ))}
+        </div>
+      </div>
+
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         <Field label="Dietary needs">
           <TextInput value={draft.dietary} onChange={(e) => set("dietary", e.target.value)} placeholder="Vegetarian, no shellfish…" />
@@ -121,6 +159,48 @@ function AssistantSettingsForm() {
         <Field label="Anything else the assistant should remember?">
           <TextArea value={draft.notes} onChange={(e) => set("notes", e.target.value)} placeholder="I love rooftop bars, hate early flights, collecting Marriott points…" />
         </Field>
+      </div>
+
+      <div className="mt-6 rounded-2xl border border-border p-4" data-testid="memory-panel">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2 text-[14px] font-semibold">
+              <Brain className="h-4 w-4" /> What XPMatch has learned
+            </div>
+            <p className="mt-0.5 text-[12px] text-muted">
+              Tastes you confirmed in chat. Each one is sent to the assistant with every message; delete anything that no longer fits.
+            </p>
+          </div>
+          <label className="flex shrink-0 cursor-pointer items-center gap-2 text-[13px] font-medium">
+            <input
+              type="checkbox"
+              checked={draft.learnFromChat}
+              onChange={(e) => set("learnFromChat", e.target.checked)}
+              className="h-4 w-4 accent-neutral-900"
+            />
+            Learn from our chats
+          </label>
+        </div>
+        {learned.length === 0 ? (
+          <p className="mt-3 text-[13px] text-muted">Nothing yet. When you mention a taste in chat (“I prefer boutique hotels”), XPMatch will offer to remember it.</p>
+        ) : (
+          <ul className="mt-3 divide-y divide-border">
+            {learned.map((p) => (
+              <li key={p.id} className="flex items-center gap-3 py-2 text-[13px]" data-testid="memory-item">
+                <span className="min-w-0 flex-1">
+                  <span className="font-medium">{p.statement}</span>
+                  <span className="block text-[12px] text-muted">
+                    {POLARITY_LABEL[p.polarity]} · {DOMAIN_LABEL[p.domain]} · {SOURCE_LABEL[p.source]}
+                    {p.tripId ? ` · only for ${tripTitle(p.tripId)}` : ""}
+                  </span>
+                </span>
+                <button type="button" onClick={() => removePreference(p.id)} aria-label={`Forget ${p.statement}`} className="rounded-full p-2 text-neutral-500 hover:bg-surface hover:text-red-600">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </Modal>
   );

@@ -562,11 +562,12 @@ function LinkItemsSection({ kind, trip, canEdit, onTrip }: SectionProps & { kind
 /* ---------------------------- preferences ---------------------------- */
 
 function PreferencesSection({ trip, canEdit, onTrip }: SectionProps) {
-  const { patchTrip } = useTravelStore();
+  const { patchTrip, preferences, removePreference } = useTravelStore();
   const [value, setValue] = useState(trip.preferences);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const learnedForTrip = preferences.filter((p) => p.tripId === trip.id);
 
   const save = async () => {
     setBusy(true);
@@ -606,6 +607,27 @@ function PreferencesSection({ trip, canEdit, onTrip }: SectionProps) {
           <ErrorText>{error}</ErrorText>
         </div>
       ) : null}
+      <div className="rounded-2xl border border-border p-4">
+        <div className="text-[14px] font-semibold">Learned for this trip</div>
+        <p className="mt-0.5 text-[12px] text-muted">Things you asked XPMatch to remember “for this trip” in its chats. They only apply here.</p>
+        {learnedForTrip.length === 0 ? (
+          <p className="mt-2 text-[13px] text-muted">Nothing yet.</p>
+        ) : (
+          <ul className="mt-2 divide-y divide-border">
+            {learnedForTrip.map((p) => (
+              <li key={p.id} className="flex items-center gap-3 py-2 text-[13px]">
+                <span className="min-w-0 flex-1">
+                  <span className="font-medium">{p.statement}</span>
+                  <span className="block text-[12px] capitalize text-muted">{p.polarity} · {p.domain}</span>
+                </span>
+                <IconButton label={`Forget ${p.statement}`} danger onClick={() => removePreference(p.id)}>
+                  <Trash2 className="h-4 w-4" />
+                </IconButton>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }

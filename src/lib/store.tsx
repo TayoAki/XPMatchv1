@@ -8,6 +8,10 @@ import {
   DEFAULT_PROFILE,
   type ChatSummary,
   type Guide,
+  type LearnedPreference,
+  type PreferenceDomain,
+  type PreferencePolarity,
+  type PreferenceSource,
   type SavedItem,
   type SavedKind,
   type SessionUser,
@@ -25,7 +29,11 @@ export type {
   ChatSummary,
   Companions,
   ItineraryDay,
+  LearnedPreference,
   Pace,
+  PreferenceDomain,
+  PreferencePolarity,
+  PreferenceSource,
   SavedItem,
   SavedKind,
   SessionUser,
@@ -38,7 +46,15 @@ export type {
   TripPlanner,
   UpdateItem,
 } from "@/lib/types";
-export { DEFAULT_PLANNER, DEFAULT_PROFILE } from "@/lib/types";
+export { DEFAULT_PLANNER, DEFAULT_PROFILE, DEALBREAKER_OPTIONS, DOMAIN_LABEL } from "@/lib/types";
+
+export interface NewPreference {
+  statement: string;
+  domain: PreferenceDomain;
+  polarity: PreferencePolarity;
+  source?: PreferenceSource;
+  tripId?: string | null;
+}
 
 /** Fields of a trip that members can edit. `null` clears a date. */
 export type TripPatch = Partial<Pick<Trip, "title" | "destination" | "itinerary" | "preferences">> & {
@@ -78,6 +94,7 @@ export interface TravelStoreState {
   trips: Trip[];
   chats: ChatSummary[];
   updates: UpdateItem[];
+  preferences: LearnedPreference[];
   proactiveDismissedAt: string | null;
   hydrated: boolean;
 }
@@ -97,6 +114,7 @@ const DEFAULT_STATE: TravelStoreState = {
   trips: [],
   chats: [],
   updates: [],
+  preferences: [],
   proactiveDismissedAt: null,
   hydrated: false,
 };
@@ -192,6 +210,7 @@ export const travelActions = {
           trips: data.trips,
           chats: data.chats,
           updates: data.updates,
+          preferences: data.preferences ?? [],
           hydrated: true,
         });
       } catch (err) {
@@ -223,6 +242,50 @@ export const travelActions = {
 
   updatePlanner(patch: Partial<TripPlanner>) {
     set((prev) => ({ planner: { ...prev.planner, ...patch } }));
+  },
+
+  /** Stores a learned preference (optimistically) and resolves with the saved row. */
+  async addPreference(input: NewPreference): Promise<LearnedPreference> {
+    const prev = readSnapshot();
+    const statement = input.statement.trim();
+    const tripId = input.tripId ?? undefined;
+    const existing = prev.preferences.find((p) => sameTitle(p.statement, statement) && (p.tripId ?? undefined) === tripId);
+    if (existing && existing.polarity === input.polarity && existing.domain === input.domain) return existing;
+    const tempId = `temp-${newId()}`;
+    const optimistic: LearnedPreference = {
+      id: existing?.id ?? tempId,
+      tripId,
+      domain: input.domain,
+      polarity: input.polarity,
+      statement,
+      source: input.source ?? "chat",
+      createdAt: existing?.createdAt ?? new Date().toISOString(),
+    };
+    set({ preferences: [optimistic, ...prev.preferences.filter((p) => p.id !== optimistic.id)] });
+    try {
+      const created = await api<LearnedPreference>("/api/me/preferences", {
+        method: "POST",
+        json: { statement, domain: input.domain, polarity: input.polarity, source: input.source ?? "chat", tripId: tripId ?? null },
+      });
+      set((s) => ({ preferences: [created, ...s.preferences.filter((p) => p.id !== optimistic.id && p.id !== created.id)] }));
+      return created;
+    } catch (err) {
+      report("saving a preference", err);
+      set((s) => ({ preferences: existing ? s.preferences.map((p) => (p.id === existing.id ? existing : p)) : s.preferences.filter((p) => p.id !== tempId) }));
+      throw err;
+    }
+  },
+
+  removePreference(id: string) {
+    const prev = readSnapshot();
+    const item = prev.preferences.find((p) => p.id === id);
+    if (!item) return;
+    set({ preferences: prev.preferences.filter((p) => p.id !== id) });
+    if (id.startsWith("temp-")) return;
+    api(`/api/me/preferences/${encodeURIComponent(id)}`, { method: "DELETE" }).catch((err) => {
+      report("removing a preference", err);
+      set((s) => ({ preferences: [item, ...s.preferences] }));
+    });
   },
 
   isSaved(kind: SavedKind, title: string, refId?: string): boolean {

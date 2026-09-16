@@ -126,4 +126,30 @@ export const MIGRATIONS: Migration[] = [
       `CREATE INDEX IF NOT EXISTS notifications_user_idx ON notifications(user_id, created_at DESC)`,
     ],
   },
+  {
+    id: "0002_chat_transcripts_and_preferences",
+    statements: [
+      // Full chat transcripts (AG-UI messages) so reopening a chat survives deploys and restarts.
+      // No FK to chats: the transcript can land before the client has named the chat.
+      `CREATE TABLE IF NOT EXISTS chat_messages (
+        thread_id text PRIMARY KEY,
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        messages jsonb NOT NULL DEFAULT '[]'::jsonb,
+        updated_at timestamptz NOT NULL DEFAULT now()
+      )`,
+      `CREATE INDEX IF NOT EXISTS chat_messages_user_idx ON chat_messages(user_id, updated_at DESC)`,
+      // Preferences learned in conversation, picked in onboarding (dealbreakers) or given as feedback.
+      `CREATE TABLE IF NOT EXISTS preferences (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        trip_id uuid REFERENCES trips(id) ON DELETE CASCADE,
+        domain text NOT NULL DEFAULT 'general',
+        polarity text NOT NULL DEFAULT 'like',
+        statement text NOT NULL,
+        source text NOT NULL DEFAULT 'chat',
+        created_at timestamptz NOT NULL DEFAULT now()
+      )`,
+      `CREATE INDEX IF NOT EXISTS preferences_user_idx ON preferences(user_id, created_at DESC)`,
+    ],
+  },
 ];

@@ -5,8 +5,9 @@ import { useEffect, useMemo } from "react";
 import { Lightbulb, Luggage, Sparkles } from "lucide-react";
 import { ToolCallStatus } from "@copilotkit/core";
 import { useAgentContext, useFrontendTool } from "@copilotkit/react-core/v2";
-import { formatDateRange, travelActions } from "@/lib/store";
+import { formatDateRange, travelActions, useTravelStore } from "@/lib/store";
 import { mapActions } from "@/lib/map-store";
+import { preferencesForContext } from "@/components/chat/TravelCopilot";
 import { resolvePlaces } from "@/lib/places/client";
 import type { MapPlace, ResolvedPlace } from "@/lib/places/types";
 import type { TripDetail } from "@/lib/types";
@@ -79,6 +80,13 @@ function cleanPatch(args: UpdateTripPlanArgs): UpdateTripPlanArgs {
  */
 export function TripChatScope({ tripId, threadId }: { tripId: string; threadId?: string }) {
   const { trip, setTrip } = useTripDetail(tripId);
+  const { preferences } = useTravelStore();
+  const tripPreferences = useMemo(() => preferencesForContext(preferences, tripId), [preferences, tripId]);
+
+  useAgentContext({
+    description: "Preferences the traveler asked to remember for THIS trip only (in addition to the profile-wide ones)",
+    value: tripPreferences,
+  });
 
   const pins = useMemo<MapPlace[]>(
     () =>

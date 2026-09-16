@@ -3,21 +3,28 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAgentContext, useConfigureSuggestions, useFrontendTool, useHumanInTheLoop } from "@copilotkit/react-core/v2";
 import type { ToolCallStatus } from "@copilotkit/core";
-import { travelActions, useTravelStore, type TravelerProfile, type Trip, type TripPlanner } from "@/lib/store";
+import { travelActions, useTravelStore, type LearnedPreference, type TravelerProfile, type Trip, type TripPlanner } from "@/lib/store";
 import { useAppConfig } from "@/lib/app-config";
+import { useHitlPending } from "@/lib/hitl-store";
 import { mapActions, useMapView } from "@/lib/map-store";
 import { resolvePlaces } from "@/lib/places/client";
 import {
+  compareOptionsSchema,
   createTripSchema,
   focusMapSchema,
+  rememberPreferenceSchema,
+  setSearchConstraintsSchema,
   showAttractionsSchema,
   showDestinationsSchema,
   showFlightsSchema,
   showHotelsSchema,
   showRestaurantsSchema,
   updateTravelerProfileSchema,
+  type CompareOptionsArgs,
   type CreateTripArgs,
   type FocusMapArgs,
+  type RememberPreferenceArgs,
+  type SetSearchConstraintsArgs,
   type ShowAttractionsArgs,
   type ShowDestinationsArgs,
   type ShowFlightsArgs,
@@ -26,6 +33,7 @@ import {
   type Streaming,
   type UpdateTravelerProfileArgs,
 } from "@/lib/travel/schemas";
+import { constraintActions, useConstraints } from "@/lib/constraints-store";
 import { DestinationCards } from "@/components/chat/cards/DestinationCards";
 import { HotelCards } from "@/components/chat/cards/HotelCards";
 import { FlightCards } from "@/components/chat/cards/FlightCards";
@@ -34,6 +42,9 @@ import { AttractionCards } from "@/components/chat/cards/AttractionCards";
 import { TripProposalCard } from "@/components/chat/cards/TripProposalCard";
 import { ProfileUpdatedChip } from "@/components/chat/cards/ProfileUpdatedChip";
 import { FocusCallout } from "@/components/chat/cards/FocusCallout";
+import { ConstraintChips } from "@/components/chat/cards/ConstraintChips";
+import { ComparisonCard } from "@/components/chat/cards/ComparisonCard";
+import { RememberPreferenceCard } from "@/components/chat/cards/RememberPreferenceCard";
 
 type RenderProps<T> = { args: Partial<T> | T; status: ToolCallStatus; result?: string; toolCallId: string };
 
@@ -66,9 +77,25 @@ const TripRenderer = ({
   args,
   status,
   result,
+  toolCallId,
   respond,
 }: RenderProps<CreateTripArgs> & { respond?: (result: unknown) => Promise<void> }) => (
-  <TripProposalCard args={args as Streaming<CreateTripArgs>} status={status} result={result} respond={respond} />
+  <TripProposalCard args={args as Streaming<CreateTripArgs>} status={status} result={result} toolCallId={toolCallId} respond={respond} />
+);
+const ConstraintsRenderer = ({ args, status, toolCallId }: RenderProps<SetSearchConstraintsArgs>) => (
+  <ConstraintChips args={args as Streaming<SetSearchConstraintsArgs>} status={status} toolCallId={toolCallId} />
+);
+const CompareRenderer = ({ args, status, toolCallId }: RenderProps<CompareOptionsArgs>) => (
+  <ComparisonCard args={args as Streaming<CompareOptionsArgs>} status={status} toolCallId={toolCallId} />
+);
+const RememberRenderer = ({
+  args,
+  status,
+  result,
+  toolCallId,
+  respond,
+}: RenderProps<RememberPreferenceArgs> & { respond?: (result: unknown) => Promise<void> }) => (
+  <RememberPreferenceCard args={args as Streaming<RememberPreferenceArgs>} status={status} result={result} toolCallId={toolCallId} respond={respond} />
 );
 
 function nextMonthName(): string {
@@ -126,8 +153,19 @@ function useDebounced<T>(value: T, delayMs: number): T {
  * traveler context, generative-UI tools, the human-in-the-loop trip flow and
  * personalized suggestions. Rendered once inside the providers.
  */
+/** Learned preferences as the model sees them: grouped by polarity, one line each. */
+export function preferencesForContext(preferences: LearnedPreference[], tripId?: string | null) {
+  const scoped = preferences.filter((p) => (tripId ? p.tripId === tripId : !p.tripId)).slice(0, 60);
+  const line = (p: LearnedPreference) => `${p.statement} (${p.domain})`;
+  return {
+    dealbreakers: scoped.filter((p) => p.polarity === "dealbreaker").map(line),
+    likes: scoped.filter((p) => p.polarity === "like").map(line),
+    dislikes: scoped.filter((p) => p.polarity === "dislike").map(line),
+  };
+}
+
 export function TravelCopilot() {
-  const { profile, planner, saved, trips } = useTravelStore();
+  const { profile, planner, saved, trips, preferences } = useTravelStore();
   const config = useAppConfig();
   const demo = config?.mode === "demo";
   const mapView = useMapView();
@@ -145,7 +183,15 @@ export function TravelCopilot() {
       dietary: profile.dietary || "none stated",
       accommodationPreference: profile.accommodation || "none stated",
       notes: profile.notes || "",
+      learnFromChat: profile.learnFromChat,
     },
+  });
+
+  const learned = useMemo(() => preferencesForContext(preferences), [preferences]);
+  useAgentContext({
+    description:
+      "Learned preferences (profile-wide). Dealbreakers must never be violated silently: check every pick against them and call out any conflict in the card's tradeoffs. Likes and dislikes steer picks.",
+    value: learned,
   });
 
   useAgentContext({
@@ -181,6 +227,19 @@ export function TravelCopilot() {
       focus: mapView.focus ? { name: mapView.focus.name, locality: mapView.focus.locality ?? "" } : "none",
       pinned: mapView.placeList.slice(0, 25).map((p) => ({ name: p.name, kind: p.kind })),
     },
+  });
+
+  const constraints = useConstraints(mapView.threadId);
+  useAgentContext({
+    description: "Active search constraints (the chips the traveler currently sees; honor hard ones, prefer soft ones, until they change topic)",
+    value: constraints
+      ? {
+          searching: constraints.kind,
+          hard: constraints.constraints.filter((c) => c.hard).map((c) => c.label),
+          soft: constraints.constraints.filter((c) => !c.hard).map((c) => c.label),
+          notUnderstood: constraints.notUnderstood,
+        }
+      : "none",
   });
 
   useAgentContext({
@@ -315,6 +374,58 @@ export function TravelCopilot() {
     [],
   );
 
+  useFrontendTool(
+    {
+      name: "set_search_constraints",
+      description:
+        "Show the traveler how you understood their search criteria, as editable chips, BEFORE calling a card tool. One chip per criterion (budget, area, amenity, vibe, dietary, timing, distance, other); hard = stated requirement, soft = preference. Put phrases you could not map into notUnderstood.",
+      parameters: setSearchConstraintsSchema,
+      followUp: true,
+      handler: async (args, context) => {
+        const threadId = context.agent?.threadId ?? mapActions.activeThreadId();
+        if (threadId) {
+          constraintActions.set(threadId, {
+            kind: args.kind,
+            constraints: args.constraints,
+            notUnderstood: args.notUnderstood ?? [],
+            toolCallId: context.toolCall.id,
+          });
+        }
+        const hard = args.constraints.filter((c) => c.hard).map((c) => c.label);
+        return `Chips shown to the traveler${hard.length ? ` (must have: ${hard.join(", ")})` : ""}. Now call the card tool with results that satisfy every hard chip; do not list the chips again in text.`;
+      },
+      render: ConstraintsRenderer,
+    },
+    [],
+  );
+
+  useFrontendTool(
+    {
+      name: "compare_options",
+      description:
+        "Compare two or three specific options side by side on this traveler's priorities. Use it when asked to compare, or when a 'Compare these options' message arrives. Verdicts: strong / ok / weak / unknown; never guess facts you do not know (put them in unknowns).",
+      parameters: compareOptionsSchema,
+      followUp: true,
+      handler: async () =>
+        "The comparison is displayed with map links, save and add-to-trip actions per option. Do not repeat the table; add at most two sentences.",
+      render: CompareRenderer,
+    },
+    [],
+  );
+
+  useHumanInTheLoop(
+    {
+      name: "remember_preference",
+      description:
+        "Offer to remember a lasting taste the traveler revealed in passing (e.g. 'Prefers boutique hotels'). The traveler picks Always, For this trip or No thanks in the UI; wait for that response and acknowledge it in one line. Only when the profile says learnFromChat is true.",
+      parameters: rememberPreferenceSchema,
+      followUp: true,
+      available: profile.learnFromChat,
+      render: RememberRenderer,
+    },
+    [profile.learnFromChat],
+  );
+
   const debouncedPlanner = useDebounced(planner, 1500);
   const staticSuggestions = useMemo(
     () => buildStaticSuggestions(profile, debouncedPlanner, trips),
@@ -329,6 +440,9 @@ export function TravelCopilot() {
     [staticSuggestions],
   );
 
+  // No follow-up suggestions while a proposal or "remember this?" card waits for a click: the
+  // suggestions run would send the model a tool call without a result, which providers reject.
+  const hitlPending = useHitlPending();
   useConfigureSuggestions(
     config === null
       ? null
@@ -338,9 +452,9 @@ export function TravelCopilot() {
             : "Suggest 2-3 short next steps the traveler could ask for next, grounded in the conversation and their profile (for example: find hotels for the destination being discussed, compare flights from their home airport, restaurants near the chosen hotel, weather and packing, or turning the plan into a saved trip). Titles under six words; messages written in first person as the traveler would type them.",
           minSuggestions: 2,
           maxSuggestions: 3,
-          available: "after-first-message",
+          available: hitlPending ? "disabled" : "after-first-message",
         },
-    [config, demo],
+    [config, demo, hitlPending],
   );
 
   return null;

@@ -2,7 +2,7 @@
 
 import { useState, type HTMLAttributes, type ReactNode } from "react";
 import clsx from "clsx";
-import { ExternalLink, Heart, MapPin, Plus } from "lucide-react";
+import { ExternalLink, Heart, MapPin, Plus, TriangleAlert } from "lucide-react";
 import { ToolCallStatus } from "@copilotkit/core";
 import { findSaved, useTravelStore, type SavedKind } from "@/lib/store";
 import type { ResolvedPlace } from "@/lib/places/types";
@@ -144,6 +144,22 @@ export function Tag({ children, tone = "neutral" }: { children: ReactNode; tone?
     >
       {children}
     </span>
+  );
+}
+
+/** Amber "Heads-up" chips: the honest downsides of a pick for this traveler. */
+export function Tradeoffs({ items }: { items?: (string | undefined)[] }) {
+  const list = (items ?? []).filter((t): t is string => typeof t === "string" && t.trim() !== "").slice(0, 3);
+  if (list.length === 0) return null;
+  return (
+    <ul className="flex flex-wrap gap-1.5 pt-1" aria-label="Heads-up" data-testid="tradeoffs">
+      {list.map((t) => (
+        <li key={t} className="inline-flex items-start gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[12px] font-medium text-amber-800">
+          <TriangleAlert className="mt-0.5 h-3 w-3 shrink-0" />
+          <span>{t}</span>
+        </li>
+      ))}
+    </ul>
   );
 }
 

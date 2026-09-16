@@ -14,9 +14,23 @@ in development), and the app deploys to **Railway** with the included Dockerfile
 ## Features
 
 - **Personalized from message one** — an onboarding dialog ("Update my assistant") captures name,
-  home city/airport, travel styles, pace, budget, companions, dietary needs and notes. Everything is
-  sent to the agent as context on every run, and the model can remember new preferences it hears in
-  conversation via the `update_traveler_profile` tool.
+  home city/airport, travel styles, pace, budget, companions, dietary needs, notes and "What ruins a
+  trip for you?" dealbreakers. Everything is sent to the agent as context on every run; concrete
+  profile fields heard in conversation go through `update_traveler_profile`.
+- **Learns tastes with your say-so** — when you mention a lasting preference in chat, a "Remember
+  this?" card offers **Always / For this trip / No thanks** (`remember_preference`, human-in-the-loop).
+  "Update my assistant" lists everything learned with delete buttons and a "Learn from our chats"
+  switch; trip-scoped items show on the trip page.
+- **Smart filters you can see** — criteria in a request ("quiet, under $250 a night, pool") become an
+  editable "Understood as" chip strip (`set_search_constraints`): must-haves vs preferences, "Not
+  applied" for what could not be mapped, and every edit re-runs the search. Explore parses price
+  words, ratings and "open now" into Google Places filters and shows the same kind of chips.
+- **Honest heads-ups** — every hotel, restaurant, attraction and flight card carries `tradeoffs`:
+  amber chips with the downsides for this traveler, including any conflict with a dealbreaker.
+- **Side-by-side comparison** — Compare on two or three cards → floating bar → `compare_options`
+  card: your priorities as rows with strong / ok / weak / unknown verdicts, Price, Rating (Google's
+  numbers when the option is pinned), Location, Strengths, Compromises and Couldn't verify, with Map,
+  Save, Add to trip and Pick this one per column.
 - **Generative UI recommendations** — the agent calls frontend tools that render streaming cards:
   `show_destinations`, `show_hotels`, `show_flights`, `show_restaurants`, `show_attractions`.
 - **Actionable, not just descriptive** — every card links out to live inventory: Google Flights,
@@ -148,7 +162,8 @@ are).
 ## How it is wired
 
 ```
-src/app/api/copilotkit/[[...path]]/route.ts   CopilotKit v2 runtime (fetch handler, in-memory threads)
+src/app/api/copilotkit/[[...path]]/route.ts   CopilotKit v2 runtime (fetch handler, per-user request scope)
+src/server/copilot-runner.ts                 In-memory runner that persists transcripts to Postgres and restores them
 src/server/agent.ts                          BuiltInAgent: model selection, prompt, server tools
 src/server/demo-model.ts                     Offline model speaking the same tool protocol
 src/lib/travel/prompt.ts                     Static system prompt (traveler facts arrive as context)
@@ -169,7 +184,9 @@ src/components/chat/TravelCopilot.tsx        useAgentContext / useFrontendTool /
                                              useConfigureSuggestions registration
 src/components/chat/TravelChat.tsx           <CopilotChat> with the welcome hero and input slots
 src/components/chat/cards/*                  Destination, hotel, flight, restaurant, attraction,
-                                             trip-proposal cards
+                                             trip-proposal, constraint-chip, comparison and remember cards
+src/lib/constraints-store.ts, compare-store.ts, hitl-store.ts   Per-thread chips, compare selection, pending HITL cards
+src/lib/search-parser.ts                     Deterministic Explore query → Places filters + chips
 src/components/panel/RightPanel.tsx          Discovery feed ⇄ map switch
 src/components/panel/DiscoveryPanel.tsx      Right-hand discovery panel
 src/components/map/*                         Google Map panel, markers, place sheet, card ↔ pin hook
@@ -178,9 +195,10 @@ src/server/places.ts + src/app/api/places/*  Places API (New) resolution, detail
 src/components/shell/*                       Sidebar, top bar, app shell
 ```
 
-Chat transcripts are held by the runtime's in-memory runner for the lifetime of the server process;
-the chat list, profile, trips, saved items and notifications persist in the database per user. Only
-the planner bar values and small UI preferences stay in the browser.
+Chat transcripts, the chat list, profile, learned preferences, trips, saved items and notifications
+persist in the database per user (transcripts are written by the runner after every run and restored
+into the runtime when a chat is reopened after a deploy). Only the planner bar values and small UI
+preferences stay in the browser.
 
 ## Scripts
 

@@ -5,8 +5,9 @@ import { ToolCallStatus } from "@copilotkit/core";
 import type { ShowHotelsArgs, Streaming } from "@/lib/travel/schemas";
 import { bookingSearchUrl, googleHotelsUrl, googleMapsSearchUrl } from "@/lib/travel/links";
 import { formatDateRange } from "@/lib/store";
-import { usePlacePin, useRegisterPlaces } from "@/components/map/useRegisterPlaces";
-import { CardPhoto, AddToTripButton, Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Stars, Tag, Text, ViewOnMapButton, usd } from "./shared";
+import { placeKey, usePlacePin, useRegisterPlaces } from "@/components/map/useRegisterPlaces";
+import { CardPhoto, AddToTripButton, Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Stars, Tag, Text, Tradeoffs, ViewOnMapButton, usd } from "./shared";
+import { CompareToggle } from "./CompareControls";
 
 export function HotelCards({ args, status, toolCallId }: { args: Streaming<ShowHotelsArgs>; status: ToolCallStatus; toolCallId: string }) {
   const items = (args.hotels ?? []).filter((h) => h && h.name);
@@ -92,6 +93,7 @@ function HotelCard({
                     <Tag key={a}>{a}</Tag>
                   ))}
                 </div>
+                <Tradeoffs items={h.tradeoffs} />
               </Body>
               <Footer>
                 <ExtLink primary href={bookingSearchUrl({ query, checkIn: args.checkIn, checkOut: args.checkOut, guests: args.guests })}>
@@ -100,6 +102,13 @@ function HotelCard({
                 <ExtLink href={googleHotelsUrl(query)}>Google Hotels</ExtLink>
                 <ViewOnMapButton pin={pin} />
                 <AddToTripButton place={pin.place} />
+                <CompareToggle
+                  pinKey={placeKey(toolCallId, index)}
+                  name={h.name}
+                  kind="hotel"
+                  facts={[h.area, h.style, h.nightlyEstimateUsd ? `${usd(h.nightlyEstimateUsd)}/night est.` : "", h.rating ? `rated ${h.rating}` : ""].filter(Boolean).join(", ")}
+                  place={pin.place}
+                />
                 {!pin.place ? (
                   <ExtLink href={googleMapsSearchUrl(query)}>
                     <MapPin className="h-3.5 w-3.5" /> Map

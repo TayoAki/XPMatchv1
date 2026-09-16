@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import type { ResolvedPlace } from "@/lib/places/types";
 import type { Guide } from "@/lib/types";
 import { resolvePlaces } from "@/lib/places/client";
+import { parseSearch } from "@/lib/search-parser";
 import { findSaved, useTravelStore } from "@/lib/store";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { EmptyState } from "@/components/PageFrame";
@@ -156,20 +157,26 @@ export function ExploreClient() {
   const center = override ?? home;
   const resolvingHome = hydrated && !!homeCity && homeState?.query !== homeCity && !override;
 
+  // The search box is read deterministically: price words, ratings and "open now" become Places
+  // filters, vibe words stay in the text query; both are shown as chips so nothing is hidden.
+  const parsed = useMemo(() => parseSearch(q), [q]);
   const resultKey = center ? `${center.place.id}|${tab}|${q}` : "";
   useEffect(() => {
     if (!center || tab === "guides") return;
     let active = true;
     const key = resultKey;
     const params = new URLSearchParams({ lat: center.place.lat.toFixed(5), lng: center.place.lng.toFixed(5), category: tab });
-    if (q) params.set("q", q);
+    if (parsed.query) params.set("q", parsed.query);
+    if (parsed.priceLevels?.length) params.set("levels", parsed.priceLevels.join(","));
+    if (parsed.minRating) params.set("minRating", String(parsed.minRating));
+    if (parsed.openNow) params.set("openNow", "1");
     api<{ items: ResolvedPlace[] }>(`/api/places/nearby?${params.toString()}`)
       .then((data) => active && setResults({ key, items: data.items, error: null }))
       .catch((err: unknown) => active && setResults({ key, items: [], error: err instanceof Error ? err.message : "Could not load places" }));
     return () => {
       active = false;
     };
-    // `center` is summarized by resultKey.
+    // `center` and `parsed` are summarized by resultKey.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resultKey, tab, q]);
 
@@ -325,6 +332,22 @@ export function ExploreClient() {
               Search
             </Button>
           </form>
+
+          {q && parsed.chips.length ? (
+            <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[13px] text-muted" data-testid="explore-understood">
+              <span>Understood as:</span>
+              {parsed.chips.map((c) => (
+                <span
+                  key={c.label}
+                  title={c.applied ? "Applied as a Google Places filter" : "Searched in the text"}
+                  className={clsx("rounded-full px-2.5 py-0.5 font-medium", c.applied ? "bg-neutral-900 text-white" : "bg-surface text-neutral-700")}
+                >
+                  {c.label}
+                </span>
+              ))}
+              {parsed.query ? <span className="text-neutral-700">· “{parsed.query}”</span> : null}
+            </div>
+          ) : null}
 
           <div className="mt-4 flex flex-wrap gap-2">
             {TABS.map((t) => (

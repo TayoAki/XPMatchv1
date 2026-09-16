@@ -1,6 +1,10 @@
 import type { ResolvedPlace } from "@/lib/places/types";
 import type {
   ChatSummary,
+  LearnedPreference,
+  PreferenceDomain,
+  PreferencePolarity,
+  PreferenceSource,
   SavedItem,
   SavedKind,
   TravelerProfile,
@@ -168,6 +172,121 @@ export async function upsertChat(userId: string, threadId: string, title: string
   );
   if (!row) throw new Error("Chat belongs to another user");
   return mapChat(row);
+}
+
+/* --------------------------- transcripts --------------------------- */
+
+/** Rough ceiling for one stored transcript (Postgres jsonb is fine with this; the model context is not). */
+const TRANSCRIPT_MAX_BYTES = 1_500_000;
+const TRANSCRIPT_MAX_MESSAGES = 400;
+
+interface TranscriptMessage {
+  id?: string;
+  role?: string;
+}
+
+/**
+ * Keeps the newest messages under the size cap, always cutting at a user turn so
+ * an assistant tool call is never separated from its result.
+ */
+export function trimTranscript<T extends TranscriptMessage>(messages: T[]): T[] {
+  let list = messages;
+  const cutAtNextUserTurn = (from: number) => {
+    const next = list.findIndex((m, i) => i > from && m.role === "user");
+    return next === -1 ? list.length : next;
+  };
+  if (list.length > TRANSCRIPT_MAX_MESSAGES) list = list.slice(cutAtNextUserTurn(list.length - TRANSCRIPT_MAX_MESSAGES - 1));
+  let guard = 0;
+  while (list.length > 1 && JSON.stringify(list).length > TRANSCRIPT_MAX_BYTES && guard++ < 50) {
+    list = list.slice(cutAtNextUserTurn(0));
+  }
+  return list;
+}
+
+export async function saveTranscript(userId: string, threadId: string, messages: unknown[]): Promise<void> {
+  const trimmed = trimTranscript(messages as TranscriptMessage[]);
+  await queryAll(
+    `INSERT INTO chat_messages (thread_id, user_id, messages, updated_at) VALUES ($1, $2, $3::jsonb, now())
+     ON CONFLICT (thread_id) DO UPDATE SET messages = EXCLUDED.messages, updated_at = now()
+     WHERE chat_messages.user_id = $2`,
+    [threadId.slice(0, 200), userId, JSON.stringify(trimmed)],
+  );
+}
+
+export async function loadTranscript(userId: string, threadId: string): Promise<unknown[]> {
+  const row = await queryOne<{ messages: unknown }>("SELECT messages FROM chat_messages WHERE thread_id = $1 AND user_id = $2", [
+    threadId.slice(0, 200),
+    userId,
+  ]);
+  const messages = jsonb<unknown[]>(row?.messages);
+  return Array.isArray(messages) ? messages : [];
+}
+
+/* --------------------------- preferences --------------------------- */
+
+interface PreferenceRow extends Row {
+  id: string;
+  trip_id: string | null;
+  domain: string;
+  polarity: string;
+  statement: string;
+  source: string;
+  created_at: unknown;
+}
+
+const PREFERENCE_SELECT = "SELECT id, trip_id, domain, polarity, statement, source, created_at FROM preferences";
+
+const mapPreference = (r: PreferenceRow): LearnedPreference => ({
+  id: r.id,
+  tripId: r.trip_id ?? undefined,
+  domain: r.domain as PreferenceDomain,
+  polarity: r.polarity as PreferencePolarity,
+  statement: r.statement,
+  source: r.source as PreferenceSource,
+  createdAt: iso(r.created_at),
+});
+
+export async function loadPreferences(userId: string): Promise<LearnedPreference[]> {
+  const rows = await queryAll<PreferenceRow>(`${PREFERENCE_SELECT} WHERE user_id = $1 ORDER BY created_at DESC LIMIT 300`, [userId]);
+  return rows.map(mapPreference);
+}
+
+export interface PreferenceInput {
+  tripId?: string | null;
+  domain: PreferenceDomain;
+  polarity: PreferencePolarity;
+  statement: string;
+  source: PreferenceSource;
+}
+
+/** Adds a preference; the same statement in the same scope is returned instead of duplicated. */
+export async function insertPreference(userId: string, input: PreferenceInput): Promise<LearnedPreference> {
+  const statement = input.statement.trim();
+  const existing = await queryOne<PreferenceRow>(
+    `${PREFERENCE_SELECT} WHERE user_id = $1 AND lower(statement) = lower($2) AND trip_id IS NOT DISTINCT FROM $3`,
+    [userId, statement, input.tripId ?? null],
+  );
+  if (existing) {
+    if (existing.polarity !== input.polarity || existing.domain !== input.domain) {
+      const updated = await queryOne<PreferenceRow>(
+        "UPDATE preferences SET polarity = $3, domain = $4 WHERE id = $1 AND user_id = $2 RETURNING id, trip_id, domain, polarity, statement, source, created_at",
+        [existing.id, userId, input.polarity, input.domain],
+      );
+      if (updated) return mapPreference(updated);
+    }
+    return mapPreference(existing);
+  }
+  const row = await queryOne<PreferenceRow>(
+    `INSERT INTO preferences (user_id, trip_id, domain, polarity, statement, source) VALUES ($1, $2, $3, $4, $5, $6)
+     RETURNING id, trip_id, domain, polarity, statement, source, created_at`,
+    [userId, input.tripId ?? null, input.domain, input.polarity, statement, input.source],
+  );
+  if (!row) throw new Error("Could not save the preference");
+  return mapPreference(row);
+}
+
+export async function deletePreference(userId: string, id: string): Promise<void> {
+  await queryAll("DELETE FROM preferences WHERE id = $1 AND user_id = $2", [id, userId]);
 }
 
 /* -------------------------- notifications -------------------------- */

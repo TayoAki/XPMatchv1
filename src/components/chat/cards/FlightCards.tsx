@@ -5,7 +5,7 @@ import { ToolCallStatus } from "@copilotkit/core";
 import type { ShowFlightsArgs, Streaming } from "@/lib/travel/schemas";
 import { googleFlightsUrl } from "@/lib/travel/links";
 import { formatDateRange } from "@/lib/store";
-import { Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Tag, Text, usd } from "./shared";
+import { Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Tag, Text, Tradeoffs, usd } from "./shared";
 
 export function FlightCards({ args, status }: { args: Streaming<ShowFlightsArgs>; status: ToolCallStatus }) {
   const items = (args.options ?? []).filter((o) => o && o.airline);
@@ -70,6 +70,7 @@ export function FlightCards({ args, status }: { args: Streaming<ShowFlightsArgs>
                 <Text value={o.departureWindow} />
               </div>
               {o.notes ? <p className="text-[13px] text-neutral-600">{o.notes}</p> : null}
+              <Tradeoffs items={o.tradeoffs} />
             </Body>
             <Footer>{searchUrl ? <ExtLink primary href={searchUrl}>Search on Google Flights</ExtLink> : null}</Footer>
           </CardShell>

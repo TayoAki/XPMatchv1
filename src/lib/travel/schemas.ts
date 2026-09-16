@@ -29,6 +29,15 @@ export const showDestinationsSchema = z.object({
   destinations: z.array(destinationSchema).min(1).max(6),
 });
 
+/** Honest downsides for this traveler ("street noise at night", "20-minute walk to the metro"). */
+export const tradeoffsSchema = z
+  .array(z.string())
+  .max(3)
+  .optional()
+  .describe(
+    "0-3 short heads-ups this traveler should know before choosing: real, specific downsides (noise, distance, stairs, crowds, price creep, limited hours). Name any conflict with their dealbreakers explicitly. Omit when nothing notable is known; never invent.",
+  );
+
 export const hotelSchema = z.object({
   name: z.string(),
   area: z.string().describe("Neighborhood or district"),
@@ -38,6 +47,7 @@ export const hotelSchema = z.object({
   rating: z.number().min(0).max(5).optional().describe("Typical guest rating out of 5, if known"),
   whyItFits: z.string(),
   amenities: z.array(z.string()).describe("3-5 notable amenities"),
+  tradeoffs: tradeoffsSchema,
 });
 
 export const showHotelsSchema = z.object({
@@ -57,6 +67,7 @@ export const flightOptionSchema = z.object({
   estimatedPriceUsd: z.number().describe("Round-trip estimate per person in USD"),
   departureWindow: z.string().describe("e.g. 'Morning departure, evening return'"),
   notes: z.string().optional().describe("Bag policy, why this option, caveats"),
+  tradeoffs: tradeoffsSchema,
 });
 
 export const showFlightsSchema = z.object({
@@ -77,6 +88,7 @@ export const restaurantSchema = z.object({
   whyItFits: z.string(),
   reservationRecommended: z.boolean(),
   bestFor: z.string().describe("e.g. 'dinner date', 'quick lunch', 'group brunch'"),
+  tradeoffs: tradeoffsSchema,
 });
 
 export const showRestaurantsSchema = z.object({
@@ -93,6 +105,7 @@ export const attractionSchema = z.object({
   bestTimeOfDay: z.string(),
   durationHours: z.number().describe("Typical visit length in hours"),
   ticketNote: z.string().describe("Free / book ahead / typical price"),
+  tradeoffs: tradeoffsSchema,
 });
 
 export const showAttractionsSchema = z.object({
@@ -186,3 +199,66 @@ export const addTripIdeasSchema = z.object({
 
 export type UpdateTripPlanArgs = z.infer<typeof updateTripPlanSchema>;
 export type AddTripIdeasArgs = z.infer<typeof addTripIdeasSchema>;
+
+/* ------------------------- Wave 1: smart filters ------------------------- */
+
+export const constraintKindSchema = z.enum(["hotels", "restaurants", "attractions", "flights", "destinations"]);
+
+export const searchConstraintSchema = z.object({
+  label: z.string().describe("Short chip text as the traveler would say it, e.g. 'Quiet', 'Under $250/night', 'Near restaurants', 'Pool'"),
+  type: z.enum(["budget", "area", "amenity", "vibe", "dietary", "timing", "distance", "other"]),
+  value: z.string().optional().describe("Normalized value when useful, e.g. '250 USD/night', 'Trastevere', 'vegetarian'"),
+  hard: z.boolean().describe("true when the traveler stated it as a requirement; false for a preference"),
+});
+
+export const setSearchConstraintsSchema = z.object({
+  kind: constraintKindSchema.describe("What is being searched"),
+  constraints: z.array(searchConstraintSchema).max(10).describe("One chip per criterion the traveler stated (from this message and earlier ones still in force)"),
+  notUnderstood: z.array(z.string()).max(5).optional().describe("Phrases you could not turn into a concrete criterion, e.g. 'good vibes'"),
+});
+
+export type SearchConstraintArg = z.infer<typeof searchConstraintSchema>;
+export type SetSearchConstraintsArgs = z.infer<typeof setSearchConstraintsSchema>;
+
+/* ------------------------- Wave 1: comparison ------------------------- */
+
+export const compareVerdictSchema = z.enum(["strong", "ok", "weak", "unknown"]);
+
+export const compareOptionSchema = z.object({
+  name: z.string().describe("Exactly the option's name as shown on its card"),
+  area: z.string().optional().describe("Neighborhood or route"),
+  priceEstimateUsd: z.number().optional().describe("Per night, per meal or per ticket, matching the kind"),
+  rating: z.number().min(0).max(5).optional(),
+  cells: z
+    .array(
+      z.object({
+        priority: z.string().describe("Must match one entry of `priorities`"),
+        verdict: compareVerdictSchema.describe("strong = clearly delivers, ok = fine, weak = falls short, unknown = you do not know"),
+        note: z.string().describe("One short line of evidence or the compromise"),
+      }),
+    )
+    .describe("One cell per priority, in the same order"),
+  strengths: z.array(z.string()).max(3),
+  compromises: z.array(z.string()).max(3).describe("What the traveler gives up by choosing this"),
+  unknowns: z.array(z.string()).max(3).describe("Things you could not verify (never guess them)"),
+});
+
+export const compareOptionsSchema = z.object({
+  kind: constraintKindSchema,
+  priorities: z.array(z.string()).min(2).max(5).describe("What matters most to THIS traveler, in order, drawn from their profile, learned preferences, active constraints and the question (e.g. 'Quiet at night', 'Walkable to Trastevere', 'Under $250')"),
+  options: z.array(compareOptionSchema).min(2).max(3),
+  recommendation: z.string().describe("One or two sentences: which to pick for whom, hedged where evidence is thin"),
+});
+
+export type CompareOptionsArgs = z.infer<typeof compareOptionsSchema>;
+export type CompareOptionArg = z.infer<typeof compareOptionSchema>;
+
+/* -------------------- Wave 1: learn preferences in chat -------------------- */
+
+export const rememberPreferenceSchema = z.object({
+  statement: z.string().describe("The preference in the traveler's own terms, in the third person, e.g. 'Prefers boutique hotels over chains'"),
+  domain: z.enum(["stays", "food", "flights", "activities", "general"]),
+  polarity: z.enum(["like", "dislike", "dealbreaker"]).describe("like = wants more of it, dislike = avoid when possible, dealbreaker = never"),
+});
+
+export type RememberPreferenceArgs = z.infer<typeof rememberPreferenceSchema>;

@@ -351,7 +351,15 @@ async function googleNearby(center: LatLng, types: string[], kind: PlaceKind, li
   return (data.places ?? []).map((p) => toResolved(p, kind)).filter(present);
 }
 
-async function googleTextMany(query: string, kind: PlaceKind, center: LatLng, limit: number, priceLevels?: string[]): Promise<ResolvedPlace[]> {
+/** Filters Places Text Search applies server-side (from Explore's parsed query or the traveler's budget). */
+export interface NearbyFilters {
+  priceLevels?: string[];
+  /** 0-5 in half steps. */
+  minRating?: number;
+  openNow?: boolean;
+}
+
+async function googleTextMany(query: string, kind: PlaceKind, center: LatLng, limit: number, filters: NearbyFilters = {}): Promise<ResolvedPlace[]> {
   const data = await googleFetch<{ places?: GooglePlace[] }>(
     `${PLACES_BASE}/places:searchText`,
     {
@@ -361,7 +369,9 @@ async function googleTextMany(query: string, kind: PlaceKind, center: LatLng, li
         pageSize: Math.min(Math.max(limit, 1), 20),
         languageCode: "en",
         locationBias: { circle: { center: { latitude: center.lat, longitude: center.lng }, radius: NEARBY_RADIUS_M } },
-        ...(priceLevels?.length ? { priceLevels } : {}),
+        ...(filters.priceLevels?.length ? { priceLevels: filters.priceLevels } : {}),
+        ...(filters.minRating ? { minRating: filters.minRating } : {}),
+        ...(filters.openNow ? { openNow: true } : {}),
       }),
     },
     NEARBY_FIELDS,
@@ -404,23 +414,32 @@ export function priceLevelsFor(budgetTier?: string | null): string[] | undefined
   }
 }
 
+const CATEGORY_TEXT: Record<NearbyCategory, string> = { "for-you": "things to do and restaurants", restaurants: "restaurants", experiences: "things to do", stays: "hotels" };
+
 export async function searchNearby(
   center: LatLng,
   category: NearbyCategory,
   query?: string,
   limit = 12,
-  priceLevels?: string[],
+  filters: NearbyFilters = {},
 ): Promise<ResolvedPlace[]> {
   if (!placesApiKey()) return [];
   const q = query?.trim().toLowerCase() ?? "";
-  const key = `${category}|${q}|${(priceLevels ?? []).join("+")}|${center.lat.toFixed(3)}|${center.lng.toFixed(3)}|${limit}`;
+  // Price levels are reliable for restaurants; hotels rarely carry them, so they only apply there.
+  const effective: NearbyFilters = {
+    priceLevels: category === "restaurants" || (category === "for-you" && q) ? filters.priceLevels : undefined,
+    minRating: filters.minRating,
+    openNow: filters.openNow,
+  };
+  const hasFilters = !!(effective.priceLevels?.length || effective.minRating || effective.openNow);
+  const key = `${category}|${q}|${(effective.priceLevels ?? []).join("+")}|${effective.minRating ?? ""}|${effective.openNow ? "open" : ""}|${center.lat.toFixed(3)}|${center.lng.toFixed(3)}|${limit}`;
   const hit = nearbyCache.get(key);
   if (hit && Date.now() - hit.at < NEARBY_TTL_MS) return hit.promise;
   const promise = (async () => {
-    if (q) {
+    if (q || hasFilters) {
+      // Free text or filters: Text Search understands both; category tabs without either use the cheaper Nearby Search.
       const kind: PlaceKind = category === "restaurants" ? "restaurant" : category === "stays" ? "hotel" : "attraction";
-      // Price levels are reliable for restaurants; hotels rarely carry them, so only apply there.
-      return googleTextMany(q, kind, center, limit, category === "restaurants" ? priceLevels : undefined);
+      return googleTextMany(q || CATEGORY_TEXT[category], kind, center, limit, effective);
     }
     if (category === "for-you") {
       const [experiences, restaurants] = await Promise.all([

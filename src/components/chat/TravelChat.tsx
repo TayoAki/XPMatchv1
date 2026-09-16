@@ -11,6 +11,7 @@ import { useAppConfig } from "@/lib/app-config";
 import { useUiState } from "@/components/providers/UiState";
 import { WelcomeHero } from "@/components/chat/WelcomeHero";
 import { TripChatScope } from "@/components/chat/TripChatScope";
+import { CompareBar } from "@/components/chat/cards/CompareControls";
 
 function messageText(m: Message): string {
   const content = (m as { content?: unknown }).content;
@@ -74,7 +75,8 @@ export function TravelChat({ threadId, initialPrompt, tripId }: { threadId?: str
   );
 
   return (
-    <div className="xp-chat flex h-full min-h-0 flex-col">
+    <div className="xp-chat relative flex h-full min-h-0 flex-col">
+      <CompareBar threadId={agent.threadId} />
       {config?.mode === "demo" ? (
         <div className="flex items-center gap-2 border-b border-amber-200 bg-amber-50 px-4 py-2 text-[13px] text-amber-900">
           <AlertTriangle className="h-4 w-4 shrink-0" />

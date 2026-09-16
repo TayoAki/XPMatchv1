@@ -6,6 +6,7 @@ import { Calendar, Check, Users, Wallet } from "lucide-react";
 import { ToolCallStatus } from "@copilotkit/core";
 import type { CreateTripArgs, Streaming } from "@/lib/travel/schemas";
 import { formatDateRange, useTravelStore } from "@/lib/store";
+import { useHitlPendingMarker } from "@/lib/hitl-store";
 import { PlaceImage } from "@/components/ui/PlaceImage";
 import { Button } from "@/components/ui/Button";
 import { CardShell, Skeleton, Tag } from "./shared";
@@ -14,6 +15,7 @@ interface TripProposalCardProps {
   args: Streaming<CreateTripArgs>;
   status: ToolCallStatus;
   result?: string;
+  toolCallId: string;
   respond?: (result: unknown) => Promise<void>;
 }
 
@@ -30,11 +32,12 @@ function parseResult(result?: string): { created?: boolean; tripId?: string } {
  * Human-in-the-loop card: the model proposes a trip, the traveler confirms it
  * and it is saved locally to "Trips".
  */
-export function TripProposalCard({ args, status, result, respond }: TripProposalCardProps) {
+export function TripProposalCard({ args, status, result, toolCallId, respond }: TripProposalCardProps) {
   const { addTrip } = useTravelStore();
   const [busy, setBusy] = useState(false);
   const [expanded, setExpanded] = useState(true);
   const outcome = parseResult(result);
+  useHitlPendingMarker(toolCallId, status);
   const days = (args.itinerary ?? []).filter((d) => d && d.day !== undefined);
   const dates = formatDateRange(args.startDate, args.endDate);
   const canRespond = status === ToolCallStatus.Executing && !!respond;
