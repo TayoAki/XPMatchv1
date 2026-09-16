@@ -146,8 +146,11 @@ test("in-depth onboarding drives home picks with match scores and thumbs; itiner
     const context = await browser.newContext({ baseURL });
     const admin = await context.newPage();
     await login(admin, "admin@example.com");
-    // A fresh admin account still gets the wizard; a returning one goes straight in.
-    if (await admin.getByRole("dialog", { name: /personalize/i }).isVisible({ timeout: 5_000 }).catch(() => false)) await completeOnboarding(admin);
+    // Let the sign-in redirect finish: a fresh admin account gets the wizard, a returning one the hero.
+    await admin.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 30_000 });
+    const wizard = admin.getByRole("dialog", { name: /personalize/i });
+    await expect(wizard.or(admin.getByRole("heading", { name: /Where to today/ }))).toBeVisible({ timeout: 30_000 });
+    if (await wizard.isVisible()) await completeOnboarding(admin);
     await admin.goto("/admin");
     const report = admin.getByTestId("bug-report").filter({ hasText: "The stays row overlaps the map" });
     await expect(report).toBeVisible({ timeout: 20_000 });
