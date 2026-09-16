@@ -22,6 +22,7 @@ export default function UpdatesPage() {
           {updates.map((u) => {
             const Icon = ICON[u.kind] ?? Bell;
             const tripId = typeof u.data?.tripId === "string" ? u.data.tripId : null;
+            const guideId = typeof u.data?.guideId === "string" ? u.data.guideId : null;
             return (
               <li key={u.id} className="flex items-center gap-3 px-4 py-3">
                 <span className="flex h-9 w-9 items-center justify-center rounded-full bg-surface">
@@ -34,6 +35,11 @@ export default function UpdatesPage() {
                 {tripId ? (
                   <Link href={`/trips/${tripId}`} className="inline-flex h-8 items-center rounded-full border border-border px-3 text-[13px] font-medium hover:bg-surface">
                     Open trip
+                  </Link>
+                ) : null}
+                {guideId ? (
+                  <Link href={`/guides/${guideId}`} className="inline-flex h-8 items-center rounded-full border border-border px-3 text-[13px] font-medium hover:bg-surface">
+                    Open guide
                   </Link>
                 ) : null}
               </li>

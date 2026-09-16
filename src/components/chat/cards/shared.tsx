@@ -146,6 +146,7 @@ export function SaveButton({
   subtitle,
   destination,
   url,
+  place,
   className,
 }: {
   kind: SavedKind;
@@ -153,6 +154,8 @@ export function SaveButton({
   subtitle?: string;
   destination?: string;
   url?: string;
+  /** Resolved pin, when known, so the saved item carries coordinates and photos. */
+  place?: ResolvedPlace;
   className?: string;
 }) {
   const { saved, toggleSaved } = useTravelStore();
@@ -163,7 +166,7 @@ export function SaveButton({
       type="button"
       aria-pressed={active}
       aria-label={active ? `Remove ${title} from saved` : `Save ${title}`}
-      onClick={() => toggleSaved({ kind, title, subtitle, destination, url })}
+      onClick={() => toggleSaved({ kind, title, subtitle, destination, url: url ?? place?.googleMapsUri, place, refId: place?.id })}
       className={clsx(
         "flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-sm backdrop-blur transition-colors hover:bg-white",
         className,

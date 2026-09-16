@@ -55,6 +55,7 @@ function HotelCard({
             <CardShell highlighted={pin.isSelected} onMouseEnter={() => pin.hover(true)} onMouseLeave={() => pin.hover(false)}>
               <PlaceImage queries={[h.area ? `${h.area}, ${dest}` : "", dest]} alt={h.name ?? "Hotel"} className="aspect-[16/9]">
                 <SaveButton
+                  place={pin.place}
                   kind="hotel"
                   title={h.name}
                   subtitle={[h.area, dest].filter(Boolean).join(", ")}

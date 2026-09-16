@@ -50,7 +50,7 @@ function RestaurantCard({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
                     <div className="text-[15px] font-semibold">{r.name}</div>
-                    <SaveButton kind="restaurant" title={r.name} subtitle={[r.cuisine, dest].filter(Boolean).join(" · ")} destination={dest} url={googleMapsSearchUrl(query)} className="bg-surface shadow-none" />
+                    <SaveButton place={pin.place} kind="restaurant" title={r.name} subtitle={[r.cuisine, dest].filter(Boolean).join(" · ")} destination={dest} url={googleMapsSearchUrl(query)} className="bg-surface shadow-none" />
                   </div>
                   <div className="text-[13px] text-muted">
                     <Text value={[r.cuisine, r.neighborhood, r.priceTier].filter(Boolean).join(" · ")} />

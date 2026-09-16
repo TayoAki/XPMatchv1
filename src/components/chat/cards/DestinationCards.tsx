@@ -44,7 +44,7 @@ function DestinationCard({
   return (
             <CardShell highlighted={pin.isSelected} onMouseEnter={() => pin.hover(true)} onMouseLeave={() => pin.hover(false)}>
               <PlaceImage queries={[d.name ?? "", label]} alt={label} className="aspect-[16/10]">
-                <SaveButton kind="destination" title={d.name} subtitle={d.country} destination={d.name} className="absolute right-2 top-2" />
+                <SaveButton place={pin.place} kind="destination" title={d.name} subtitle={d.country} destination={d.name} className="absolute right-2 top-2" />
                 <div className="absolute bottom-2 left-3 right-3 text-white drop-shadow">
                   <div className="text-[17px] font-semibold">{d.name}</div>
                   <div className="text-[12px] opacity-90">{d.country}</div>
