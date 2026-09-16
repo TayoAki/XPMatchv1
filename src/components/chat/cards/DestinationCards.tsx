@@ -4,10 +4,9 @@ import { MapPin } from "lucide-react";
 import { ToolCallStatus } from "@copilotkit/core";
 import type { ShowDestinationsArgs, Streaming } from "@/lib/travel/schemas";
 import { googleMapsSearchUrl } from "@/lib/travel/links";
-import { PlaceImage } from "@/components/ui/PlaceImage";
 import { useSendMessage } from "@/components/chat/useSendMessage";
 import { usePlacePin, useRegisterPlaces } from "@/components/map/useRegisterPlaces";
-import { AddToTripButton, ActionButton, Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Tag, Text, ViewOnMapButton, usd } from "./shared";
+import { CardPhoto, AddToTripButton, ActionButton, Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Tag, Text, ViewOnMapButton, usd } from "./shared";
 
 export function DestinationCards({ args, status, toolCallId }: { args: Streaming<ShowDestinationsArgs>; status: ToolCallStatus; toolCallId: string }) {
   const items = (args.destinations ?? []).filter((d) => d && d.name);
@@ -43,13 +42,13 @@ function DestinationCard({
   const label = [d.name, d.country].filter(Boolean).join(", ");
   return (
             <CardShell highlighted={pin.isSelected} onMouseEnter={() => pin.hover(true)} onMouseLeave={() => pin.hover(false)}>
-              <PlaceImage queries={[d.name ?? "", label]} alt={label} className="aspect-[16/10]">
+              <CardPhoto place={pin.place} queries={[d.name ?? "", label]} alt={label} className="aspect-[16/10]">
                 <SaveButton place={pin.place} kind="destination" title={d.name} subtitle={d.country} destination={d.name} className="absolute right-2 top-2" />
                 <div className="absolute bottom-2 left-3 right-3 text-white drop-shadow">
                   <div className="text-[17px] font-semibold">{d.name}</div>
                   <div className="text-[12px] opacity-90">{d.country}</div>
                 </div>
-              </PlaceImage>
+              </CardPhoto>
               <Body>
                 <div className="font-medium">
                   <Text value={d.tagline} />

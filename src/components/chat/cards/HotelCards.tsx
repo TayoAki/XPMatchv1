@@ -5,9 +5,8 @@ import { ToolCallStatus } from "@copilotkit/core";
 import type { ShowHotelsArgs, Streaming } from "@/lib/travel/schemas";
 import { bookingSearchUrl, googleHotelsUrl, googleMapsSearchUrl } from "@/lib/travel/links";
 import { formatDateRange } from "@/lib/store";
-import { PlaceImage } from "@/components/ui/PlaceImage";
 import { usePlacePin, useRegisterPlaces } from "@/components/map/useRegisterPlaces";
-import { AddToTripButton, Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Stars, Tag, Text, ViewOnMapButton, usd } from "./shared";
+import { CardPhoto, AddToTripButton, Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Stars, Tag, Text, ViewOnMapButton, usd } from "./shared";
 
 export function HotelCards({ args, status, toolCallId }: { args: Streaming<ShowHotelsArgs>; status: ToolCallStatus; toolCallId: string }) {
   const items = (args.hotels ?? []).filter((h) => h && h.name);
@@ -53,7 +52,7 @@ function HotelCard({
   const query = `${h.name} ${dest}`.trim();
   return (
             <CardShell highlighted={pin.isSelected} onMouseEnter={() => pin.hover(true)} onMouseLeave={() => pin.hover(false)}>
-              <PlaceImage queries={[h.area ? `${h.area}, ${dest}` : "", dest]} alt={h.name ?? "Hotel"} className="aspect-[16/9]">
+              <CardPhoto place={pin.place} queries={[h.area ? `${h.area}, ${dest}` : "", dest]} alt={h.name ?? "Hotel"} className="aspect-[16/9]">
                 <SaveButton
                   place={pin.place}
                   kind="hotel"
@@ -66,7 +65,7 @@ function HotelCard({
                 {h.priceTier ? (
                   <span className="absolute left-3 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[12px] font-semibold">{h.priceTier}</span>
                 ) : null}
-              </PlaceImage>
+              </CardPhoto>
               <Body>
                 <div className="flex items-start justify-between gap-2">
                   <div className="text-[15px] font-semibold">{h.name}</div>

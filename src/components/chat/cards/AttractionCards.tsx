@@ -4,9 +4,8 @@ import { Clock, MapPin, Ticket } from "lucide-react";
 import { ToolCallStatus } from "@copilotkit/core";
 import type { ShowAttractionsArgs, Streaming } from "@/lib/travel/schemas";
 import { getYourGuideSearchUrl, googleMapsSearchUrl } from "@/lib/travel/links";
-import { PlaceImage } from "@/components/ui/PlaceImage";
 import { usePlacePin, useRegisterPlaces } from "@/components/map/useRegisterPlaces";
-import { AddToTripButton, Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Tag, Text, ViewOnMapButton } from "./shared";
+import { CardPhoto, AddToTripButton, Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Tag, Text, ViewOnMapButton } from "./shared";
 
 export function AttractionCards({ args, status, toolCallId }: { args: Streaming<ShowAttractionsArgs>; status: ToolCallStatus; toolCallId: string }) {
   const items = (args.attractions ?? []).filter((a) => a && a.name);
@@ -45,10 +44,10 @@ function AttractionCard({
   const query = `${a.name} ${dest}`.trim();
   return (
             <CardShell highlighted={pin.isSelected} onMouseEnter={() => pin.hover(true)} onMouseLeave={() => pin.hover(false)}>
-              <PlaceImage queries={[a.name ?? "", dest]} alt={a.name ?? "Attraction"} className="aspect-[16/9]">
+              <CardPhoto place={pin.place} queries={[a.name ?? "", dest]} alt={a.name ?? "Attraction"} className="aspect-[16/9]">
                 <SaveButton place={pin.place} kind="attraction" title={a.name} subtitle={[a.category, dest].filter(Boolean).join(" · ")} destination={dest} url={googleMapsSearchUrl(query)} className="absolute right-2 top-2" />
                 {a.category ? <span className="absolute left-3 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[12px] font-semibold">{a.category}</span> : null}
-              </PlaceImage>
+              </CardPhoto>
               <Body>
                 <div className="text-[15px] font-semibold">{a.name}</div>
                 <div className="text-[13px] text-muted">

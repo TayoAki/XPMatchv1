@@ -1,6 +1,6 @@
 "use client";
 
-import type { HTMLAttributes, ReactNode } from "react";
+import { useState, type HTMLAttributes, type ReactNode } from "react";
 import clsx from "clsx";
 import { ExternalLink, Heart, MapPin, Plus } from "lucide-react";
 import { ToolCallStatus } from "@copilotkit/core";
@@ -8,6 +8,7 @@ import { findSaved, useTravelStore, type SavedKind } from "@/lib/store";
 import type { ResolvedPlace } from "@/lib/places/types";
 import { useUiState } from "@/components/providers/UiState";
 import { useTripScope } from "@/components/trips/TripScope";
+import { PlaceImage } from "@/components/ui/PlaceImage";
 
 export function CardGrid({ children, className }: { children: ReactNode; className?: string }) {
   return <div className={clsx("mt-2 grid gap-3 sm:grid-cols-2", className)}>{children}</div>;
@@ -44,6 +45,41 @@ export function ViewOnMapButton({ pin }: { pin: { place?: unknown; open: () => v
     >
       <MapPin className="h-3.5 w-3.5" /> View on map
     </button>
+  );
+}
+
+/**
+ * Card image: the Google Places photo of the resolved pin when we have it,
+ * otherwise the Wikipedia/gradient fallback while the place is still resolving.
+ */
+export function CardPhoto({
+  place,
+  queries,
+  alt,
+  className,
+  children,
+}: {
+  place?: ResolvedPlace;
+  queries: string[];
+  alt: string;
+  className?: string;
+  children?: ReactNode;
+}) {
+  const [failed, setFailed] = useState<string | null>(null);
+  const src = place?.photos?.[0];
+  if (src && failed !== src) {
+    return (
+      <div className={clsx("relative overflow-hidden bg-neutral-200", className)}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- proxied Places photo */}
+        <img src={src} alt={alt} onError={() => setFailed(src)} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
+        {children}
+      </div>
+    );
+  }
+  return (
+    <PlaceImage queries={queries} alt={alt} className={className}>
+      {children}
+    </PlaceImage>
   );
 }
 
