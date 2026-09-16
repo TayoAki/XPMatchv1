@@ -16,9 +16,10 @@ cd demo && npm run render             # demo/out/xpmatch-demo.mp4 (1920×1080, 3
 npm run preview                       # Remotion Studio to tweak titles and captions
 ```
 
-`capture.mjs` starts its own app instance on port 3300 (override with `DEMO_APP_PORT`) and writes one
-timeline mark per chapter; `src/timeline.ts` maps those marks to the titles and captions shown around
-the recording. The recording uses Playwright's Chromium (`PW_CHROMIUM`, default
+`capture.mjs` starts its own app instance on port 3300 (override with `DEMO_APP_PORT`) with
+`NEXT_DEV_INDICATORS=0`, which keeps the `next dev` on-screen badge out of the recording (see
+`next.config.ts`), and writes one timeline mark per chapter; `src/timeline.ts` maps those marks to the
+titles and captions shown around the recording. The recording uses Playwright's Chromium (`PW_CHROMIUM`, default
 `/opt/pw-browsers/chromium`); the render uses Playwright's headless shell (`REMOTION_BROWSER`, default
 `/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell`), because Remotion drives
 Chrome's old headless mode. Remotion never downloads a browser here.
