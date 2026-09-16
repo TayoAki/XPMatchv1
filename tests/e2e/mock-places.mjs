@@ -218,7 +218,9 @@ export const PLACES = [
     editorialSummary: { text: "The Flavian amphitheatre, Rome's most visited monument." },
     photos: [{ name: "places/colosseum/photos/p1" }],
     googleMapsUri: "https://maps.google.com/?cid=colosseum",
-    regularOpeningHours: { weekdayDescriptions: ["Monday: 8:30 AM–7:15 PM"] },
+    regularOpeningHours: {
+      weekdayDescriptions: ["Monday: 8:30 AM–7:15 PM", "Tuesday: 8:30 AM–7:15 PM", "Wednesday: 8:30 AM–7:15 PM", "Thursday: 8:30 AM–7:15 PM", "Friday: 8:30 AM–7:15 PM", "Saturday: 8:30 AM–7:15 PM", "Sunday: 8:30 AM–7:15 PM"],
+    },
     reviewSummary: { text: { text: "Visitors call it unmissable; most advise booking timed tickets and going early to avoid the crowds and the heat." } },
     reviews: [
       review("Nadia K.", 5, "Unmissable. Book the timed entry online, the queue without it was two hours in the sun."),
