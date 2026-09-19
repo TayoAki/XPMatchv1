@@ -114,11 +114,23 @@ test("phone: three-screen quiz, home feed, tab bar, proposal, map over chat, tri
     const mapButton = page.getByTestId("mobile-map-button");
     await expect(mapButton).toBeVisible();
     await mapButton.click();
-    const overlay = page.getByTestId("mobile-map-overlay");
-    await expect(overlay).toBeVisible();
-    await expect(overlay.getByTestId("map-panel")).toBeVisible();
-    await overlay.getByRole("button", { name: "Back to chat" }).click();
-    await expect(overlay).toBeHidden();
+    const sheet = page.getByTestId("mobile-map-sheet");
+    await expect(sheet).toBeVisible();
+    await expect(sheet.getByTestId("map-panel")).toBeVisible();
+    const pinList = sheet.getByTestId("mobile-pin-list");
+    await expect(pinList.getByRole("button")).toHaveCount(5, { timeout: 30_000 });
+    // A pinned row opens the place as a sheet over the map; closing it returns to the map, then to the chat.
+    await pinList.getByRole("button").first().click();
+    const placeSheet = page.getByTestId("mobile-place-sheet");
+    await expect(placeSheet).toBeVisible();
+    await expect(placeSheet.getByRole("heading", { level: 2 })).toBeVisible();
+    await expect(placeSheet.getByRole("button", { name: "Add to trip" })).toBeVisible();
+    await expectFits(page, "the place sheet");
+    await placeSheet.getByRole("button", { name: "Close" }).click();
+    await expect(placeSheet).toBeHidden();
+    await expect(sheet).toBeVisible();
+    await sheet.getByRole("button", { name: "Close" }).click();
+    await expect(sheet).toBeHidden();
 
     await proposal.getByRole("button", { name: "Save to my trips" }).click();
     await proposal.getByRole("link", { name: /Saved to Trips/ }).click();

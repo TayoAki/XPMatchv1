@@ -28,7 +28,7 @@ const KIND_LABEL: Record<PlaceKind, string> = {
   attraction: "Attraction",
 };
 
-function compact(n?: number): string {
+function compactCount(n?: number): string {
   if (!n) return "";
   return new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 0 }).format(n);
 }
@@ -59,11 +59,14 @@ export function PlaceDetailSheet({
   focusName,
   onClose,
   onCollapse,
+  compact = false,
 }: {
   place: ResolvedPlace;
   focusName?: string;
   onClose: () => void;
   onCollapse: () => void;
+  /** Inside a phone bottom sheet: fills its parent, the sheet owns the close button, actions wrap under the title. */
+  compact?: boolean;
 }) {
   const { saved, toggleSaved } = useTravelStore();
   const send = useSendMessage();
@@ -123,60 +126,69 @@ export function PlaceDetailSheet({
       ? { label: "Things to do nearby", prompt: `What are the best things to do near ${place.name}${focusName ? ` in ${focusName}` : ""}?` }
       : { label: "Restaurants nearby", prompt: `Recommend restaurants near ${place.name}${focusName ? ` in ${focusName}` : ""}.` };
 
-  return (
-    <div className="absolute inset-0 z-10 flex flex-col bg-white" data-testid="place-sheet">
-      <div className="flex items-center justify-between px-5 pt-4">
-        <div className="flex items-center gap-2">
-          <button type="button" onClick={onClose} aria-label="Close" className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-white hover:bg-surface">
-            <X className="h-5 w-5" />
-          </button>
-          <button type="button" onClick={onCollapse} aria-label="Hide map" className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-white hover:bg-surface">
-            <PanelLeftClose className="h-5 w-5" />
-          </button>
-        </div>
-        <div className="flex items-center gap-2">
-          <ReactionControl name={place.name} kind={place.kind} place={data} destination={focusName ?? (isDestination ? undefined : data.locality)} source="sheet" size="lg" />
-          <button
-            type="button"
-            onClick={save}
-            aria-pressed={isSaved}
-            className="flex h-11 items-center gap-2 rounded-full border border-border bg-white px-4 text-[14px] font-semibold hover:bg-surface"
-          >
-            <Heart className={clsx("h-4 w-4", isSaved && "fill-red-500 text-red-500")} /> {isSaved ? "Saved" : "Save"}
-          </button>
-          <button type="button" onClick={addToTrip} className="flex h-11 items-center gap-2 rounded-full border border-border bg-white px-4 text-[14px] font-semibold hover:bg-surface">
-            <Plus className="h-4 w-4" /> Add to trip
-          </button>
-          <a href={mapsUrl} target="_blank" rel="noreferrer noopener" aria-label="Open in Google Maps" className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-white hover:bg-surface">
-            <ExternalLink className="h-4 w-4" />
-          </a>
-        </div>
-      </div>
+  const actions = (
+    <>
+      <ReactionControl name={place.name} kind={place.kind} place={data} destination={focusName ?? (isDestination ? undefined : data.locality)} source="sheet" size="lg" />
+      <button
+        type="button"
+        onClick={save}
+        aria-pressed={isSaved}
+        className="flex h-11 items-center gap-2 rounded-full border border-border bg-white px-4 text-[14px] font-semibold hover:bg-surface"
+      >
+        <Heart className={clsx("h-4 w-4", isSaved && "fill-red-500 text-red-500")} /> {isSaved ? "Saved" : "Save"}
+      </button>
+      <button type="button" onClick={addToTrip} className="flex h-11 items-center gap-2 rounded-full border border-border bg-white px-4 text-[14px] font-semibold hover:bg-surface">
+        <Plus className="h-4 w-4" /> Add to trip
+      </button>
+      {compact ? null : (
+        // The phone sheet keeps this on the Location tab.
+        <a href={mapsUrl} target="_blank" rel="noreferrer noopener" aria-label="Open in Google Maps" className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-white hover:bg-surface">
+          <ExternalLink className="h-4 w-4" />
+        </a>
+      )}
+    </>
+  );
 
-      <div className="xp-scroll relative flex-1 overflow-y-auto px-5 pb-28 pt-6">
+  return (
+    <div className={clsx("flex flex-col bg-white", compact ? "relative h-full" : "absolute inset-0 z-10")} data-testid="place-sheet">
+      {compact ? null : (
+        <div className="flex items-center justify-between px-5 pt-4">
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={onClose} aria-label="Close" className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-white hover:bg-surface">
+              <X className="h-5 w-5" />
+            </button>
+            <button type="button" onClick={onCollapse} aria-label="Hide map" className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-white hover:bg-surface">
+              <PanelLeftClose className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="flex items-center gap-2">{actions}</div>
+        </div>
+      )}
+
+      <div className={clsx("xp-scroll relative flex-1 overflow-y-auto", compact ? "px-4 pb-24 pt-1" : "px-5 pb-28 pt-6")}>
         {isDestination ? (
-          <div className="relative -mx-5 -mt-6 mb-5 h-[360px]">
+          <div className={clsx("relative mb-5", compact ? "-mx-4 -mt-1 h-[220px]" : "-mx-5 -mt-6 h-[360px]")}>
             {photos[0] ? (
               <Photo src={photos[0]} alt={place.name} className="absolute inset-0" />
             ) : (
               <PlaceImage queries={[place.name, `${place.name}, ${place.locality ?? ""}`]} alt={place.name} className="absolute inset-0" />
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-            <div className="absolute bottom-6 left-6 text-white drop-shadow">
-              <div className="text-[44px] font-semibold leading-none tracking-tight">{place.name}</div>
+            <div className={clsx("absolute text-white drop-shadow", compact ? "bottom-4 left-4" : "bottom-6 left-6")}>
+              <div className={clsx("font-semibold leading-none tracking-tight", compact ? "text-[30px]" : "text-[44px]")}>{place.name}</div>
               {data.locality ? <div className="mt-2 flex items-center gap-1 text-[16px]">📍 {data.locality}</div> : null}
             </div>
           </div>
         ) : (
           <>
-            <h2 className="text-[32px] font-semibold leading-tight tracking-tight">{place.name}</h2>
+            <h2 className={clsx("font-semibold leading-tight tracking-tight", compact ? "text-[24px]" : "text-[32px]")}>{place.name}</h2>
             <div className="mt-2 flex flex-wrap items-center gap-x-2 text-[15px] text-neutral-700">
               {data.rating ? (
                 <span className="inline-flex items-center gap-1 font-semibold text-foreground">
                   <Star className="h-4 w-4 fill-current" /> {data.rating.toFixed(1)}
                 </span>
               ) : null}
-              {data.userRatingCount ? <span className="text-muted">· {compact(data.userRatingCount)} reviews</span> : null}
+              {data.userRatingCount ? <span className="text-muted">· {compactCount(data.userRatingCount)} reviews</span> : null}
               {data.locality ? <span className="text-muted">· {data.locality}</span> : null}
             </div>
             <div className="mt-1 flex items-center gap-2 text-[15px] text-neutral-700">
@@ -186,8 +198,12 @@ export function PlaceDetailSheet({
               {place.source === "estimate" ? <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[12px] text-amber-700">Approximate location</span> : null}
             </div>
 
-            {photos.length ? (
-              <div className="mt-5 grid h-[300px] grid-cols-4 grid-rows-2 gap-2 overflow-hidden rounded-2xl">
+            {photos.length === 1 ? (
+              <div className={clsx("mt-5 overflow-hidden rounded-2xl", compact ? "h-[200px]" : "h-[300px]")}>
+                <Photo src={photos[0]} alt={place.name} />
+              </div>
+            ) : photos.length ? (
+              <div className={clsx("mt-5 grid grid-cols-4 grid-rows-2 gap-2 overflow-hidden rounded-2xl", compact ? "h-[200px]" : "h-[300px]")}>
                 <div className="col-span-2 row-span-2">
                   <Photo src={photos[0]} alt={place.name} />
                 </div>
@@ -203,8 +219,10 @@ export function PlaceDetailSheet({
           </>
         )}
 
+        {compact ? <div className="mt-4 flex flex-wrap gap-2">{actions}</div> : null}
+
         {/* Tabs */}
-        <div className="mt-6 flex gap-6 border-b border-border text-[16px]">
+        <div className={clsx("flex border-b border-border", compact ? "mt-5 gap-4 text-[14px]" : "mt-6 gap-6 text-[16px]")}>
           {isDestination ? (
             <>
               <TabButton active={tab === "overview"} onClick={() => setTab("overview")}>Overview</TabButton>
@@ -308,7 +326,7 @@ export function PlaceDetailSheet({
       <button
         type="button"
         onClick={() => send(suggestion.prompt)}
-        className="absolute bottom-6 right-6 flex h-12 items-center gap-2 rounded-full bg-neutral-900 px-5 text-[15px] font-semibold text-white shadow-xl hover:bg-neutral-800"
+        className={clsx("absolute flex h-12 items-center gap-2 rounded-full bg-neutral-900 px-5 text-[15px] font-semibold text-white shadow-xl hover:bg-neutral-800", compact ? "bottom-4 right-4" : "bottom-6 right-6")}
       >
         <Sparkles className="h-4 w-4" /> {suggestion.label}
       </button>

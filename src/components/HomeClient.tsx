@@ -1,7 +1,7 @@
 "use client";
 
 import { TravelChat } from "@/components/chat/TravelChat";
-import { MobileMapOverlay } from "@/components/map/MobileMapOverlay";
+import { MobileMapSheet } from "@/components/map/MobileMapSheet";
 import { RightPanel } from "@/components/panel/RightPanel";
 import { useUiState } from "@/components/providers/UiState";
 import { TripScopeProvider } from "@/components/trips/TripScope";
@@ -23,7 +23,7 @@ export function HomeClient({ threadId, initialPrompt, tripId }: { threadId?: str
       <div className="flex h-full min-h-0">
         <section className="relative flex min-w-0 flex-1 flex-col">
           <TravelChat key={chatKey} threadId={threadId} initialPrompt={initialPrompt} tripId={effectiveTripId ?? undefined} />
-          <MobileMapOverlay />
+          <MobileMapSheet />
         </section>
         {wide ? (
           <aside className="w-[44%] min-w-[420px] max-w-[900px] shrink-0 border-l border-border/60 bg-white">
