@@ -3,6 +3,75 @@
 What a small group of beta testers gets, what to check before inviting them, what to tell them, and what
 to watch while they use it.
 
+## Audit (September 19, 2026)
+
+**Verdict: ready for a small, invited beta (people you can reach directly, roughly 10–25) once the four
+blockers below are done. Not ready for an open sign-up beta: there are no per-user rate limits, no
+password reset and a single instance.**
+
+What was checked and passed:
+
+- Code: `tsc`, `eslint` and the unit tests (81) clean; the end-to-end suite (13 specs against the
+  stand-in model, the Places stub and the fixture site, desktop and a 390 × 844 touch phone) green; a
+  production build green.
+- Production (Railway `xpmatch`, `main`): the last deployments read SUCCESS; over the last 72 hours 387
+  requests, 0 server errors (5xx), 15 client errors (4xx); one replica in `sfo` behind
+  `app.xpmatchme.com` and `xpmatch-production.up.railway.app`; none of the dev-only variables
+  (`IMPORT_ALLOW_LOOPBACK`, `PLACES_BASE_URL`, `ROUTES_BASE_URL`, `OPENROUTER_BASE_URL`) is set.
+- Security posture: passwords hashed with bcrypt (cost 12); sessions are random tokens stored hashed,
+  30 days sliding, in an HttpOnly, SameSite=Lax cookie, Secure in production; every route except
+  `/login`, `/signup`, their API calls, `/api/health` and `/api/config` sits behind the session gate
+  (`src/proxy.ts`), including the photo proxy and the Places endpoints, so the Google keys cannot be
+  driven anonymously; API writes check the request origin; bodies are validated with zod; uploads are
+  capped (screenshots, 6 MB import images); imported links go through an SSRF guard with a rate limit;
+  admin routes check `ADMIN_EMAILS` on the server; the server Google key never reaches the browser; the
+  repository holds no secrets (scanned on every commit).
+- Logs: only two kinds of noise, bogus server-action probes (`Server Reference ID did not match`) and
+  streams aborted by the client (`Error: aborted`). Neither is a failure.
+
+Blockers, in order (about an hour of work, none of it code):
+
+1. **`ADMIN_EMAILS` is not set in production**, so nobody sees bug reports, the beta numbers, the
+   member roster or the quiz answers. Set it to the team's account emails (a redeploy follows).
+2. **Keys.** Rotate the OpenRouter key and both Google keys that were pasted in chat during
+   development; restrict the browser key to `app.xpmatchme.com` and the Railway domain (Maps
+   JavaScript API only) and the server key to Places API (New) and Routes API; enable the Routes API.
+   A rotated browser key is baked into the build, so redeploy after changing it.
+3. **Spend caps at the providers.** Nothing in the app limits how many model or Places calls a signed-in
+   account can make (the only rate limit is on imports). For an invited beta a spending limit on the
+   OpenRouter key and a Google Cloud budget alert are enough (`docs/COGS.md`: about $9 per active user
+   per month at list prices); an open beta needs per-user limits in the app first.
+4. **Nobody can recover a forgotten password**: there is no reset flow, no email verification and no
+   email provider wired up, and an admin cannot set a temporary password either. For an invited beta,
+   tell testers to use a password manager and keep their emails so you can reach them; a reset flow is
+   the first thing to add once people are in.
+
+First week after inviting:
+
+5. **Dependency advisories**: `npm audit --omit=dev` reports 6 (1 high: `undici`, pulled in by
+   `@copilotkit/runtime` through the Vertex provider the app does not use; 5 moderate in `@ai-sdk/*`).
+   All transitive, all with a fix available; apply `npm audit fix` and re-run the e2e suite.
+6. **Error monitoring**: none beyond Railway logs. Add Sentry (or Railway alerts on 5xx and restarts) so
+   crashes are not discovered by testers.
+7. **Backups**: Postgres is one Railway volume with no backups configured. Turn on volume backups or a
+   nightly `pg_dump` before people enter real trips and confirmations.
+8. **Real devices**: the phone flows are verified in emulated Chromium (touch, 390 × 844) only. Walk
+   the quiz, a proposal, the map and place sheets, the board sheet and a reorder on an iPhone (Safari)
+   and an Android phone; the things most likely to differ are the sheet drag, the viewport height
+   with Safari's toolbar and the composer's focus zoom.
+9. **Terms and Privacy** in the sidebar footer are placeholder text, not pages. Testers' chats and
+   uploaded confirmations are sent to the model provider; a one-page privacy note and a retention
+   rule for screenshots and confirmations are due.
+10. **Account deletion**: no self-service way to delete an account; handle requests by hand in Postgres
+    until there is one.
+11. **Login throttling**: no lockout or throttle on `/api/auth/login` (bcrypt slows guessing, nothing
+    stops it). Fine for a private beta; add before an open one.
+12. Cosmetic: `/api/config` (public) reveals the model name; the chat disclaimer shows it too.
+
+Also worth doing before the first invite: re-run Update my assistant on the team's own accounts (they
+predate the in-depth quiz, so their home picks are generic), and keep the URL private since sign-up has
+no invite code.
+
 ## What is live
 
 - Chat with cards, map, place sheets, smart filters, comparison, heads-ups, remembered preferences,
@@ -20,6 +89,10 @@ to watch while they use it.
 - Bug reports from the sidebar with screenshots; `/admin` for the accounts in `ADMIN_EMAILS` with the
   reports and the recommendation hit rate.
 - Explore near you, community guides, Saved (places, guides, imports), Updates.
+- A chat-first phone app (`docs/MOBILE_PLAN.md`): bottom tab bar and More sheet, the first run as
+  three questions in the chat with the picks as the assistant's first message, card rows that swipe,
+  the map, places and the itinerary board as sheets over the chat, trip pages as tabs with a board
+  that reorders with up / down buttons.
 - Accounts with email + password, per-user data in Postgres, chat transcripts that survive deploys.
 
 ## Before inviting anyone
