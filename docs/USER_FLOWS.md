@@ -27,9 +27,13 @@ with a progress bar, Back / Next and "Skip for now" on every step.
 6. *Dealbreakers & notes* — **"What ruins a trip for you?"** chips (street noise, no workspace, stairs,
    crowds, early starts, long transfers, spicy food…) that become dealbreakers, and anything else.
 
-On a phone (under 640 px) the same six sections come as three screens (about you + style, where you
-stay + how you eat, logistics + dealbreakers) with a three-segment progress bar, and chip lists longer
-than eight options fold behind **Show all** with your picks kept visible.
+On a phone (under 640 px) the wizard does not open at all: the chat asks three questions as bubbles
+(where you start from and where you dream of going, what you love doing as chips that fold behind
+**Show all**, how you like to spend as four budget cards), each answer echoes back as your bubble,
+**Done** saves the profile and the nine home picks arrive as the assistant's first message ("Here's
+what I'd pick for you in Rome…"); **Skip for now** saves what was filled. The full six sections stay
+one tap away under More › Update my assistant, where they come as three screens (about you + style,
+where you stay + how you eat, logistics + dealbreakers) while the quiz is unfinished.
 
 "Save preferences" on the last step stores the profile and the dealbreakers on the server; "Skip for
 now" keeps what was filled so far. Everything is sent to the assistant as context on every message
@@ -53,10 +57,16 @@ conversation is about a place, then the live map). Conversation history lives in
 **Chats** expands in place to list every conversation (grouped newest first, trip labels, hover to
 delete, "Show all", "+ New chat") so no horizontal space is spent on a separate rail.
 
-On a phone the chat is the whole screen: the welcome hero, suggestion chips and the composer sit at the
-top of one scrolling page with Jump back in, the home picks and Get inspired below them. Once the
-conversation has pins, a **Map · N pinned** pill (top right) opens the map over the chat; **Back to
-chat** returns to the same place in the conversation.
+On a phone the chat is the whole screen and everything else opens over it in sheets: the welcome hero,
+suggestion chips and the composer sit at the top of one scrolling page with the picks (as the
+assistant's first message), Jump back in and Get inspired below them. Recommendation cards come as a
+row that swipes card by card; tapping a card's photo opens the place detail as a sheet. Once the
+conversation has pins, a **Map · N pinned** pill (top right) opens the map in a half-height sheet with
+the pinned places listed under it (drag the handle for peek, half or full); tapping a pin or a row
+stacks the place sheet on top, closing it returns to the map, closing the map returns to the same place
+in the conversation. "Saved to Trips · open the board" on a proposal and "Open the board" on a
+scheduling chip open the itinerary board as a full-height sheet (short map, then the days) with
+**Open trip** for the full page.
 
 1. **Start** — the welcome hero ("Where to today, Tayo?") shows suggestion chips built from the profile,
    the planner bar values and upcoming trips. Type anything travel-related or pick a chip.
@@ -180,7 +190,8 @@ Trip tab; or **Add to trip → New trip** from any place.
 - **Board | Tiles** toggle (right column; the choice is remembered per browser, `?view=board` opens the
   board from chat). On a phone the page is three tabs, **Overview | Board | Tiles**, and opens on the
   board when the trip has stops (or `?view=board`); the map is a short header above the board with
-  **Hide map / Show map**.
+  **Hide map / Show map**, and stops have no drag handle: **up / down** buttons reorder them within
+  the day and **Move to…** sends them to another day, back to ideas or away.
 - **Board** — Wanderlog-style: dates, travelers, bookings and ideas chips and a **Walk / Drive /
   Transit** travel mode (remembered per browser); then each **Day** (color dot, date, editable theme)
   with the reservations that start on it (time, name, confirmation code) above a list of numbered stops

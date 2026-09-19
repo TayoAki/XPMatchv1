@@ -1,7 +1,7 @@
 # Mobile plan: Plan A (responsive rescue) folded into Plan B (chat-first phone app)
 
-Status: Plan A shipped (all five steps, verified by `tests/e2e/mobile.spec.ts` at 390 × 844 and
-deployed from `main`). Plan B is in progress on the same branch.
+Status: Plan A and Plan B shipped (verified by `tests/e2e/mobile.spec.ts` at 390 × 844 with touch,
+deployed from `main`). Plan C (installable app) is the next candidate.
 
 ## Why
 
@@ -52,24 +52,30 @@ Keep the architecture; make every screen usable on a phone.
    trip page tabs work, the three-screen quiz completes. Then the full suite, the production
    build, deploy.
 
-## Plan B: chat-first phone app (next)
+## Plan B: chat-first phone app (shipped)
 
 The phone experience is layered instead of split: the chat is the base layer and everything
 else opens over it.
 
-1. **Sheets.** A reusable bottom sheet with peek, half and full heights. The map lives in it
-   with the pinned list; tapping a pin opens the place detail as a sheet stacked on top. The
-   itinerary board opens as a full-height sheet from a proposal or from "Saved to Trips", and
-   closing it returns to the same place in the conversation.
-2. **Cards as carousels.** Hotel, restaurant and attraction cards render as swipeable horizontal
-   rows inside the thread on phones; tapping a card opens the detail sheet.
-3. **Picks as the first message.** After the quiz, the nine home picks arrive in the chat as a
-   card stack the traveler can thumb through and react to.
-4. **Conversational quiz.** Three quick questions answered by tapping chips inside the chat
-   (where you start from, what you love doing, budget), everything else learned later through
-   the remember-preference flow.
-5. **Day-list board.** On phones the board is a vertical day-by-day list with a compact map
-   header and a Move to day menu instead of drag and drop.
+1. **Sheets.** `src/components/ui/BottomSheet.tsx`: peek, half and full heights, a drag handle
+   that snaps (a drag starts after a few pixels so taps stay clicks), a backdrop, Escape and a
+   close button; stacked sheets sit one layer higher. `MobileMapSheet` puts the map in it with
+   the pinned list; a pin, a row or "View on map" / a card photo opens `PlaceDetailSheet`
+   (compact layout) stacked on top. `TripBoardSheet` opens the board full height from
+   "Saved to Trips" and "Open the board" (the trip id lives in `UiState`), with "Open trip" for
+   the page; closing returns to the same place in the conversation.
+2. **Cards as carousels.** `CardGrid` is a snapping horizontal row below 640 px (next card
+   peeking in) and the two-column grid above; `CardPhoto` takes `onOpen` so a tap on the photo
+   opens the place (buttons over the photo keep their clicks).
+3. **Picks as the first message.** `DiscoveryFeed picksFirst` frames the nine home picks as the
+   assistant's opening bubble on the phone home, with the proactive card out of the way.
+4. **Conversational quiz.** `PhoneQuiz` asks three questions as chat bubbles (home city + dream
+   destination, interests with a Show all fold, budget cards) and saves the profile; `AppShell`
+   no longer opens the wizard on phones. Everything else is learned in conversation or under
+   Update my assistant.
+5. **Day-list board.** Below 640 px `StopCard` drops the drag handle (sorting disabled) and
+   shows up / down buttons next to the Move to… menu; `TripBoard.onReorderStop` moves a stop
+   one place within its day.
 6. Desktop keeps the split layout; the two layouts share components and state.
 
 ## Out of scope for now

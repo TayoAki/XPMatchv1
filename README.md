@@ -127,14 +127,19 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   ("Where to today, Tayo?"), and a discovery panel with a proactive nudge, "Jump back in",
   "For you in {city}" and "Get inspired". Chats is one experience: the sidebar's Chats item expands
   in place to list conversations, and the active chat sits beside the map or discovery feed.
-- **Works on a phone** — below tablet width a bottom tab bar (Chat, Trips, Explore, Saved, More)
-  replaces the sidebar; the More sheet holds Updates (with the unread badge), Inspiration, Create,
-  Admin, Update my assistant, Report a bug and Log out. The phone home is one scrolling page: hero,
-  composer, then Jump back in, the nine home picks and Get inspired. Once a chat has pins, a
-  "Map · N pinned" pill opens the map over the chat. Trip pages become **Overview | Board | Tiles**
-  tabs with the board first, the quiz runs as three screens, every card fits a 390 px screen and
-  tap targets grow on touch screens. `tests/e2e/mobile.spec.ts` walks all of it at an iPhone
-  viewport; `docs/MOBILE_PLAN.md` has the assessment and what comes next (the chat-first phone app).
+- **A chat-first phone app** — below tablet width a bottom tab bar (Chat, Trips, Explore, Saved,
+  More) replaces the sidebar; the More sheet holds Updates (with the unread badge), Inspiration,
+  Create, Admin, Update my assistant, Report a bug and Log out. On a phone the chat is the base layer
+  and everything else opens over it in sheets: the first run is three questions asked as chat
+  bubbles (where you start from and dream of going, what you love doing, how you spend), then the
+  nine home picks arrive as the assistant's first message with thumbs; recommendation cards swipe
+  as a row and a tap on a photo opens the place as a sheet; "Map · N pinned" opens the map in a
+  sheet with the pinned list, a pin stacks the place detail on top; "Saved to Trips" and "Open the
+  board" open the itinerary board as a full-height sheet with "Open trip" for the full page. Trip
+  pages become **Overview | Board | Tiles** tabs with the board first, where stops move with up /
+  down buttons and the Move to… menu instead of dragging. Every card fits a 390 px screen and tap
+  targets grow on touch screens. `tests/e2e/mobile.spec.ts` walks all of it at an iPhone viewport;
+  `docs/MOBILE_PLAN.md` has the assessment and the plan.
 - **Personalized suggestion chips** — static chips before the first message, model-generated
   follow-ups after.
 - **Demo mode** — with no API key configured the app runs against an offline demo model so the
