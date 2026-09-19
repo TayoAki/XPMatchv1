@@ -238,6 +238,8 @@ let hydration: Promise<void> | null = null;
 
 /** Thumbs writes for the same place run one after another (a quick thumbs-down followed by its reason must land in that order). */
 const recQueues = new Map<string, Promise<unknown>>();
+/** Reaction writes for the same place, likewise: "Loved it" and the reason chip tapped next. */
+const feedbackQueues = new Map<string, Promise<unknown>>();
 
 async function writeRecFeedback(placeId: string, input: NewRecFeedback): Promise<RecFeedback> {
   const prev = readSnapshot();
@@ -372,7 +374,7 @@ export const travelActions = {
   },
 
   /** Records a reaction to a place (optimistically); resolves with the saved row. */
-  async recordFeedback(input: NewFeedback): Promise<PlaceFeedback> {
+  recordFeedback(input: NewFeedback): Promise<PlaceFeedback> {
     const prev = readSnapshot();
     const placeId = input.placeId ?? feedbackKey(input.name, input.place);
     const existing = prev.feedback.find((f) => f.placeId === placeId);
@@ -394,24 +396,36 @@ export const travelActions = {
       updatedAt: now,
     };
     set({ feedback: [optimistic, ...prev.feedback.filter((f) => f.placeId !== placeId)] });
-    try {
-      const res = await api<{ feedback: PlaceFeedback; taste: TasteProfile; preferences: LearnedPreference[] }>("/api/me/feedback", {
-        method: "POST",
-        json: { ...input, placeId, reasons: input.reasons ?? [], note: input.note ?? "", source: input.source ?? "card", tripId: input.tripId ?? null },
-      });
-      set((s) => ({
-        feedback: [res.feedback, ...s.feedback.filter((f) => f.placeId !== placeId)],
-        taste: res.taste,
-        preferences: res.preferences.length
-          ? [...res.preferences.filter((p) => !s.preferences.some((q) => q.id === p.id)), ...s.preferences.map((p) => res.preferences.find((q) => q.id === p.id) ?? p)]
-          : s.preferences,
-      }));
-      return res.feedback;
-    } catch (err) {
-      report("saving your reaction", err);
-      set((s) => ({ feedback: existing ? s.feedback.map((f) => (f.placeId === placeId ? existing : f)) : s.feedback.filter((f) => f.placeId !== placeId) }));
-      throw err;
-    }
+    // Writes for one place go out one after another: a verdict and the reason tapped right after it
+    // must land in that order, or the server keeps the reasonless row.
+    const previous = feedbackQueues.get(placeId) ?? Promise.resolve();
+    const run: Promise<PlaceFeedback> = previous.catch(() => undefined).then(async () => {
+      try {
+        const res = await api<{ feedback: PlaceFeedback; taste: TasteProfile; preferences: LearnedPreference[] }>("/api/me/feedback", {
+          method: "POST",
+          json: { ...input, placeId, reasons: input.reasons ?? [], note: input.note ?? "", source: input.source ?? "card", tripId: input.tripId ?? null },
+        });
+        // A newer write for this place is queued behind this one; its response carries the final state.
+        if (feedbackQueues.get(placeId) !== run) return res.feedback;
+        set((s) => ({
+          feedback: [res.feedback, ...s.feedback.filter((f) => f.placeId !== placeId)],
+          taste: res.taste,
+          preferences: res.preferences.length
+            ? [...res.preferences.filter((p) => !s.preferences.some((q) => q.id === p.id)), ...s.preferences.map((p) => res.preferences.find((q) => q.id === p.id) ?? p)]
+            : s.preferences,
+        }));
+        return res.feedback;
+      } catch (err) {
+        report("saving your reaction", err);
+        set((s) => ({ feedback: existing ? s.feedback.map((f) => (f.placeId === placeId ? existing : f)) : s.feedback.filter((f) => f.placeId !== placeId) }));
+        throw err;
+      }
+    });
+    feedbackQueues.set(placeId, run);
+    void run.finally(() => {
+      if (feedbackQueues.get(placeId) === run) feedbackQueues.delete(placeId);
+    }).catch(() => undefined);
+    return run;
   },
 
   removeFeedback(id: string) {

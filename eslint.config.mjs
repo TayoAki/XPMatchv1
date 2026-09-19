@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Local build output and scratch scripts (all gitignored): second dist dirs, the demo renders.
+    ".next-*/**",
+    "demo/out/**",
+    "demo/public/**",
+    ".data/**",
   ]),
 ]);
 
