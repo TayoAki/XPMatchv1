@@ -149,6 +149,15 @@ export function TripBoard({ trip, canEdit, onTrip, onSelectPlace, hoveredKey, on
     persist(moveStop(days, stopId, target, days[target].stops.length));
   };
 
+  const onReorderStop = (stopId: string, direction: -1 | 1) => {
+    const dayIndex = days.findIndex((d) => d.stops.some((s) => s.id === stopId));
+    if (dayIndex < 0) return;
+    const index = days[dayIndex].stops.findIndex((s) => s.id === stopId);
+    const to = index + direction;
+    if (to < 0 || to >= days[dayIndex].stops.length) return;
+    persist(moveStop(days, stopId, dayIndex, to));
+  };
+
   const onAddStop = (dayIndex: number, title: string, kind?: PlaceKind) => {
     const stop: ItineraryStop = { id: newStopId(), title, note: "" };
     if (kind) stop.kind = kind;
@@ -223,6 +232,7 @@ export function TripBoard({ trip, canEdit, onTrip, onSelectPlace, hoveredKey, on
               onRenameCommit={() => persist(days)}
               onAddStop={(title, kind) => onAddStop(i, title, kind)}
               onMoveStop={onMoveStop}
+              onReorderStop={onReorderStop}
               onUpdateStop={(stopId, patch) => persist(updateStop(days, stopId, patch))}
               onOptimize={() => persist(days.map((d, j) => (j === i ? { ...d, stops: optimizeDay(d.stops) } : d)))}
               onRemoveDay={() => onRemoveDay(i)}

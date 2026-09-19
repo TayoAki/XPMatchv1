@@ -48,6 +48,8 @@ export interface DayColumnProps {
   onRenameCommit: () => void;
   onAddStop: (title: string, kind?: PlaceKind) => void;
   onMoveStop: (stopId: string, to: StopMove) => void;
+  /** One place up or down within the day (the phone's buttons instead of dragging). */
+  onReorderStop?: (stopId: string, direction: -1 | 1) => void;
   onUpdateStop: (stopId: string, patch: Partial<Omit<ItineraryStop, "id">>) => void;
   onOptimize: () => void;
   onRemoveDay: () => void;
@@ -99,6 +101,7 @@ export function DayColumn({
   onRenameCommit,
   onAddStop,
   onMoveStop,
+  onReorderStop,
   onUpdateStop,
   onOptimize,
   onRemoveDay,
@@ -129,9 +132,12 @@ export function DayColumn({
         hovered={hoveredKey === stopPinKey(stop)}
         pending={saving}
         destination={destination}
+        isFirst={i === 0}
+        isLast={i === day.stops.length - 1}
         onHover={onHover}
         onSelectPlace={onSelectPlace}
         onMove={onMoveStop}
+        onReorder={onReorderStop}
         onUpdate={onUpdateStop}
       />,
     );
@@ -196,7 +202,7 @@ export function DayColumn({
           {rows}
           {day.stops.length === 0 ? (
             <li className="rounded-2xl border border-dashed border-border px-4 py-4 text-center text-[13px] text-muted">
-              {canEdit ? "Drag a stop or an idea here, or add one below." : "Nothing planned yet."}
+              {canEdit ? "Move a stop or an idea here, or add one below." : "Nothing planned yet."}
             </li>
           ) : null}
         </ul>

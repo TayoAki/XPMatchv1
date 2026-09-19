@@ -33,45 +33,43 @@ async function expectFits(page: Page, what: string) {
   expect(width, `${what} should not be wider than the phone`).toBeLessThanOrEqual(PHONE_WIDTH);
 }
 
-test("phone: three-screen quiz, home feed, tab bar, proposal, map over chat, trip tabs", async ({ page }) => {
+test("phone: in-chat quiz, first picks, tab bar, card rows, proposal, sheets over the chat, trip tabs", async ({ page }) => {
   const email = `mobile+${Date.now()}@example.com`;
 
-  await test.step("sign up and finish the quiz in three screens", async () => {
+  await test.step("sign up and answer the three questions in the chat", async () => {
     await page.goto("/signup");
     await page.getByPlaceholder("Tayo Akigbogun").fill("Mia Mobile");
     await page.getByPlaceholder("you@example.com").fill(email);
     await page.locator('input[type="password"]').fill("travel-2026-secret");
     await page.getByRole("button", { name: "Create account" }).click();
 
-    const dialog = page.getByRole("dialog", { name: /personalize/i });
-    await dialog.waitFor({ timeout: 60_000 });
-    await expect(dialog.getByTestId("onboarding-steps").locator("li")).toHaveCount(3);
-    await expect(dialog).toContainText("Step 1 of 3");
-    const next = dialog.getByRole("button", { name: "Next", exact: true });
+    // No wizard dialog on a phone: the questions are bubbles in the chat.
+    const quiz = page.getByTestId("phone-quiz");
+    await quiz.waitFor({ timeout: 60_000 });
+    await expect(page.getByRole("dialog", { name: /personalize/i })).toHaveCount(0);
+    await quiz.getByLabel("Home city").fill("Austell, GA");
+    await quiz.getByLabel("Dreaming of").fill("Rome, Italy");
+    await quiz.getByRole("button", { name: "Next" }).click();
+    await expect(quiz).toContainText("From Austell, GA · dreaming of Rome, Italy");
 
-    await dialog.getByPlaceholder("Austell, GA").fill("Austell, GA");
-    await pick(dialog.getByTestId("style-chips"), "Food & drink");
-    await pick(dialog.getByTestId("interest-chips"), "Museums & art");
-    await pick(dialog.getByTestId("interest-chips"), "Food tours & markets");
-    // The interests list is longer than the fold, so the phone shows a "Show all" chip.
-    await expect(dialog.getByTestId("interest-chips").getByRole("button", { name: /^Show all/ })).toBeVisible();
-    await next.click();
+    const interests = quiz.getByTestId("quiz-interests");
+    await pick(interests, "Museums & art");
+    // "Street food" sits past the fold, so picking it opens "Show all" first.
+    await expect(interests.getByRole("button", { name: /^Show all/ })).toBeVisible();
+    await pick(interests, "Street food");
+    await quiz.getByRole("button", { name: "Next" }).click();
+    await expect(quiz).toContainText("Museums & art, Street food");
 
-    await expect(dialog).toContainText("Step 2 of 3");
-    await pick(dialog.getByTestId("stay-type-chips"), "Boutique hotel");
-    await pick(dialog.getByTestId("cuisine-chips"), "Italian");
-    await next.click();
-
-    await expect(dialog).toContainText("Step 3 of 3");
-    await dialog.getByPlaceholder("Rome, Italy").fill("Rome, Italy");
-    await dialog.getByPlaceholder("October").fill("October");
-    await dialog.getByRole("button", { name: "Save preferences" }).click();
-    await expect(dialog).toBeHidden();
+    await quiz.getByTestId("quiz-budget").getByRole("button", { name: /^Mid-range/ }).click();
+    await quiz.getByRole("button", { name: "Done" }).click();
+    await expect(quiz).toBeHidden();
   });
 
-  await test.step("the home feed shows the picks under the composer", async () => {
+  await test.step("the picks arrive as the assistant's first message", async () => {
     await expect(page.getByTestId("mobile-home")).toBeVisible();
     await expect(page.getByRole("heading", { name: /Where to today, Mia/ })).toBeVisible();
+    const first = page.getByTestId("first-picks");
+    await expect(first).toContainText("what I'd pick for you in Rome");
     const stays = page.getByTestId("home-row-stays");
     await stays.scrollIntoViewIfNeeded();
     await expect(stays.getByTestId("home-pick")).toHaveCount(3, { timeout: 60_000 });
@@ -179,6 +177,13 @@ test("phone: three-screen quiz, home feed, tab bar, proposal, map over chat, tri
     await expect(panel.getByTestId("stop-card").first()).toBeVisible({ timeout: 60_000 });
     await expect(panel.getByTestId("stop-card")).toHaveCount(5);
     await expectFits(page, "the board");
+    // No drag handles on a phone: stops move with up / down buttons and the Move to… menu.
+    await expect(panel.getByRole("button", { name: /^Drag / })).toHaveCount(0);
+    await expect(panel.getByTestId("stop-card").first()).toContainText("Colosseum");
+    await expect(panel.getByRole("button", { name: "Move Colosseum up" })).toBeDisabled();
+    await panel.getByRole("button", { name: "Move Colosseum down" }).click();
+    await expect(panel.getByTestId("stop-card").first()).toContainText("Roscioli");
+    await expect(panel.getByTestId("stop-card").nth(1)).toContainText("Colosseum");
 
     await tabs.getByRole("tab", { name: "Overview" }).click();
     await expect(panel.getByRole("heading", { name: "Long weekend in Rome" })).toBeVisible();

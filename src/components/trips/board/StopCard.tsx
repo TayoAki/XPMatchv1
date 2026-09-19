@@ -4,9 +4,10 @@ import { useState } from "react";
 import clsx from "clsx";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Bed, ChevronDown, Clock, GripVertical, Landmark, MapPin, Pencil, Star, StickyNote, Utensils } from "lucide-react";
+import { ArrowDown, ArrowUp, Bed, ChevronDown, Clock, GripVertical, Landmark, MapPin, Pencil, Star, StickyNote, Utensils } from "lucide-react";
 import type { ItineraryStop } from "@/lib/types";
 import { stopPinKey } from "@/lib/itinerary";
+import { useMediaQuery } from "@/lib/use-media-query";
 import { Button } from "@/components/ui/Button";
 import { TextArea, TextInput } from "@/components/ui/Field";
 import { ReactionControl } from "@/components/feedback/ReactionControl";
@@ -26,9 +27,14 @@ export interface StopCardProps {
   pending: boolean;
   /** The trip's destination, for links and the assistant's questions. */
   destination?: string;
+  /** Position within the day, for the phone's up / down buttons. */
+  isFirst?: boolean;
+  isLast?: boolean;
   onHover?: (key: string | null) => void;
   onSelectPlace: (key: string) => void;
   onMove: (stopId: string, to: StopMove) => void;
+  /** Moves the stop one place up (-1) or down (1) within its day (phones, instead of dragging). */
+  onReorder?: (stopId: string, direction: -1 | 1) => void;
   onUpdate: (stopId: string, patch: Partial<Omit<ItineraryStop, "id">>) => void;
 }
 
@@ -59,9 +65,13 @@ function formatDuration(min: number): string {
   return m ? `${h} h ${m} min` : `${h} h`;
 }
 
-/** One numbered stop of a day: sortable by its handle, editable inline, with a Move menu that needs no dragging. */
-export function StopCard({ stop, index, color, dayIndex, dayCount, canEdit, hovered, pending, destination, onHover, onSelectPlace, onMove, onUpdate }: StopCardProps) {
-  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: stop.id, disabled: !canEdit });
+/**
+ * One numbered stop of a day: sortable by its handle, editable inline, with a Move menu that
+ * needs no dragging. Phones drop the handle and reorder with up / down buttons instead.
+ */
+export function StopCard({ stop, index, color, dayIndex, dayCount, canEdit, hovered, pending, destination, isFirst, isLast, onHover, onSelectPlace, onMove, onReorder, onUpdate }: StopCardProps) {
+  const phone = !useMediaQuery("(min-width: 640px)");
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: stop.id, disabled: !canEdit || phone });
   const [editing, setEditing] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [draft, setDraft] = useState({ startTime: stop.startTime ?? "", durationMin: stop.durationMin ? String(stop.durationMin) : "", note: stop.note });
@@ -98,7 +108,7 @@ export function StopCard({ stop, index, color, dayIndex, dayCount, canEdit, hove
         isDragging && "z-10 opacity-70 shadow-lg",
       )}
     >
-      {canEdit ? (
+      {canEdit && !phone ? (
         <button
           ref={setActivatorNodeRef}
           type="button"
@@ -168,6 +178,28 @@ export function StopCard({ stop, index, color, dayIndex, dayCount, canEdit, hove
               <button type="button" aria-label={`Edit ${stop.title}`} title="Time and notes" onClick={editing ? () => setEditing(false) : startEditing} className="rounded-full p-1.5 text-neutral-500 hover:bg-surface hover:text-foreground pointer-coarse:p-2.5">
                 <Pencil className="h-4 w-4" />
               </button>
+            ) : null}
+            {canEdit && phone && onReorder ? (
+              <>
+                <button
+                  type="button"
+                  aria-label={`Move ${stop.title} up`}
+                  disabled={isFirst}
+                  onClick={() => onReorder(stop.id, -1)}
+                  className="rounded-full p-2.5 text-neutral-500 hover:bg-surface hover:text-foreground disabled:opacity-30"
+                >
+                  <ArrowUp className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Move ${stop.title} down`}
+                  disabled={isLast}
+                  onClick={() => onReorder(stop.id, 1)}
+                  className="rounded-full p-2.5 text-neutral-500 hover:bg-surface hover:text-foreground disabled:opacity-30"
+                >
+                  <ArrowDown className="h-4 w-4" />
+                </button>
+              </>
             ) : null}
             {canEdit ? (
               <select
