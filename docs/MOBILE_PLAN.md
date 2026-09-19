@@ -1,6 +1,7 @@
 # Mobile plan: Plan A (responsive rescue) folded into Plan B (chat-first phone app)
 
-Status: Plan A in progress. Plan B follows on the same branch.
+Status: Plan A shipped (all five steps, verified by `tests/e2e/mobile.spec.ts` at 390 × 844 and
+deployed from `main`). Plan B is in progress on the same branch.
 
 ## Why
 

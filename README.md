@@ -18,7 +18,8 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   budget, pace, travel styles, things you love doing, the kind of place you stay in and its
   must-haves, cuisines, dietary needs, how adventurous you eat, your day rhythm, walking, transport
   and flight preferences, where you are dreaming of going next, and "What ruins a trip for you?"
-  dealbreakers; the same sections edit in place under Update my assistant. Everything is sent to the
+  dealbreakers; the same sections edit in place under Update my assistant. On a phone the wizard
+  runs as three screens and long chip lists fold behind "Show all". Everything is sent to the
   agent as context on every run; profile fields heard in conversation go through
   `update_traveler_profile`.
 - **Home picks with a match score** — "For you in Rome" (the next trip, the dreamed-of destination,
@@ -62,7 +63,9 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   `ADMIN_EMAILS` get an Update per report and an `/admin` page with the beta numbers (sign-ups in
   total, in the last 7 days and by day; trips, chats, saved places, guides, open bugs), a **Members**
   roster (who signed up, their email, sign-up date, whether they finished the quiz, home city and
-  activity), the reports and recommendation quality. The server also logs one `[xpmatch] db ready` line
+  activity), **What people answered** (per-question counts of the quiz answers across onboarded
+  profiles: interests, budget, stay types, cuisines and the rest), the reports and recommendation
+  quality. The server also logs one `[xpmatch] db ready` line
   with the user, trip and chat counts at boot, so the deploy log answers "how many users" without
   database access.
 - **Taste profile that learns from reactions** — Rate any place (Loved it / It was fine / Not for me
@@ -124,6 +127,14 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   ("Where to today, Tayo?"), and a discovery panel with a proactive nudge, "Jump back in",
   "For you in {city}" and "Get inspired". Chats is one experience: the sidebar's Chats item expands
   in place to list conversations, and the active chat sits beside the map or discovery feed.
+- **Works on a phone** — below tablet width a bottom tab bar (Chat, Trips, Explore, Saved, More)
+  replaces the sidebar; the More sheet holds Updates (with the unread badge), Inspiration, Create,
+  Admin, Update my assistant, Report a bug and Log out. The phone home is one scrolling page: hero,
+  composer, then Jump back in, the nine home picks and Get inspired. Once a chat has pins, a
+  "Map · N pinned" pill opens the map over the chat. Trip pages become **Overview | Board | Tiles**
+  tabs with the board first, the quiz runs as three screens, every card fits a 390 px screen and
+  tap targets grow on touch screens. `tests/e2e/mobile.spec.ts` walks all of it at an iPhone
+  viewport; `docs/MOBILE_PLAN.md` has the assessment and what comes next (the chat-first phone app).
 - **Personalized suggestion chips** — static chips before the first message, model-generated
   follow-ups after.
 - **Demo mode** — with no API key configured the app runs against an offline demo model so the

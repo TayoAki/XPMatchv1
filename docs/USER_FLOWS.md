@@ -27,6 +27,10 @@ with a progress bar, Back / Next and "Skip for now" on every step.
 6. *Dealbreakers & notes* — **"What ruins a trip for you?"** chips (street noise, no workspace, stairs,
    crowds, early starts, long transfers, spicy food…) that become dealbreakers, and anything else.
 
+On a phone (under 640 px) the same six sections come as three screens (about you + style, where you
+stay + how you eat, logistics + dealbreakers) with a three-segment progress bar, and chip lists longer
+than eight options fold behind **Show all** with your picks kept visible.
+
 "Save preferences" on the last step stores the profile and the dealbreakers on the server; "Skip for
 now" keeps what was filled so far. Everything is sent to the assistant as context on every message
 (interests, stay types, must-haves, cuisines, dietary tags, rhythm, walking, transport, flights, next
@@ -48,6 +52,11 @@ sidebar. Signed-out visitors are redirected to `/login` by `src/proxy.ts`; API r
 conversation is about a place, then the live map). Conversation history lives in the main sidebar:
 **Chats** expands in place to list every conversation (grouped newest first, trip labels, hover to
 delete, "Show all", "+ New chat") so no horizontal space is spent on a separate rail.
+
+On a phone the chat is the whole screen: the welcome hero, suggestion chips and the composer sit at the
+top of one scrolling page with Jump back in, the home picks and Get inspired below them. Once the
+conversation has pins, a **Map · N pinned** pill (top right) opens the map over the chat; **Back to
+chat** returns to the same place in the conversation.
 
 1. **Start** — the welcome hero ("Where to today, Tayo?") shows suggestion chips built from the profile,
    the planner bar values and upcoming trips. Type anything travel-related or pick a chip.
@@ -169,7 +178,9 @@ Trip tab; or **Add to trip → New trip** from any place.
   links to the board).
 - **Chats** — every conversation attached to this trip, newest first.
 - **Board | Tiles** toggle (right column; the choice is remembered per browser, `?view=board` opens the
-  board from chat).
+  board from chat). On a phone the page is three tabs, **Overview | Board | Tiles**, and opens on the
+  board when the trip has stops (or `?view=board`); the map is a short header above the board with
+  **Hide map / Show map**.
 - **Board** — Wanderlog-style: dates, travelers, bookings and ideas chips and a **Walk / Drive /
   Transit** travel mode (remembered per browser); then each **Day** (color dot, date, editable theme)
   with the reservations that start on it (time, name, confirmation code) above a list of numbered stops
