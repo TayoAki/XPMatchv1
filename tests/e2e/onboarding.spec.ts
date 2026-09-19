@@ -178,6 +178,8 @@ test("in-depth onboarding drives home picks with match scores and thumbs; itiner
     const testerRow = members.getByTestId("member-row").filter({ hasText: email });
     await expect(testerRow).toBeVisible();
     await expect(testerRow).toContainText("Completed");
+    // What people answered: the tester's interests are counted.
+    await expect(admin.getByTestId("quiz-interests")).toContainText("Museums & art");
     await context.close();
   });
 });
