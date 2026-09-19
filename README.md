@@ -91,7 +91,9 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   Booking.com / Google Hotels, Google Maps, OpenTable and GetYourGuide, pre-filled with the
   recommended place, dates and travelers. Prices are labeled as estimates.
 - **Accounts and per-user data** — email + password sign-up, sessions in HttpOnly cookies, and a
-  profile, saved places, trips, chat list and notifications stored per user on the server.
+  profile, saved places, trips, chat list and notifications stored per user on the server. Forgotten
+  password: an admin issues a single-use, 30-minute reset link from the Members roster and sends it by
+  hand; `/reset?token=…` sets the new password, signs that browser in and signs every other device out.
 - **Trips like Mindtrip** — `create_trip` proposes a day-by-day itinerary the traveler confirms in
   chat, the planner's "Create trip" makes one directly, and every trip has its own page: title and
   chips, a proactive nudge, "Ask anything else" (opens a chat attached to the trip), the trip's

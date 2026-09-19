@@ -253,4 +253,20 @@ export const MIGRATIONS: Migration[] = [
       `CREATE INDEX IF NOT EXISTS bug_reports_created_idx ON bug_reports(created_at DESC)`,
     ],
   },
+  {
+    id: "0006_password_resets",
+    statements: [
+      // Single-use password reset links issued by an admin (the raw token is only ever in the link).
+      `CREATE TABLE IF NOT EXISTS password_resets (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        token_hash text UNIQUE NOT NULL,
+        expires_at timestamptz NOT NULL,
+        used_at timestamptz,
+        created_by uuid REFERENCES users(id) ON DELETE SET NULL,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )`,
+      `CREATE INDEX IF NOT EXISTS password_resets_user_idx ON password_resets(user_id)`,
+    ],
+  },
 ];

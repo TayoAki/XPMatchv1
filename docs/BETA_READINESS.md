@@ -41,10 +41,10 @@ Blockers, in order (about an hour of work, none of it code):
    account can make (the only rate limit is on imports). For an invited beta a spending limit on the
    OpenRouter key and a Google Cloud budget alert are enough (`docs/COGS.md`: about $9 per active user
    per month at list prices); an open beta needs per-user limits in the app first.
-4. **Nobody can recover a forgotten password**: there is no reset flow, no email verification and no
-   email provider wired up, and an admin cannot set a temporary password either. For an invited beta,
-   tell testers to use a password manager and keep their emails so you can reach them; a reset flow is
-   the first thing to add once people are in.
+4. **Forgotten passwords** (done the same day): an admin issues a single-use, 30-minute reset link from
+   `/admin` › Members › **Reset link** and sends it by hand; `/reset?token=…` sets the new password and
+   signs every other device out. Still missing: a self-service "Forgot password?" email, which needs an
+   email provider (Resend and a verified `xpmatchme.com`) and reuses the same link.
 
 First week after inviting:
 
@@ -87,7 +87,8 @@ no invite code.
   for the destination in focus), a match score with "Why this score" and thumbs up / down on every
   recommendation, board stop details, resolved stops on the trip proposal.
 - Bug reports from the sidebar with screenshots; `/admin` for the accounts in `ADMIN_EMAILS` with the
-  reports and the recommendation hit rate.
+  reports, the recommendation hit rate, the beta numbers, the Members roster (with password reset
+  links) and the quiz answers.
 - Explore near you, community guides, Saved (places, guides, imports), Updates.
 - A chat-first phone app (`docs/MOBILE_PLAN.md`): bottom tab bar and More sheet, the first run as
   three questions in the chat with the picks as the assistant's first message, card rows that swipe,
@@ -181,8 +182,8 @@ no invite code.
 - Review answers depend on the five reviews and attributes Google returns; the card says when evidence is
   thin.
 - The map needs a valid browser key for the deployed domain; without it the panel shows a list fallback.
-- Single region, single Postgres; no email verification or password reset (they were Wave 4, which is
-  skipped by decision, together with flight price tracking).
+- Single region, single Postgres; no email verification, and password resets are issued by an admin
+  (no self-service email yet; that and flight price tracking were Wave 4, skipped by decision).
 
 ## Next after beta
 

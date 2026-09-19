@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 const SESSION_COOKIE = "xp_session";
-const PUBLIC_PATHS = new Set(["/login", "/signup", "/api/auth/login", "/api/auth/signup", "/api/health", "/api/config"]);
+const PUBLIC_PATHS = new Set(["/login", "/signup", "/reset", "/api/auth/login", "/api/auth/signup", "/api/auth/reset", "/api/health", "/api/config"]);
 
 /**
  * Optimistic auth gate: pages redirect to /login without a session cookie and API

@@ -52,8 +52,71 @@ function whenLabel(iso: string | null): string {
   return Number.isNaN(date.getTime()) ? "—" : date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
+type ResetState = "busy" | { url: string; expiresAt: string } | { error: string };
+
+/** "Reset link" for one member: the admin creates a single-use link and sends it by hand. */
+function ResetCell({ user, state, copied, onIssue, onCopy }: { user: AdminUser; state: ResetState | undefined; copied: boolean; onIssue: () => void; onCopy: (url: string) => void }) {
+  if (state === "busy") return <span className="text-[12px] text-muted">Creating…</span>;
+  if (state && "error" in state) {
+    return (
+      <div className="grid gap-1">
+        <span className="text-[12px] text-red-600">{state.error}</span>
+        <Button size="sm" variant="outline" onClick={onIssue} aria-label={`Reset link for ${user.email}`}>
+          Try again
+        </Button>
+      </div>
+    );
+  }
+  if (state) {
+    return (
+      <div className="grid max-w-[320px] gap-1">
+        <code className="break-all rounded-lg bg-surface px-2 py-1 text-[11px]" data-testid="reset-link">
+          {state.url}
+        </code>
+        <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted">
+          <Button size="sm" variant="outline" onClick={() => onCopy(state.url)} aria-label={`Copy reset link for ${user.email}`}>
+            {copied ? "Copied" : "Copy"}
+          </Button>
+          <span>Works once · expires {new Date(state.expiresAt).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</span>
+          <button type="button" onClick={onIssue} className="underline-offset-2 hover:underline">
+            New link
+          </button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <Button size="sm" variant="outline" onClick={onIssue} aria-label={`Reset link for ${user.email}`}>
+      Reset link
+    </Button>
+  );
+}
+
 function Members({ users }: { users: AdminUser[] | null }) {
   const completed = users?.filter((u) => u.quiz === "completed").length ?? 0;
+  const [resets, setResets] = useState<Record<string, ResetState>>({});
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const issue = async (u: AdminUser) => {
+    setResets((m) => ({ ...m, [u.id]: "busy" }));
+    setCopiedId(null);
+    try {
+      const res = await api<{ url: string; expiresAt: string }>(`/api/admin/users/${encodeURIComponent(u.id)}/reset`, { method: "POST" });
+      setResets((m) => ({ ...m, [u.id]: { url: res.url, expiresAt: res.expiresAt } }));
+    } catch (err) {
+      setResets((m) => ({ ...m, [u.id]: { error: err instanceof Error ? err.message : "Could not create the link" } }));
+    }
+  };
+
+  const copy = async (id: string, url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedId(id);
+    } catch {
+      // No clipboard access (http, permissions): the link text is selectable.
+    }
+  };
+
   return (
     <section className="mt-8" data-testid="members">
       <h2 className="flex items-center gap-2 text-[19px] font-semibold tracking-tight">
@@ -66,7 +129,7 @@ function Members({ users }: { users: AdminUser[] | null }) {
         <p className="mt-2 text-[13px] text-muted">No sign-ups yet.</p>
       ) : (
         <div className="mt-3 overflow-x-auto rounded-2xl border border-border">
-          <table className="w-full min-w-[720px] text-left text-[13px]">
+          <table className="w-full min-w-[900px] text-left text-[13px]">
             <thead className="bg-surface text-[12px] text-muted">
               <tr>
                 <th className="px-3 py-2 font-medium">Traveler</th>
@@ -77,6 +140,7 @@ function Members({ users }: { users: AdminUser[] | null }) {
                 <th className="px-3 py-2 text-right font-medium">Chats</th>
                 <th className="px-3 py-2 text-right font-medium">Saved</th>
                 <th className="px-3 py-2 font-medium">Last active</th>
+                <th className="px-3 py-2 font-medium">Access</th>
               </tr>
             </thead>
             <tbody>
@@ -97,6 +161,9 @@ function Members({ users }: { users: AdminUser[] | null }) {
                     <td className="px-3 py-2 text-right tabular-nums">{u.chats}</td>
                     <td className="px-3 py-2 text-right tabular-nums">{u.saved}</td>
                     <td className="whitespace-nowrap px-3 py-2 text-neutral-700">{whenLabel(u.lastActiveAt)}</td>
+                    <td className="px-3 py-2">
+                      <ResetCell user={u} state={resets[u.id]} copied={copiedId === u.id} onIssue={() => void issue(u)} onCopy={(url) => void copy(u.id, url)} />
+                    </td>
                   </tr>
                 );
               })}

@@ -50,6 +50,14 @@ button, plus a **Learn from our chats** switch that stops the assistant from off
 (`?next=`). Sessions last 30 days and slide on use. Log out is in the account menu at the bottom of the
 sidebar. Signed-out visitors are redirected to `/login` by `src/proxy.ts`; API routes return 401.
 
+**Forgot your password** — ask the XPMatch team. An admin opens `/admin` › Members, taps **Reset link**
+on your row and sends you the link (text, email, however you talk). The link opens `/reset?token=…`
+without signing in, shows which account it is for, takes a new password (typed twice, 8+ characters)
+and signs that browser in; every other device is signed out at the same time. Links work once and
+expire after 30 minutes (`password_resets` stores only a hash of the token; a new link replaces an
+unused older one). There is no self-service "Forgot password?" email yet: that needs an email provider,
+and it will reuse the same link.
+
 ## 2. Chat (home)
 
 `/` is the chat: the **active chat** with the **right panel** beside it (discovery feed until the
@@ -320,7 +328,9 @@ in the last 7 days, sign-ups by UTC day over two weeks, last sign-up, trips, cha
 open bugs; `GET /api/admin/stats`), then a **Members** roster (`GET /api/admin/users`): every account
 newest first with name, handle, email, sign-up date, quiz status (completed / skipped / not started — from
 `profiles.onboarded` and whether the saved preferences hold real answers), home city, trip / chat / saved
-counts and last activity. It then lists reports newest first (open / resolved / all, mark resolved /
+counts, last activity and an **Access** column with **Reset link** (`POST /api/admin/users/[id]/reset`:
+a single-use, 30-minute password reset link the admin sends to the traveler by hand, with Copy and New
+link). It then lists reports newest first (open / resolved / all, mark resolved /
 reopen, show screenshot) and ends with the **Recommendation quality** summary: hit rate of thumbs across
 every traveler, by kind and by context (chat, home, explore, board), why picks miss, and the recent misses
 with the score that was shown. The same counts are printed once at boot (`[xpmatch] db ready (pg):
@@ -330,7 +340,7 @@ users=… trips=… chats=…`), so the Railway deploy log shows them without a 
 
 | Route | Screen |
 | --- | --- |
-| `/login`, `/signup` | Account |
+| `/login`, `/signup`, `/reset` (`?token=`) | Account, and the page a password reset link opens |
 | `/admin` | Bug reports and recommendation quality (admins) |
 | `/` (`?thread=`, `?trip=`, `?prompt=`) | Chat and map; history expands under Chats in the sidebar; `/chats` redirects here |
 | `/trips`, `/trips/[id]` (`?view=board`, `?rate=1`) | Trips list and trip page (board view, post-trip rating) |
