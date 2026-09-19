@@ -62,8 +62,10 @@ function JumpCover({ item, compact, children }: { item: JumpItem; compact: boole
 /**
  * The discovery content: the proactive card, Jump back in, the home picks and inspiration.
  * The side panel renders it on wide screens; the phone home renders it compact under the composer.
+ * With `picksFirst` (phones, after the in-chat quiz) the picks arrive first, framed as the
+ * assistant's opening message, and the proactive card stays out of the way.
  */
-export function DiscoveryFeed({ compact = false }: { compact?: boolean }) {
+export function DiscoveryFeed({ compact = false, picksFirst = false }: { compact?: boolean; picksFirst?: boolean }) {
   const { profile, planner, trips, chats, saved, proactiveDismissedAt, dismissProactive } = useTravelStore();
   const send = useSendMessage();
 
@@ -132,10 +134,26 @@ export function DiscoveryFeed({ compact = false }: { compact?: boolean }) {
   );
 
   const headingClass = compact ? "text-[17px] font-semibold tracking-tight" : "text-[19px] font-semibold tracking-tight";
+  const picksDestination = picks.options.find((o) => o.key === picks.initialKey)?.destination ?? picks.options[0]?.destination;
+  const picksBlock = <HomePicks options={picks.options} initialKey={picks.initialKey} compact={compact} />;
 
   return (
     <>
-      {showProactive ? (
+      {picksFirst ? (
+        <section className="mt-5" data-testid="first-picks">
+          <div className="flex items-start gap-2.5">
+            <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-neutral-900 text-white">
+              <Sparkles className="h-3.5 w-3.5" />
+            </span>
+            <p className="min-w-0 flex-1 rounded-2xl rounded-tl-md bg-surface px-4 py-3 text-[15px] leading-snug">
+              Here&apos;s what I&apos;d pick for you{picksDestination ? ` in ${picksDestination}` : ""}, from what you told me. Thumb them up or down so I learn, or ask me anything above.
+            </p>
+          </div>
+          {picksBlock}
+        </section>
+      ) : null}
+
+      {showProactive && !picksFirst ? (
         <div className={clsx("relative rounded-3xl bg-surface", compact ? "mt-6 p-4" : "p-5")}>
           <button type="button" onClick={dismissProactive} aria-label="Dismiss" className="absolute right-4 top-4 rounded-full p-1 text-neutral-500 hover:bg-white">
             <X className="h-4 w-4" />
@@ -209,7 +227,7 @@ export function DiscoveryFeed({ compact = false }: { compact?: boolean }) {
         </div>
       </section>
 
-      <HomePicks options={picks.options} initialKey={picks.initialKey} compact={compact} />
+      {picksFirst ? null : picksBlock}
 
       <section className={clsx(compact ? "mt-6" : "mt-8 pb-6")}>
         <div className="flex items-center justify-between">

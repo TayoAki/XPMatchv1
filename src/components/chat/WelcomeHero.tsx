@@ -6,6 +6,7 @@ import { useTravelStore, firstName } from "@/lib/store";
 import { useUiState } from "@/components/providers/UiState";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { DiscoveryFeed } from "@/components/panel/DiscoveryPanel";
+import { PhoneQuiz } from "@/components/chat/PhoneQuiz";
 
 function HeroIllustration({ size = 140 }: { size?: number }) {
   return (
@@ -48,7 +49,20 @@ export function WelcomeHero({ input, suggestionView }: { input: ReactElement; su
   const { profile } = useTravelStore();
   const { openAssistant } = useUiState();
   const wide = useMediaQuery("(min-width: 1280px)");
+  const phone = !useMediaQuery("(min-width: 640px)");
   const name = firstName(profile);
+
+  if (phone && !profile.onboarded) {
+    // The first run on a phone is a short conversation, not a dialog: three questions, then the picks.
+    return (
+      <div className="flex h-full min-h-0 flex-col" data-testid="mobile-home">
+        <div className="xp-scroll min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-4">
+          <PhoneQuiz />
+        </div>
+        <div className="mx-auto w-full max-w-[780px] px-4 pb-2">{input}</div>
+      </div>
+    );
+  }
 
   if (!wide) {
     return (
@@ -63,7 +77,7 @@ export function WelcomeHero({ input, suggestionView }: { input: ReactElement; su
           {input}
         </div>
         <div className="px-4 pb-8">
-          <DiscoveryFeed compact />
+          <DiscoveryFeed compact picksFirst={phone} />
         </div>
       </div>
     );
