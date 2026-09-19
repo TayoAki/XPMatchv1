@@ -14,6 +14,8 @@ import { PlaceImage } from "@/components/ui/PlaceImage";
 import { Button } from "@/components/ui/Button";
 import { usePlacePin, useRegisterPlaces } from "@/components/map/useRegisterPlaces";
 import { MatchBadge, useMatch } from "@/components/recs/MatchBadge";
+import { useUiState } from "@/components/providers/UiState";
+import { useMediaQuery } from "@/lib/use-media-query";
 import { CardShell, Skeleton, Tag } from "./shared";
 
 interface TripProposalCardProps {
@@ -120,6 +122,9 @@ function ProposalStop({ stop, index, toolCallId, destination }: { stop: StreamSt
  */
 export function TripProposalCard({ args, status, result, toolCallId, respond }: TripProposalCardProps) {
   const { addTrip } = useTravelStore();
+  const { openBoardSheet } = useUiState();
+  // Without a side column the board opens as a sheet over the chat instead of leaving it.
+  const wide = useMediaQuery("(min-width: 1280px)");
   const [busy, setBusy] = useState(false);
   const [expanded, setExpanded] = useState(true);
   const outcome = parseResult(result);
@@ -250,9 +255,19 @@ export function TripProposalCard({ args, status, result, toolCallId, respond }: 
             </>
           ) : null}
           {status === ToolCallStatus.Complete && outcome.created ? (
-            <Link href={outcome.tripId ? `/trips/${outcome.tripId}?view=board` : "/trips"} className="inline-flex h-8 items-center gap-1.5 rounded-full bg-emerald-50 px-3 text-[13px] font-medium text-emerald-700">
-              <Check className="h-4 w-4" /> Saved to Trips · open the board
-            </Link>
+            outcome.tripId && !wide ? (
+              <button
+                type="button"
+                onClick={() => openBoardSheet(outcome.tripId!)}
+                className="inline-flex h-8 items-center gap-1.5 rounded-full bg-emerald-50 px-3 text-[13px] font-medium text-emerald-700"
+              >
+                <Check className="h-4 w-4" /> Saved to Trips · open the board
+              </button>
+            ) : (
+              <Link href={outcome.tripId ? `/trips/${outcome.tripId}?view=board` : "/trips"} className="inline-flex h-8 items-center gap-1.5 rounded-full bg-emerald-50 px-3 text-[13px] font-medium text-emerald-700">
+                <Check className="h-4 w-4" /> Saved to Trips · open the board
+              </Link>
+            )
           ) : null}
           {status === ToolCallStatus.Complete && outcome.created === false ? <Tag>Not saved</Tag> : null}
           {status === ToolCallStatus.InProgress ? <Tag>Drafting itinerary…</Tag> : null}

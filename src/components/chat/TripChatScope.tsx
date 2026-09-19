@@ -16,6 +16,8 @@ import { addDay, daysFromModel, insertStop, newStopId } from "@/lib/itinerary";
 import { CalendarPlus } from "lucide-react";
 import { useTripDetail } from "@/components/trips/useTripDetail";
 import { useTripScope } from "@/components/trips/TripScope";
+import { useUiState } from "@/components/providers/UiState";
+import { useMediaQuery } from "@/lib/use-media-query";
 
 type RenderProps<T> = { args: Partial<T> | T; status: ToolCallStatus; result?: string };
 
@@ -74,6 +76,9 @@ const IdeasAddedRenderer = (props: RenderProps<AddTripIdeasArgs>) => <IdeasAdded
 
 function StopsScheduledChip({ args, status }: RenderProps<ScheduleStopsArgs>) {
   const tripId = useTripScope();
+  const { openBoardSheet } = useUiState();
+  // Phones open the board as a sheet over this chat rather than leaving it.
+  const wide = useMediaQuery("(min-width: 1280px)");
   const stops = ((args as Streaming<ScheduleStopsArgs>).stops ?? []).filter((st) => st && st.name);
   return (
     <div className="mt-2 inline-flex max-w-full items-start gap-2 rounded-2xl border border-border bg-surface/70 px-3 py-2 text-[13px]">
@@ -82,9 +87,15 @@ function StopsScheduledChip({ args, status }: RenderProps<ScheduleStopsArgs>) {
         <div className="font-semibold">{status === ToolCallStatus.Complete ? `Scheduled ${stops.length} stop${stops.length === 1 ? "" : "s"}` : "Scheduling…"}</div>
         {stops.length ? <div className="text-neutral-700">{stops.map((st) => `Day ${st.day}: ${st.name}`).join(" · ")}</div> : null}
         {status === ToolCallStatus.Complete ? (
-          <Link href={tripId ? `/trips/${tripId}?view=board` : "/trips"} className="font-semibold underline-offset-2 hover:underline">
-            Open the board
-          </Link>
+          tripId && !wide ? (
+            <button type="button" onClick={() => openBoardSheet(tripId)} className="font-semibold underline-offset-2 hover:underline">
+              Open the board
+            </button>
+          ) : (
+            <Link href={tripId ? `/trips/${tripId}?view=board` : "/trips"} className="font-semibold underline-offset-2 hover:underline">
+              Open the board
+            </Link>
+          )
         ) : null}
       </div>
     </div>

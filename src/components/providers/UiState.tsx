@@ -36,6 +36,10 @@ interface UiStateValue {
   bugReportOpen: boolean;
   openBugReport: () => void;
   closeBugReport: () => void;
+  /** Trip whose itinerary board is open as a sheet over the chat (phones). */
+  boardSheetTripId: string | null;
+  openBoardSheet: (tripId: string) => void;
+  closeBoardSheet: () => void;
   newChatNonce: number;
   startNewChat: () => void;
 }
@@ -49,6 +53,7 @@ export function UiStateProvider({ children }: { children: ReactNode }) {
   const [plannerTab, setPlannerTab] = useState<PlannerTab>("where");
   const [addToTrip, setAddToTrip] = useState<AddToTripRequest | null>(null);
   const [bugReportOpen, setBugReportOpen] = useState(false);
+  const [boardSheetTripId, setBoardSheetTripId] = useState<string | null>(null);
   const [newChatNonce, setNewChatNonce] = useState(0);
   const router = useRouter();
 
@@ -65,6 +70,8 @@ export function UiStateProvider({ children }: { children: ReactNode }) {
   const closeAddToTrip = useCallback(() => setAddToTrip(null), []);
   const openBugReport = useCallback(() => setBugReportOpen(true), []);
   const closeBugReport = useCallback(() => setBugReportOpen(false), []);
+  const openBoardSheet = useCallback((tripId: string) => setBoardSheetTripId(tripId), []);
+  const closeBoardSheet = useCallback(() => setBoardSheetTripId(null), []);
   const startNewChat = useCallback(() => {
     setNewChatNonce((n) => n + 1);
     router.push("/");
@@ -88,6 +95,9 @@ export function UiStateProvider({ children }: { children: ReactNode }) {
       bugReportOpen,
       openBugReport,
       closeBugReport,
+      boardSheetTripId,
+      openBoardSheet,
+      closeBoardSheet,
       newChatNonce,
       startNewChat,
     }),
@@ -108,6 +118,9 @@ export function UiStateProvider({ children }: { children: ReactNode }) {
       bugReportOpen,
       openBugReport,
       closeBugReport,
+      boardSheetTripId,
+      openBoardSheet,
+      closeBoardSheet,
       newChatNonce,
       startNewChat,
     ],
