@@ -130,7 +130,7 @@ function RowSkeleton({ compact = false }: { compact?: boolean }) {
  * scored against the traveler's profile, with thumbs so the score learns.
  */
 export function HomePicks({ options, initialKey, compact = false }: { options: FocusOption[]; initialKey: string; compact?: boolean }) {
-  const { profile, taste, preferences, recFeedback, hydrated } = useTravelStore();
+  const { profile, taste, preferences, recFeedback, hydrated, profileSaving } = useTravelStore();
   const { openAssistant } = useUiState();
   const [chosenKey, setChosenKey] = useState<string | null>(null);
   const [custom, setCustom] = useState<string | null>(null);
@@ -151,8 +151,10 @@ export function HomePicks({ options, initialKey, compact = false }: { options: F
     return () => window.removeEventListener("mousedown", onDown);
   }, [menuOpen]);
 
+  // The server scores picks against the stored profile, so a fetch waits for an in-flight profile
+  // save (finishing the quiz, Update my assistant) and runs again once it has landed.
   useEffect(() => {
-    if (!hydrated || !destination) return;
+    if (!hydrated || !destination || profileSaving) return;
     let active = true;
     const target = destination;
     api<HomePicksData>(`/api/recs/home?destination=${encodeURIComponent(target)}`)
@@ -161,7 +163,7 @@ export function HomePicks({ options, initialKey, compact = false }: { options: F
     return () => {
       active = false;
     };
-  }, [hydrated, destination]);
+  }, [hydrated, destination, profileSaving]);
 
   // Scores are recomputed on the client so thumbs and reactions move the badges at once.
   const data = state?.destination === destination ? state.data : null;

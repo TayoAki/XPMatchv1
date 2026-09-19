@@ -137,6 +137,8 @@ export interface TravelStoreState {
   recFeedback: RecFeedback[];
   proactiveDismissedAt: string | null;
   hydrated: boolean;
+  /** True while a profile save is in flight; the home picks wait for it so they reflect the new answers. */
+  profileSaving: boolean;
 }
 
 const LOCAL_KEY = "xpmatch:local:v2";
@@ -160,6 +162,7 @@ const DEFAULT_STATE: TravelStoreState = {
   recFeedback: [],
   proactiveDismissedAt: null,
   hydrated: false,
+  profileSaving: false,
 };
 
 let state: TravelStoreState = DEFAULT_STATE;
@@ -320,9 +323,12 @@ export const travelActions = {
     set({
       profile,
       user: prev.user && patch.name?.trim() ? { ...prev.user, name: patch.name.trim() } : prev.user,
+      profileSaving: true,
     });
     // keepalive: finishing onboarding and leaving the page at once must not drop the save.
-    api("/api/me/profile", { method: "PUT", json: profile, keepalive: true }).catch((err) => report("saving preferences", err));
+    api("/api/me/profile", { method: "PUT", json: profile, keepalive: true })
+      .catch((err) => report("saving preferences", err))
+      .finally(() => set({ profileSaving: false }));
   },
 
   updatePlanner(patch: Partial<TripPlanner>) {

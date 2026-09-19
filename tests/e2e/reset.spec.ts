@@ -3,12 +3,13 @@ import { completeOnboarding, ensureAccount, eventually, login, PASSWORD, signupA
 
 const NEW_PASSWORD = "brand-new-secret-9";
 
-test("password reset: the admin issues a link, the traveler sets a new password, other sessions and the link stop working", async ({ page, browser, baseURL }) => {
+test("password reset: the admin issues a link, the traveler sets a new password, other sessions and the link stop working", async ({ page, browser, baseURL, request }) => {
   test.setTimeout(240_000);
   const email = uniqueEmail("reset");
-  // The traveler signs up through the API; this browser context now holds their session.
+  // The traveler signs up through the page's context, which then holds their session (the "old device").
   await signupApi(page.request, { name: "Rae Reset", email }, baseURL!);
-  await ensureAccount(page.request, { name: "Ada Admin", email: "admin@example.com" }, baseURL!);
+  // The admin account is created through a separate request context so its cookie never lands in the traveler's jar.
+  await ensureAccount(request, { name: "Ada Admin", email: "admin@example.com" }, baseURL!);
 
   let link = "";
   await test.step("the admin creates a single-use link from the Members roster", async () => {
