@@ -59,8 +59,10 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   while the traveler decides, and the Itinerary tile shows the same facts.
 - **Bug reports and an admin page** — a bug icon in the sidebar opens a report (what happened,
   expected, severity, screenshot downscaled in the browser; page, chat and build attached). Accounts in
-  `ADMIN_EMAILS` get an Update per report and an `/admin` page with the reports and recommendation
-  quality.
+  `ADMIN_EMAILS` get an Update per report and an `/admin` page with the beta numbers (sign-ups in
+  total, in the last 7 days and by day; trips, chats, saved places, guides, open bugs), the reports and
+  recommendation quality. The server also logs one `[xpmatch] db ready` line with the user, trip and
+  chat counts at boot, so the deploy log answers "how many users" without database access.
 - **Taste profile that learns from reactions** — Rate any place (Loved it / It was fine / Not for me
   with reason chips) on cards, the sheet, trips and Saved; "Not for me" hides the card. Reactions
   feed a per-domain taste profile (Your taste in Update my assistant), repeated reasons become
@@ -166,7 +168,7 @@ Without a model key the app starts in demo mode. Model selection lives in `src/s
 | `PGSSL` | `true` to force TLS to Postgres when the URL has no `sslmode=require`. |
 | `PGLITE_DIR` | Where PGlite stores its files locally (default `.data/pglite`). |
 | `COPILOTKIT_TELEMETRY_DISABLED` | `true` to turn off CopilotKit's anonymous runtime telemetry. |
-| `ADMIN_EMAILS` | Comma-separated account emails that see `/admin` (bug reports, recommendation quality) and get an Update per report. |
+| `ADMIN_EMAILS` | Comma-separated account emails that see `/admin` (beta numbers, bug reports, recommendation quality) and get an Update per report. |
 | `APP_VERSION` | Optional build label attached to bug reports (Railway's `RAILWAY_GIT_COMMIT_SHA` is used when unset). |
 
 Note: CopilotKit generates follow-up suggestions with a forced tool call, which Claude Fable 5.1

@@ -60,7 +60,20 @@ async function init(): Promise<Db> {
     };
   }
   await migrate(db);
+  await logBootSummary(db);
   return db;
+}
+
+/** One line at boot so the deploy log shows how far the beta has come (counts only, no personal data). */
+async function logBootSummary(db: Db) {
+  try {
+    const [row] = await db.query<{ users: unknown; trips: unknown; chats: unknown }>(
+      "SELECT (SELECT count(*) FROM users) AS users, (SELECT count(*) FROM trips) AS trips, (SELECT count(*) FROM chats) AS chats",
+    );
+    console.log(`[xpmatch] db ready (${db.driver}): users=${row?.users ?? 0} trips=${row?.trips ?? 0} chats=${row?.chats ?? 0}`);
+  } catch (err) {
+    console.warn(`[xpmatch] db ready (${db.driver}), summary unavailable: ${err instanceof Error ? err.message : String(err)}`);
+  }
 }
 
 async function migrate(db: Db) {

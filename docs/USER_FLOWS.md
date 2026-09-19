@@ -293,10 +293,13 @@ The bug icon next to the traveler's name in the sidebar (and in the top bar on s
 happened, what was expected, and an optional screenshot that the browser downscales to 1280 px JPEG before
 sending. The page, the current chat id, the browser and the deployed build are attached automatically.
 Reports land in `bug_reports`; every admin gets an Update ("Bug report from @tayo: …"). Accounts listed in
-`ADMIN_EMAILS` see **Admin** in the sidebar: `/admin` lists reports newest first (open / resolved / all,
-mark resolved / reopen, show screenshot) and the **Recommendation quality** summary: hit rate of thumbs
-across every traveler, by kind and by context (chat, home, explore, board), why picks miss, and the recent
-misses with the score that was shown.
+`ADMIN_EMAILS` see **Admin** in the sidebar: `/admin` opens with the **Beta numbers** (users in total and
+in the last 7 days, sign-ups by UTC day over two weeks, last sign-up, trips, chats, saved places, guides,
+open bugs; `GET /api/admin/stats`), lists reports newest first (open / resolved / all, mark resolved /
+reopen, show screenshot) and ends with the **Recommendation quality** summary: hit rate of thumbs across
+every traveler, by kind and by context (chat, home, explore, board), why picks miss, and the recent misses
+with the score that was shown. The same counts are printed once at boot (`[xpmatch] db ready (pg):
+users=… trips=… chats=…`), so the Railway deploy log shows them without a database connection.
 
 ## 11. Routes
 

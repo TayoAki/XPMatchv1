@@ -168,6 +168,10 @@ test("in-depth onboarding drives home picks with match scores and thumbs; itiner
     await expect(admin.getByTestId("bug-report").filter({ hasText: "The stays row overlaps the map" })).toContainText("resolved");
     await expect(admin.getByTestId("rec-quality")).toContainText("50%");
     await expect(admin.getByTestId("rec-quality")).toContainText("Too pricey");
+    // Beta numbers: at least the tester and the admin exist, and the admin signed up within the week.
+    await expect(admin.getByTestId("stat-users")).toHaveText(/^([2-9]|\d{2,})$/);
+    await expect(admin.getByTestId("beta-stats")).toContainText(/\+[1-9]\d* in the last 7 days/);
+    await expect(admin.getByTestId("beta-stats")).toContainText("Last sign-up");
     await context.close();
   });
 });

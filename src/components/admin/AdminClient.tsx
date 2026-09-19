@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import clsx from "clsx";
-import { Bug, Sparkles, ThumbsDown, ThumbsUp } from "lucide-react";
+import { Bug, Sparkles, ThumbsDown, ThumbsUp, Users } from "lucide-react";
 import { api } from "@/lib/api";
+import type { BetaStats } from "@/lib/admin/types";
 import { BUG_SEVERITIES, type BugReport, type BugStatus } from "@/lib/bugs/types";
 import type { RecQuality } from "@/lib/recs/types";
 import { useTravelStore } from "@/lib/store";
@@ -27,6 +28,18 @@ function Screenshot({ id }: { id: string }) {
   );
 }
 
+function Stat({ label, value, note, testId }: { label: string; value: number; note?: string; testId?: string }) {
+  return (
+    <div className="rounded-2xl border border-border p-4">
+      <div className="text-[12px] text-muted">{label}</div>
+      <div className="mt-1 text-[28px] font-semibold tabular-nums" data-testid={testId}>
+        {value}
+      </div>
+      {note ? <div className="text-[12px] text-muted">{note}</div> : null}
+    </div>
+  );
+}
+
 function Rate({ up, down }: { up: number; down: number }) {
   const total = up + down;
   return (
@@ -43,8 +56,20 @@ export function AdminClient() {
   const [reports, setReports] = useState<BugReport[] | null>(null);
   const [version, setVersion] = useState("");
   const [quality, setQuality] = useState<(RecQuality & { travelers: number }) | null>(null);
+  const [stats, setStats] = useState<BetaStats | null>(null);
   const [error, setError] = useState<string | null>(null);
   const admin = !!user?.admin;
+
+  useEffect(() => {
+    if (!hydrated || !admin) return;
+    let active = true;
+    api<{ stats: BetaStats }>("/api/admin/stats")
+      .then((data) => active && setStats(data.stats))
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [hydrated, admin]);
 
   useEffect(() => {
     if (!hydrated || !admin) return;
@@ -84,14 +109,38 @@ export function AdminClient() {
   if (hydrated && !admin) {
     return (
       <PageFrame title="Admin">
-        <EmptyState title="Admins only" body="Add your email to ADMIN_EMAILS on the server to see bug reports and recommendation quality." />
+        <EmptyState title="Admins only" body="Add your email to ADMIN_EMAILS on the server to see sign-ups, bug reports and recommendation quality." />
       </PageFrame>
     );
   }
 
   return (
-    <PageFrame title="Admin" description={`Bug reports from testers and recommendation quality.${version ? ` Build ${version}.` : ""}`}>
-      <section data-testid="rec-quality">
+    <PageFrame title="Admin" description={`Sign-ups, bug reports from testers and recommendation quality.${version ? ` Build ${version}.` : ""}`}>
+      <section data-testid="beta-stats">
+        <h2 className="flex items-center gap-2 text-[19px] font-semibold tracking-tight">
+          <Users className="h-5 w-5" /> Beta numbers
+        </h2>
+        {!stats ? (
+          <p className="mt-2 text-[13px] text-muted">Loading…</p>
+        ) : (
+          <>
+            <div className="mt-3 grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
+              <Stat label="Users" value={stats.users} testId="stat-users" note={`+${stats.usersLast7Days} in the last 7 days`} />
+              <Stat label="Trips" value={stats.trips} />
+              <Stat label="Chats" value={stats.chats} />
+              <Stat label="Saved places" value={stats.savedItems} />
+              <Stat label="Guides" value={stats.guides} />
+              <Stat label="Open bugs" value={stats.bugReportsOpen} />
+            </div>
+            <p className="mt-2 text-[12px] text-muted">
+              {stats.lastSignupAt ? `Last sign-up ${new Date(stats.lastSignupAt).toLocaleString()}.` : "No sign-ups yet."}
+              {stats.signupsByDay.length ? ` Sign-ups by day (UTC): ${stats.signupsByDay.map((d) => `${d.day} ×${d.count}`).join(", ")}.` : ""}
+            </p>
+          </>
+        )}
+      </section>
+
+      <section className="mt-8" data-testid="rec-quality">
         <h2 className="flex items-center gap-2 text-[19px] font-semibold tracking-tight">
           <Sparkles className="h-5 w-5" /> Recommendation quality
         </h2>
