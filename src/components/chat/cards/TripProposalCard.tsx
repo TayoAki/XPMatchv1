@@ -62,7 +62,7 @@ function ProposalStop({ stop, index, toolCallId, destination }: { stop: StreamSt
   const photo = place?.photos?.[0];
   const meta = [place?.category, place?.priceLevel].filter(Boolean).join(" · ");
   return (
-    <li className="flex gap-2.5 rounded-xl bg-white p-2" data-testid="proposal-stop" onMouseEnter={() => pin.hover(true)} onMouseLeave={() => pin.hover(false)}>
+    <li className="flex min-w-0 gap-2.5 rounded-xl bg-white p-2" data-testid="proposal-stop" onMouseEnter={() => pin.hover(true)} onMouseLeave={() => pin.hover(false)}>
       {photo && !failed ? (
         // eslint-disable-next-line @next/next/no-img-element -- proxied Places photo
         <img src={photo} alt="" onError={() => setFailed(true)} className="h-12 w-12 shrink-0 rounded-lg object-cover" loading="lazy" />
@@ -73,14 +73,19 @@ function ProposalStop({ stop, index, toolCallId, destination }: { stop: StreamSt
       )}
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
+          {/* min-w-0 lets the name truncate on phones; the badge keeps its width. */}
           {place ? (
-            <button type="button" onClick={pin.open} className="truncate text-left text-[13px] font-semibold hover:underline" title={`Show ${place.name} on the map`}>
+            <button type="button" onClick={pin.open} className="min-w-0 flex-1 truncate text-left text-[13px] font-semibold hover:underline" title={`Show ${place.name} on the map`}>
               {stop.name}
             </button>
           ) : (
-            <span className="truncate text-[13px] font-semibold">{stop.name}</span>
+            <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">{stop.name}</span>
           )}
-          {match ? <MatchBadge match={match} size="sm" /> : null}
+          {match ? (
+            <span className="shrink-0">
+              <MatchBadge match={match} size="sm" />
+            </span>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-x-2 text-[12px] text-muted">
           {stop.startTime ? (

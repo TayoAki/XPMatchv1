@@ -4,10 +4,12 @@ import type { ReactElement } from "react";
 import { SlidersHorizontal } from "lucide-react";
 import { useTravelStore, firstName } from "@/lib/store";
 import { useUiState } from "@/components/providers/UiState";
+import { useMediaQuery } from "@/lib/use-media-query";
+import { DiscoveryFeed } from "@/components/panel/DiscoveryPanel";
 
-function HeroIllustration() {
+function HeroIllustration({ size = 140 }: { size?: number }) {
   return (
-    <svg width="140" height="120" viewBox="0 0 140 120" fill="none" aria-hidden="true">
+    <svg width={size} height={Math.round((size * 120) / 140)} viewBox="0 0 140 120" fill="none" aria-hidden="true">
       <defs>
         <radialGradient id="xp-glow" cx="50%" cy="45%" r="60%">
           <stop offset="0%" stopColor="#c6f1dc" />
@@ -39,11 +41,33 @@ function HeroIllustration() {
 /**
  * Empty-state screen slotted into CopilotChat. Receives the chat input and
  * suggestion pills so the hero owns the layout while the chat owns behavior.
+ * Below the xl breakpoint there is no side panel, so the discovery feed (Jump back
+ * in, home picks, inspiration) scrolls under the composer instead.
  */
 export function WelcomeHero({ input, suggestionView }: { input: ReactElement; suggestionView: ReactElement }) {
   const { profile } = useTravelStore();
   const { openAssistant } = useUiState();
+  const wide = useMediaQuery("(min-width: 1280px)");
   const name = firstName(profile);
+
+  if (!wide) {
+    return (
+      <div className="xp-scroll flex h-full min-h-0 flex-col overflow-y-auto" data-testid="mobile-home">
+        <div className="flex flex-col items-center px-5 pt-5 text-center">
+          <HeroIllustration size={96} />
+          <h1 className="mt-2 text-[26px] font-semibold tracking-tight">Where to today{name ? `, ${name}` : ""}?</h1>
+          <p className="mt-1 text-[14px] text-neutral-600">Ask me anything travel related.</p>
+        </div>
+        <div className="mx-auto w-full max-w-[780px] px-4 pt-4">
+          <div className="mb-3 flex justify-center">{suggestionView}</div>
+          {input}
+        </div>
+        <div className="px-4 pb-8">
+          <DiscoveryFeed compact />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">

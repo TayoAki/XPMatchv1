@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import clsx from "clsx";
 import { Luggage, Map, Sparkles, X } from "lucide-react";
 import { useTravelStore, formatDateRange, type Trip } from "@/lib/store";
 import { INSPIRATION } from "@/lib/travel/inspiration";
@@ -39,11 +40,12 @@ interface JumpItem {
 }
 
 /** Cover for a "Jump back in" card: the resolved place's Google photo first, the Wikipedia lookup as a fallback. */
-function JumpCover({ item, children }: { item: JumpItem; children: React.ReactNode }) {
+function JumpCover({ item, compact, children }: { item: JumpItem; compact: boolean; children: React.ReactNode }) {
   const [failed, setFailed] = useState(false);
+  const size = compact ? "h-[160px] w-[220px]" : "h-[208px] w-[264px]";
   if (item.photo && !failed) {
     return (
-      <div className="relative h-[208px] w-[264px] shrink-0 overflow-hidden rounded-2xl bg-neutral-200">
+      <div className={clsx("relative shrink-0 overflow-hidden rounded-2xl bg-neutral-200", size)}>
         {/* eslint-disable-next-line @next/next/no-img-element -- proxied Places photo */}
         <img src={item.photo} alt={item.title} onError={() => setFailed(true)} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
         {children}
@@ -51,13 +53,17 @@ function JumpCover({ item, children }: { item: JumpItem; children: React.ReactNo
     );
   }
   return (
-    <PlaceImage queries={item.queries} alt={item.title} className="h-[208px] w-[264px] shrink-0 rounded-2xl">
+    <PlaceImage queries={item.queries} alt={item.title} className={clsx("shrink-0 rounded-2xl", size)}>
       {children}
     </PlaceImage>
   );
 }
 
-export function DiscoveryPanel({ showMapButton = false, onShowMap }: { showMapButton?: boolean; onShowMap?: () => void }) {
+/**
+ * The discovery content: the proactive card, Jump back in, the home picks and inspiration.
+ * The side panel renders it on wide screens; the phone home renders it compact under the composer.
+ */
+export function DiscoveryFeed({ compact = false }: { compact?: boolean }) {
   const { profile, planner, trips, chats, saved, proactiveDismissedAt, dismissProactive } = useTravelStore();
   const send = useSendMessage();
 
@@ -125,33 +131,24 @@ export function DiscoveryPanel({ showMapButton = false, onShowMap }: { showMapBu
     [trips, profile.nextDestination, profile.nextWhen, planner.where, homeCity],
   );
 
+  const headingClass = compact ? "text-[17px] font-semibold tracking-tight" : "text-[19px] font-semibold tracking-tight";
+
   return (
-    <div className="xp-scroll relative h-full overflow-y-auto px-6 py-4">
-      {showMapButton ? (
-        <div className="mb-4 flex justify-end">
-          <button
-            type="button"
-            onClick={onShowMap}
-            className="inline-flex h-9 items-center gap-2 rounded-full bg-neutral-900 px-4 text-[13px] font-semibold text-white shadow hover:bg-neutral-800"
-          >
-            <Map className="h-4 w-4" /> Show map
-          </button>
-        </div>
-      ) : null}
+    <>
       {showProactive ? (
-        <div className="relative rounded-3xl bg-surface p-5">
+        <div className={clsx("relative rounded-3xl bg-surface", compact ? "mt-6 p-4" : "p-5")}>
           <button type="button" onClick={dismissProactive} aria-label="Dismiss" className="absolute right-4 top-4 rounded-full p-1 text-neutral-500 hover:bg-white">
             <X className="h-4 w-4" />
           </button>
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-900 text-white">
             <Sparkles className="h-4 w-4" />
           </div>
-          <p className="mt-4 max-w-[640px] text-[17px] font-semibold tracking-tight">
+          <p className={clsx("max-w-[640px] font-semibold tracking-tight", compact ? "mt-3 pr-6 text-[15px]" : "mt-4 text-[17px]")}>
             {focus
               ? `${focus.phrase} — want help getting started with where to stay or what to do?`
               : "Planning something? Tell me where you're headed and I'll get started on where to stay and what to do."}
           </p>
-          <div className="mt-8 flex flex-wrap items-center gap-2">
+          <div className={clsx("flex flex-wrap items-center gap-2", compact ? "mt-4" : "mt-8")}>
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-neutral-700">
               <Luggage className="h-4 w-4" />
             </span>
@@ -180,17 +177,17 @@ export function DiscoveryPanel({ showMapButton = false, onShowMap }: { showMapBu
         </div>
       ) : null}
 
-      <section className="mt-8" data-testid="jump-back-in">
-        <h2 className="text-[19px] font-semibold tracking-tight">Jump back in</h2>
+      <section className={compact ? "mt-6" : "mt-8"} data-testid="jump-back-in">
+        <h2 className={headingClass}>Jump back in</h2>
         <div className="xp-no-scrollbar mt-3 flex gap-4 overflow-x-auto pb-1">
           {jumpBackIn.length === 0 ? (
-            <div className="flex h-[208px] w-full items-center justify-center rounded-2xl border border-dashed border-border text-[14px] text-muted">
+            <div className={clsx("flex w-full items-center justify-center rounded-2xl border border-dashed border-border text-[14px] text-muted", compact ? "h-[120px]" : "h-[208px]")}>
               Your trips, chats and saved places will show up here.
             </div>
           ) : null}
           {jumpBackIn.map((item) => {
             const card = (
-              <JumpCover item={item}>
+              <JumpCover item={item} compact={compact}>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
                 <div className="absolute inset-x-4 bottom-4 text-left text-white">
                   <span className="rounded-md bg-white/25 px-2 py-0.5 text-[11px] font-semibold backdrop-blur">{item.kind}</span>
@@ -212,19 +209,19 @@ export function DiscoveryPanel({ showMapButton = false, onShowMap }: { showMapBu
         </div>
       </section>
 
-      <HomePicks options={picks.options} initialKey={picks.initialKey} />
+      <HomePicks options={picks.options} initialKey={picks.initialKey} compact={compact} />
 
-      <section className="mt-8 pb-6">
+      <section className={clsx(compact ? "mt-6" : "mt-8 pb-6")}>
         <div className="flex items-center justify-between">
-          <h2 className="text-[19px] font-semibold tracking-tight">Get inspired</h2>
+          <h2 className={headingClass}>Get inspired</h2>
           <Link href="/inspiration" className="text-[13px] font-medium text-neutral-700 hover:underline">
             See all
           </Link>
         </div>
-        <div className="mt-3 grid grid-cols-3 gap-4">
+        <div className={clsx("mt-3 grid", compact ? "grid-cols-2 gap-3" : "grid-cols-3 gap-4")}>
           {INSPIRATION.slice(0, 6).map((item) => (
             <button key={item.slug} type="button" onClick={() => send(item.prompt)} className="text-left">
-              <PlaceImage queries={[item.name, `${item.name}, ${item.country}`]} alt={item.name} className="h-[208px] rounded-2xl">
+              <PlaceImage queries={[item.name, `${item.name}, ${item.country}`]} alt={item.name} className={clsx("rounded-2xl", compact ? "h-[150px]" : "h-[208px]")}>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
                 <div className="absolute inset-x-4 bottom-4 text-white">
                   <div className="text-[15px] font-semibold">{item.name}</div>
@@ -235,6 +232,26 @@ export function DiscoveryPanel({ showMapButton = false, onShowMap }: { showMapBu
           ))}
         </div>
       </section>
+    </>
+  );
+}
+
+/** The side column on wide screens: the feed in a scroll container, with a Show map button when the chat has pins. */
+export function DiscoveryPanel({ showMapButton = false, onShowMap }: { showMapButton?: boolean; onShowMap?: () => void }) {
+  return (
+    <div className="xp-scroll relative h-full overflow-y-auto px-6 py-4">
+      {showMapButton ? (
+        <div className="mb-4 flex justify-end">
+          <button
+            type="button"
+            onClick={onShowMap}
+            className="inline-flex h-9 items-center gap-2 rounded-full bg-neutral-900 px-4 text-[13px] font-semibold text-white shadow hover:bg-neutral-800"
+          >
+            <Map className="h-4 w-4" /> Show map
+          </button>
+        </div>
+      ) : null}
+      <DiscoveryFeed />
     </div>
   );
 }

@@ -51,14 +51,14 @@ function Photo({ src, alt, queries, className }: { src?: string; alt: string; qu
   return <PlaceImage queries={queries} alt={alt} className={className} />;
 }
 
-function PickCard({ place, match, destination, context }: { place: ResolvedPlace; match: MatchResult; destination: string; context: "home" }) {
+function PickCard({ place, match, destination, context, className }: { place: ResolvedPlace; match: MatchResult; destination: string; context: "home"; className?: string }) {
   const { saved, toggleSaved } = useTravelStore();
   const { openAddToTrip } = useUiState();
   const send = useSendMessage();
   const isSaved = !!findSaved(saved, { kind: place.kind, title: place.name, refId: place.id });
   const kindWord = place.kind === "hotel" ? "stay" : place.kind === "restaurant" ? "restaurant" : "place";
   return (
-    <article className="flex flex-col overflow-hidden rounded-2xl border border-border bg-white" data-testid="home-pick">
+    <article className={clsx("flex flex-col overflow-hidden rounded-2xl border border-border bg-white", className)} data-testid="home-pick">
       <div className="relative">
         <Photo src={place.photos?.[0]} alt={place.name} queries={[place.name, destination]} className="h-[150px] w-full" />
         <div className="absolute right-2 top-2 flex gap-1.5">
@@ -115,11 +115,11 @@ function PickCard({ place, match, destination, context }: { place: ResolvedPlace
   );
 }
 
-function RowSkeleton() {
+function RowSkeleton({ compact = false }: { compact?: boolean }) {
   return (
-    <div className="grid grid-cols-3 gap-4" aria-busy="true">
+    <div className={compact ? "flex gap-3 overflow-hidden" : "grid grid-cols-3 gap-4"} aria-busy="true">
       {[0, 1, 2].map((i) => (
-        <div key={i} className="xp-skeleton h-[260px] rounded-2xl" />
+        <div key={i} className={clsx("xp-skeleton h-[260px] rounded-2xl", compact && "w-[230px] shrink-0")} />
       ))}
     </div>
   );
@@ -129,7 +129,7 @@ function RowSkeleton() {
  * "For you in Rome": three rows of three picks for the destination in focus,
  * scored against the traveler's profile, with thumbs so the score learns.
  */
-export function HomePicks({ options, initialKey }: { options: FocusOption[]; initialKey: string }) {
+export function HomePicks({ options, initialKey, compact = false }: { options: FocusOption[]; initialKey: string; compact?: boolean }) {
   const { profile, taste, preferences, recFeedback, hydrated } = useTravelStore();
   const { openAssistant } = useUiState();
   const [chosenKey, setChosenKey] = useState<string | null>(null);
@@ -179,11 +179,11 @@ export function HomePicks({ options, initialKey }: { options: FocusOption[]; ini
   };
 
   return (
-    <section className="mt-8" data-testid="home-picks">
+    <section className={compact ? "mt-6" : "mt-8"} data-testid="home-picks">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="relative flex items-center gap-2" ref={menuRef}>
-          <h2 className="text-[19px] font-semibold tracking-tight">For you in</h2>
-          <button type="button" onClick={() => setMenuOpen((v) => !v)} aria-haspopup="menu" aria-expanded={menuOpen} className="flex items-center gap-1 text-[19px] font-semibold tracking-tight hover:underline">
+        <div className="relative flex flex-wrap items-center gap-2" ref={menuRef}>
+          <h2 className={clsx("font-semibold tracking-tight", compact ? "text-[17px]" : "text-[19px]")}>For you in</h2>
+          <button type="button" onClick={() => setMenuOpen((v) => !v)} aria-haspopup="menu" aria-expanded={menuOpen} className={clsx("flex items-center gap-1 font-semibold tracking-tight hover:underline", compact ? "text-[17px]" : "text-[19px]")}>
             <span aria-hidden="true">📍</span>
             {headerName || "your city"}
             <ChevronDown className="h-4 w-4" />
@@ -246,20 +246,21 @@ export function HomePicks({ options, initialKey }: { options: FocusOption[]; ini
         <p className="mt-3 rounded-2xl border border-dashed border-border px-4 py-6 text-center text-[13px] text-muted">{error}</p>
       ) : !rows ? (
         <div className="mt-3 grid gap-6">
-          <RowSkeleton />
+          <RowSkeleton compact={compact} />
         </div>
       ) : (
         <div className="mt-3 grid gap-6">
           {rows.map((row) => (
-            <div key={row.key} data-testid={`home-row-${row.key}`}>
+            <div key={row.key} className="min-w-0" data-testid={`home-row-${row.key}`}>
               <div className="flex items-baseline justify-between gap-2">
                 <h3 className="text-[15px] font-semibold">{row.title}</h3>
                 {row.basedOn.length ? <span className="truncate text-[12px] text-muted">Because you like {row.basedOn.slice(0, 2).join(" and ")}</span> : null}
               </div>
               {row.items.length ? (
-                <div className="mt-2 grid grid-cols-3 gap-4">
+                // Phones scroll each row sideways (three cards do not fit); wide screens show the trio in a grid.
+                <div className={compact ? "xp-no-scrollbar -mx-4 mt-2 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1" : "mt-2 grid grid-cols-3 gap-4"}>
                   {row.items.map((item) => (
-                    <PickCard key={item.place.id} place={item.place} match={item.match} destination={headerName} context="home" />
+                    <PickCard key={item.place.id} place={item.place} match={item.match} destination={headerName} context="home" className={compact ? "w-[230px] shrink-0 snap-start" : undefined} />
                   ))}
                 </div>
               ) : (

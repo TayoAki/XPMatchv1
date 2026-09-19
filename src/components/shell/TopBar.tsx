@@ -48,12 +48,13 @@ export function TopBar() {
   ];
 
   return (
-    <header className="flex h-12 shrink-0 items-center gap-3 border-b border-border/60 bg-white px-4">
-      <div className="relative" ref={menuRef}>
+    <header className="flex h-12 shrink-0 items-center gap-3 border-b border-border/60 bg-white px-3 sm:px-4">
+      {/* min-w-0 lets a long chat title truncate on phones instead of pushing the buttons off screen. */}
+      <div className="relative min-w-0 shrink" ref={menuRef}>
         <button
           type="button"
           onClick={() => setMenuOpen((v) => !v)}
-          className="flex max-w-[320px] items-center gap-1 rounded-lg px-2 py-1 text-[15px] font-semibold hover:bg-surface"
+          className="flex w-full max-w-[320px] items-center gap-1 rounded-lg px-2 py-1 text-[15px] font-semibold hover:bg-surface"
           aria-haspopup="menu"
           aria-expanded={menuOpen}
         >
@@ -104,7 +105,7 @@ export function TopBar() {
         ) : null}
       </div>
 
-      <div className="flex flex-1 justify-center">
+      <div className="flex min-w-0 flex-1 justify-center">
         <div className="hidden items-center rounded-full border border-border bg-white p-0.5 text-[13px] sm:flex">
           {segments.map((s, i) => (
             <button
@@ -124,16 +125,18 @@ export function TopBar() {
         </div>
       </div>
 
-      <button type="button" onClick={openBugReport} aria-label="Report a bug" title="Report a bug" className="rounded-full p-2 text-neutral-600 hover:bg-surface hover:text-foreground md:hidden">
+      <button type="button" onClick={openBugReport} aria-label="Report a bug" title="Report a bug" className="hidden shrink-0 rounded-full p-2 text-neutral-600 hover:bg-surface hover:text-foreground sm:block md:hidden">
         <Bug className="h-5 w-5" />
       </button>
+      {/* Phones get the icon only; the More sheet in the tab bar carries the bug report. */}
       <button
         type="button"
         onClick={() => openPlanner("where")}
-        className="flex h-9 items-center gap-2 rounded-full bg-neutral-900 px-4 text-[13px] font-semibold text-white transition-colors hover:bg-neutral-800"
+        aria-label="Create a trip"
+        className="flex h-9 shrink-0 items-center gap-2 rounded-full bg-neutral-900 px-3 text-[13px] font-semibold text-white transition-colors hover:bg-neutral-800 sm:px-4"
       >
         <Luggage className="h-4 w-4" />
-        Create a trip
+        <span className="hidden sm:inline">Create a trip</span>
       </button>
     </header>
   );
