@@ -1,8 +1,9 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import clsx from "clsx";
 import { Chip, Field, Select, TextArea, TextInput } from "@/components/ui/Field";
+import { useMediaQuery } from "@/lib/use-media-query";
 import { TRAVEL_STYLE_OPTIONS } from "@/lib/travel/inspiration";
 import { DEALBREAKER_OPTIONS, type TravelerProfile } from "@/lib/store";
 import {
@@ -44,17 +45,30 @@ export interface SectionProps {
 
 const toggleIn = (list: string[], value: string) => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
 
+/** Phones show this many chips before a "Show all" fold; chosen ones always stay visible. */
+const FOLD_AT = 8;
+
 function ChipGroup({ label, hint, options, value, onToggle, testId }: { label: string; hint?: string; options: readonly string[]; value: string[]; onToggle: (v: string) => void; testId?: string }) {
+  const phone = !useMediaQuery("(min-width: 640px)");
+  const [expanded, setExpanded] = useState(false);
+  const folded = phone && !expanded && options.length > FOLD_AT;
+  const shown = folded ? options.filter((o, i) => i < FOLD_AT || value.includes(o)) : options;
+  const hidden = options.length - shown.length;
   return (
     <div>
       <div className="mb-1 text-[13px] font-medium">{label}</div>
       {hint ? <p className="mb-2 text-[12px] text-muted">{hint}</p> : null}
       <div className="flex flex-wrap gap-2" data-testid={testId} role="group" aria-label={label}>
-        {options.map((o) => (
+        {shown.map((o) => (
           <Chip key={o} active={value.includes(o)} onClick={() => onToggle(o)}>
             {o}
           </Chip>
         ))}
+        {folded && hidden > 0 ? (
+          <Chip onClick={() => setExpanded(true)} className="border-dashed text-neutral-600">
+            Show all (+{hidden})
+          </Chip>
+        ) : null}
       </div>
     </div>
   );

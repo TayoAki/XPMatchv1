@@ -101,11 +101,11 @@ function PickCard({ place, match, destination, context, className }: { place: Re
               onClick={() => send(`Tell me about ${place.name} in ${destination}: is this ${kindWord} right for me, and what should I know before going?`)}
               aria-label={`Ask about ${place.name}`}
               title="Ask the assistant"
-              className="rounded-full p-1.5 text-neutral-500 hover:bg-surface hover:text-foreground"
+              className="rounded-full p-1.5 text-neutral-500 hover:bg-surface hover:text-foreground pointer-coarse:p-2.5"
             >
               <MessageCircle className="h-4 w-4" />
             </button>
-            <a href={place.googleMapsUri ?? googleMapsSearchUrl(`${place.name}, ${destination}`)} target="_blank" rel="noreferrer noopener" aria-label={`${place.name} on Google Maps`} title="Google Maps" className="rounded-full p-1.5 text-neutral-500 hover:bg-surface hover:text-foreground">
+            <a href={place.googleMapsUri ?? googleMapsSearchUrl(`${place.name}, ${destination}`)} target="_blank" rel="noreferrer noopener" aria-label={`${place.name} on Google Maps`} title="Google Maps" className="rounded-full p-1.5 text-neutral-500 hover:bg-surface hover:text-foreground pointer-coarse:p-2.5">
               <MapPin className="h-4 w-4" />
             </a>
           </div>

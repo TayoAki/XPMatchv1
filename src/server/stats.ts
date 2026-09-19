@@ -1,4 +1,4 @@
-import type { AdminUser, BetaStats, QuizStatus } from "@/lib/admin/types";
+import type { AdminUser, BetaStats, QuizAnswers, QuizStatus } from "@/lib/admin/types";
 import { queryAll, queryOne } from "./db";
 
 const count = (value: unknown): number => Number(value ?? 0) || 0;
@@ -64,6 +64,31 @@ export async function loadBetaStats(): Promise<BetaStats> {
     bugReportsOpen: count(totals?.bug_reports_open),
     recFeedback: count(totals?.rec_feedback),
   };
+}
+
+const ARRAY_FIELDS = ["interests", "travelStyles", "stayTypes", "stayMustHaves", "cuisines", "dietaryTags"] as const;
+const SCALAR_FIELDS = ["budgetTier", "pace", "companions", "foodAdventure", "dayRhythm", "walking", "transport", "flightPreference"] as const;
+
+/** How many onboarded travelers picked each answer, per quiz field (field names are constants, not input). */
+export async function loadQuizAnswers(): Promise<QuizAnswers> {
+  const parts = [
+    ...ARRAY_FIELDS.map(
+      (field) =>
+        `SELECT '${field}' AS field, v AS label FROM profiles, jsonb_array_elements_text(preferences->'${field}') AS v
+          WHERE onboarded AND jsonb_typeof(preferences->'${field}') = 'array'`,
+    ),
+    ...SCALAR_FIELDS.map(
+      (field) => `SELECT '${field}' AS field, preferences->>'${field}' AS label FROM profiles WHERE onboarded AND coalesce(preferences->>'${field}', '') <> ''`,
+    ),
+  ];
+  const rows = await queryAll<{ field: string; label: string; count: unknown }>(
+    `SELECT field, label, count(*) AS count FROM (${parts.join(" UNION ALL ")}) t GROUP BY field, label ORDER BY field, count DESC, label`,
+  );
+  const answers: QuizAnswers = {};
+  for (const row of rows) {
+    (answers[row.field] ??= []).push({ label: row.label, count: count(row.count) });
+  }
+  return answers;
 }
 
 interface RosterRow extends Record<string, unknown> {

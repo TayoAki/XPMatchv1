@@ -45,7 +45,8 @@ export function Chip({
       onClick={onClick}
       aria-pressed={active}
       className={clsx(
-        "inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-medium transition-colors",
+        // Touch screens get a 40px target.
+        "inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-medium transition-colors pointer-coarse:h-10 pointer-coarse:px-4",
         active
           ? "border-neutral-900 bg-neutral-900 text-white"
           : "border-border bg-white text-foreground hover:bg-surface",

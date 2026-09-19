@@ -23,6 +23,33 @@ export interface AdminUser {
   saved: number;
 }
 
+/** One answer option and how many onboarded travelers chose it. */
+export interface QuizAnswer {
+  label: string;
+  count: number;
+}
+
+/** Quiz answers aggregated across every onboarded profile, keyed by profile field. */
+export type QuizAnswers = Record<string, QuizAnswer[]>;
+
+/** Display names for the aggregated quiz fields, in the order the admin page shows them. */
+export const QUIZ_FIELD_LABELS: { key: string; label: string }[] = [
+  { key: "interests", label: "Interests" },
+  { key: "travelStyles", label: "Travel style" },
+  { key: "budgetTier", label: "Budget" },
+  { key: "stayTypes", label: "Stay types" },
+  { key: "stayMustHaves", label: "Must-haves" },
+  { key: "cuisines", label: "Cuisines" },
+  { key: "dietaryTags", label: "Dietary needs" },
+  { key: "foodAdventure", label: "Food adventure" },
+  { key: "companions", label: "Travels with" },
+  { key: "pace", label: "Pace" },
+  { key: "dayRhythm", label: "Day rhythm" },
+  { key: "walking", label: "Walking" },
+  { key: "transport", label: "Transport" },
+  { key: "flightPreference", label: "Flights" },
+];
+
 /** Beta numbers shown on the admin page: who signed up and what they have made so far. */
 export interface BetaStats {
   users: number;

@@ -8,7 +8,15 @@ import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { DEALBREAKER_OPTIONS, DOMAIN_LABEL, useTravelStore, type LearnedPreference, type TravelerProfile } from "@/lib/store";
 import { useUiState } from "@/components/providers/UiState";
+import { useMediaQuery } from "@/lib/use-media-query";
 import { SECTIONS, SECTION_COMPONENT, type SectionKey } from "./ProfileSections";
+
+/** Phones get three screens instead of six: two sections per step, same questions. */
+const PHONE_STEPS: SectionKey[][] = [
+  ["about", "style"],
+  ["stays", "food"],
+  ["logistics", "dealbreakers"],
+];
 
 export function AssistantSettingsDialog() {
   const { assistantOpen } = useUiState();
@@ -30,6 +38,7 @@ function AssistantSettingsForm() {
   const { profile, preferences, trips, updateProfile, addPreference, removePreference } = useTravelStore();
   const { closeAssistant } = useUiState();
   const wizard = !profile.onboarded;
+  const phone = !useMediaQuery("(min-width: 640px)");
   const [draft, setDraft] = useState<TravelerProfile>(() => profile);
   const [step, setStep] = useState(0);
   // Dealbreaker chips start from the stored dealbreakers so the dialog is idempotent.
@@ -65,20 +74,22 @@ function AssistantSettingsForm() {
   const learned = preferences.filter((p) => !DEALBREAKER_OPTIONS.some((o) => o.statement === p.statement && p.polarity === "dealbreaker" && !p.tripId));
   const tripTitle = (id?: string) => (id ? trips.find((t) => t.id === id)?.title ?? "a trip" : null);
   const sectionProps = { draft, set, dealbreakers, toggleDealbreaker };
-  const last = SECTIONS.length - 1;
-  const current = SECTIONS[step];
   const jump = (key: SectionKey) => {
     document.getElementById(`profile-section-${key}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   if (wizard) {
-    const Section = SECTION_COMPONENT[current.key];
+    const steps: SectionKey[][] = phone ? PHONE_STEPS : SECTIONS.map((s) => [s.key]);
+    const index = Math.min(step, steps.length - 1);
+    const last = steps.length - 1;
+    const meta = (key: SectionKey) => SECTIONS.find((s) => s.key === key) ?? SECTIONS[0];
+    const stepTitle = (keys: SectionKey[]) => keys.map((k) => meta(k).title).join(" · ");
     return (
       <Modal
         open
         onClose={skip}
         title="Let's personalize your assistant"
-        description={`Step ${step + 1} of ${SECTIONS.length} · ${current.title}. Everything is optional and editable later under Update my assistant.`}
+        description={`Step ${index + 1} of ${steps.length} · ${stepTitle(steps[index])}. Everything is optional and editable later under Update my assistant.`}
         size="lg"
         footer={
           <div className="flex items-center justify-between gap-3">
@@ -86,13 +97,13 @@ function AssistantSettingsForm() {
               Skip for now
             </button>
             <div className="flex gap-2">
-              {step > 0 ? (
-                <Button variant="outline" onClick={() => setStep((s) => s - 1)}>
+              {index > 0 ? (
+                <Button variant="outline" onClick={() => setStep(index - 1)}>
                   <ArrowLeft className="h-4 w-4" /> Back
                 </Button>
               ) : null}
-              {step < last ? (
-                <Button onClick={() => setStep((s) => s + 1)}>
+              {index < last ? (
+                <Button onClick={() => setStep(index + 1)}>
                   Next <ArrowRight className="h-4 w-4" />
                 </Button>
               ) : (
@@ -103,23 +114,31 @@ function AssistantSettingsForm() {
         }
       >
         <ol className="mb-5 flex gap-1.5" aria-label="Onboarding steps" data-testid="onboarding-steps">
-          {SECTIONS.map((s, i) => (
-            <li key={s.key} className="flex-1">
+          {steps.map((keys, i) => (
+            <li key={keys.join("-")} className="flex-1">
               <button
                 type="button"
                 onClick={() => setStep(i)}
-                aria-current={i === step ? "step" : undefined}
-                aria-label={`Step ${i + 1}: ${s.title}`}
-                className={clsx("block h-1.5 w-full rounded-full", i <= step ? "bg-neutral-900" : "bg-surface-2")}
+                aria-current={i === index ? "step" : undefined}
+                aria-label={`Step ${i + 1}: ${stepTitle(keys)}`}
+                className={clsx("block h-1.5 w-full rounded-full", i <= index ? "bg-neutral-900" : "bg-surface-2")}
               />
             </li>
           ))}
         </ol>
-        <div className="mb-4">
-          <h3 className="text-[16px] font-semibold">{current.title}</h3>
-          <p className="text-[13px] text-muted">{current.blurb}</p>
-        </div>
-        <Section {...sectionProps} />
+        {steps[index].map((key) => {
+          const Section = SECTION_COMPONENT[key];
+          const section = meta(key);
+          return (
+            <div key={key} className="mb-7 last:mb-0">
+              <div className="mb-4">
+                <h3 className="text-[16px] font-semibold">{section.title}</h3>
+                <p className="text-[13px] text-muted">{section.blurb}</p>
+              </div>
+              <Section {...sectionProps} />
+            </div>
+          );
+        })}
       </Modal>
     );
   }

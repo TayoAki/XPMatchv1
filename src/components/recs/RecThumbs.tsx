@@ -77,7 +77,8 @@ export function RecThumbs({ name, kind, place, destination, context, match, size
         onClick={() => judge(which)}
         className={clsx(
           "inline-flex items-center justify-center rounded-full border transition-colors",
-          size === "sm" ? "h-6 w-6" : "h-7 w-7",
+          // Touch screens get a 36px target either way.
+          size === "sm" ? "h-6 w-6 pointer-coarse:h-9 pointer-coarse:w-9" : "h-7 w-7 pointer-coarse:h-9 pointer-coarse:w-9",
           active ? (which === "up" ? "border-emerald-300 bg-emerald-50 text-emerald-700" : "border-rose-300 bg-rose-50 text-rose-700") : "border-border bg-white text-neutral-500 hover:bg-surface hover:text-foreground",
         )}
       >

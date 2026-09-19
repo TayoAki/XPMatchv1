@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import clsx from "clsx";
 import { Bug, Sparkles, ThumbsDown, ThumbsUp, Users } from "lucide-react";
 import { api } from "@/lib/api";
-import type { AdminUser, BetaStats, QuizStatus } from "@/lib/admin/types";
+import { QUIZ_FIELD_LABELS, type AdminUser, type BetaStats, type QuizAnswers, type QuizStatus } from "@/lib/admin/types";
 import { BUG_SEVERITIES, type BugReport, type BugStatus } from "@/lib/bugs/types";
 import type { RecQuality } from "@/lib/recs/types";
 import { useTravelStore } from "@/lib/store";
@@ -125,6 +125,7 @@ export function AdminClient() {
   const [version, setVersion] = useState("");
   const [quality, setQuality] = useState<(RecQuality & { travelers: number }) | null>(null);
   const [stats, setStats] = useState<BetaStats | null>(null);
+  const [quiz, setQuiz] = useState<QuizAnswers | null>(null);
   const [members, setMembers] = useState<AdminUser[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const admin = !!user?.admin;
@@ -132,8 +133,12 @@ export function AdminClient() {
   useEffect(() => {
     if (!hydrated || !admin) return;
     let active = true;
-    api<{ stats: BetaStats }>("/api/admin/stats")
-      .then((data) => active && setStats(data.stats))
+    api<{ stats: BetaStats; quiz: QuizAnswers }>("/api/admin/stats")
+      .then((data) => {
+        if (!active) return;
+        setStats(data.stats);
+        setQuiz(data.quiz);
+      })
       .catch(() => undefined);
     api<{ users: AdminUser[] }>("/api/admin/users")
       .then((data) => active && setMembers(data.users))
@@ -213,6 +218,32 @@ export function AdminClient() {
       </section>
 
       <Members users={members} />
+
+      <section className="mt-8" data-testid="quiz-answers">
+        <h2 className="text-[19px] font-semibold tracking-tight">What people answered</h2>
+        <p className="mt-1 text-[13px] text-muted">Every onboarded profile, counted per answer. Empty fields are left out.</p>
+        {!quiz ? (
+          <p className="mt-2 text-[13px] text-muted">Loading…</p>
+        ) : QUIZ_FIELD_LABELS.every((f) => !quiz[f.key]?.length) ? (
+          <p className="mt-2 text-[13px] text-muted">No quiz answers yet.</p>
+        ) : (
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {QUIZ_FIELD_LABELS.filter((f) => quiz[f.key]?.length).map((f) => (
+              <div key={f.key} className="rounded-2xl border border-border p-4 text-[13px]" data-testid={`quiz-${f.key}`}>
+                <div className="text-[12px] text-muted">{f.label}</div>
+                <ul className="mt-1 grid gap-0.5">
+                  {quiz[f.key].slice(0, 6).map((a) => (
+                    <li key={a.label} className="flex justify-between gap-2">
+                      <span className="truncate capitalize">{a.label}</span>
+                      <span className="tabular-nums text-muted">×{a.count}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       <section className="mt-8" data-testid="rec-quality">
         <h2 className="flex items-center gap-2 text-[19px] font-semibold tracking-tight">

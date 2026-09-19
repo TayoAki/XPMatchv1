@@ -154,18 +154,18 @@ export function StopCard({ stop, index, color, dayIndex, dayCount, canEdit, hove
                 aria-expanded={detailsOpen}
                 title="Photos, hours, links and match"
                 onClick={() => setDetailsOpen((v) => !v)}
-                className={clsx("rounded-full p-1.5 text-neutral-500 hover:bg-surface hover:text-foreground", detailsOpen && "bg-surface text-foreground")}
+                className={clsx("rounded-full p-1.5 text-neutral-500 hover:bg-surface hover:text-foreground pointer-coarse:p-2.5", detailsOpen && "bg-surface text-foreground")}
               >
                 <ChevronDown className={clsx("h-4 w-4 transition-transform", detailsOpen && "rotate-180")} />
               </button>
             ) : null}
             {place ? (
-              <button type="button" aria-label={`Show ${stop.title} on the map`} title="Show on the map" onClick={() => onSelectPlace(key)} className="rounded-full p-1.5 text-neutral-500 hover:bg-surface hover:text-foreground">
+              <button type="button" aria-label={`Show ${stop.title} on the map`} title="Show on the map" onClick={() => onSelectPlace(key)} className="rounded-full p-1.5 text-neutral-500 hover:bg-surface hover:text-foreground pointer-coarse:p-2.5">
                 <MapPin className="h-4 w-4" />
               </button>
             ) : null}
             {canEdit ? (
-              <button type="button" aria-label={`Edit ${stop.title}`} title="Time and notes" onClick={editing ? () => setEditing(false) : startEditing} className="rounded-full p-1.5 text-neutral-500 hover:bg-surface hover:text-foreground">
+              <button type="button" aria-label={`Edit ${stop.title}`} title="Time and notes" onClick={editing ? () => setEditing(false) : startEditing} className="rounded-full p-1.5 text-neutral-500 hover:bg-surface hover:text-foreground pointer-coarse:p-2.5">
                 <Pencil className="h-4 w-4" />
               </button>
             ) : null}
