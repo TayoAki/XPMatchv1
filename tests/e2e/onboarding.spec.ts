@@ -172,6 +172,12 @@ test("in-depth onboarding drives home picks with match scores and thumbs; itiner
     await expect(admin.getByTestId("stat-users")).toHaveText(/^([2-9]|\d{2,})$/);
     await expect(admin.getByTestId("beta-stats")).toContainText(/\+[1-9]\d* in the last 7 days/);
     await expect(admin.getByTestId("beta-stats")).toContainText("Last sign-up");
+    // Members roster: the tester is listed by email, and having completed onboarding shows as a finished quiz.
+    const members = admin.getByTestId("members");
+    await expect(members.getByTestId("member-row")).toHaveCount(2, { timeout: 20_000 });
+    const testerRow = members.getByTestId("member-row").filter({ hasText: email });
+    await expect(testerRow).toBeVisible();
+    await expect(testerRow).toContainText("Completed");
     await context.close();
   });
 });

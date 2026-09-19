@@ -295,7 +295,10 @@ sending. The page, the current chat id, the browser and the deployed build are a
 Reports land in `bug_reports`; every admin gets an Update ("Bug report from @tayo: …"). Accounts listed in
 `ADMIN_EMAILS` see **Admin** in the sidebar: `/admin` opens with the **Beta numbers** (users in total and
 in the last 7 days, sign-ups by UTC day over two weeks, last sign-up, trips, chats, saved places, guides,
-open bugs; `GET /api/admin/stats`), lists reports newest first (open / resolved / all, mark resolved /
+open bugs; `GET /api/admin/stats`), then a **Members** roster (`GET /api/admin/users`): every account
+newest first with name, handle, email, sign-up date, quiz status (completed / skipped / not started — from
+`profiles.onboarded` and whether the saved preferences hold real answers), home city, trip / chat / saved
+counts and last activity. It then lists reports newest first (open / resolved / all, mark resolved /
 reopen, show screenshot) and ends with the **Recommendation quality** summary: hit rate of thumbs across
 every traveler, by kind and by context (chat, home, explore, board), why picks miss, and the recent misses
 with the score that was shown. The same counts are printed once at boot (`[xpmatch] db ready (pg):

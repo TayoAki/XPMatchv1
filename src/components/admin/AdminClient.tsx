@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import clsx from "clsx";
 import { Bug, Sparkles, ThumbsDown, ThumbsUp, Users } from "lucide-react";
 import { api } from "@/lib/api";
-import type { BetaStats } from "@/lib/admin/types";
+import type { AdminUser, BetaStats, QuizStatus } from "@/lib/admin/types";
 import { BUG_SEVERITIES, type BugReport, type BugStatus } from "@/lib/bugs/types";
 import type { RecQuality } from "@/lib/recs/types";
 import { useTravelStore } from "@/lib/store";
@@ -40,6 +40,74 @@ function Stat({ label, value, note, testId }: { label: string; value: number; no
   );
 }
 
+const QUIZ_BADGE: Record<QuizStatus, { label: string; className: string }> = {
+  completed: { label: "Completed", className: "bg-emerald-50 text-emerald-700" },
+  skipped: { label: "Skipped", className: "bg-amber-50 text-amber-800" },
+  "not-started": { label: "Not started", className: "bg-surface text-neutral-600" },
+};
+
+function whenLabel(iso: string | null): string {
+  if (!iso) return "—";
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}
+
+function Members({ users }: { users: AdminUser[] | null }) {
+  const completed = users?.filter((u) => u.quiz === "completed").length ?? 0;
+  return (
+    <section className="mt-8" data-testid="members">
+      <h2 className="flex items-center gap-2 text-[19px] font-semibold tracking-tight">
+        <Users className="h-5 w-5" /> Members
+        {users ? <span className="text-[13px] font-normal text-muted">· {users.length} signed up · {completed} finished the quiz</span> : null}
+      </h2>
+      {!users ? (
+        <p className="mt-2 text-[13px] text-muted">Loading…</p>
+      ) : users.length === 0 ? (
+        <p className="mt-2 text-[13px] text-muted">No sign-ups yet.</p>
+      ) : (
+        <div className="mt-3 overflow-x-auto rounded-2xl border border-border">
+          <table className="w-full min-w-[720px] text-left text-[13px]">
+            <thead className="bg-surface text-[12px] text-muted">
+              <tr>
+                <th className="px-3 py-2 font-medium">Traveler</th>
+                <th className="px-3 py-2 font-medium">Signed up</th>
+                <th className="px-3 py-2 font-medium">Quiz</th>
+                <th className="px-3 py-2 font-medium">Home city</th>
+                <th className="px-3 py-2 text-right font-medium">Trips</th>
+                <th className="px-3 py-2 text-right font-medium">Chats</th>
+                <th className="px-3 py-2 text-right font-medium">Saved</th>
+                <th className="px-3 py-2 font-medium">Last active</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((u) => {
+                const badge = QUIZ_BADGE[u.quiz];
+                return (
+                  <tr key={u.id} className="border-t border-border align-top" data-testid="member-row">
+                    <td className="px-3 py-2">
+                      <div className="font-medium">{u.name || u.handle}</div>
+                      <div className="text-[12px] text-muted">{u.email}</div>
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-neutral-700">{whenLabel(u.signedUpAt)}</td>
+                    <td className="px-3 py-2">
+                      <span className={clsx("rounded-full px-2 py-0.5 text-[11px] font-semibold", badge.className)}>{badge.label}</span>
+                    </td>
+                    <td className="px-3 py-2 text-neutral-700">{u.homeCity || "—"}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{u.trips}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{u.chats}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{u.saved}</td>
+                    <td className="whitespace-nowrap px-3 py-2 text-neutral-700">{whenLabel(u.lastActiveAt)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function Rate({ up, down }: { up: number; down: number }) {
   const total = up + down;
   return (
@@ -57,6 +125,7 @@ export function AdminClient() {
   const [version, setVersion] = useState("");
   const [quality, setQuality] = useState<(RecQuality & { travelers: number }) | null>(null);
   const [stats, setStats] = useState<BetaStats | null>(null);
+  const [members, setMembers] = useState<AdminUser[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const admin = !!user?.admin;
 
@@ -65,6 +134,9 @@ export function AdminClient() {
     let active = true;
     api<{ stats: BetaStats }>("/api/admin/stats")
       .then((data) => active && setStats(data.stats))
+      .catch(() => undefined);
+    api<{ users: AdminUser[] }>("/api/admin/users")
+      .then((data) => active && setMembers(data.users))
       .catch(() => undefined);
     return () => {
       active = false;
@@ -139,6 +211,8 @@ export function AdminClient() {
           </>
         )}
       </section>
+
+      <Members users={members} />
 
       <section className="mt-8" data-testid="rec-quality">
         <h2 className="flex items-center gap-2 text-[19px] font-semibold tracking-tight">

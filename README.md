@@ -60,9 +60,11 @@ in development), and the app deploys to **Railway** with the included Dockerfile
 - **Bug reports and an admin page** — a bug icon in the sidebar opens a report (what happened,
   expected, severity, screenshot downscaled in the browser; page, chat and build attached). Accounts in
   `ADMIN_EMAILS` get an Update per report and an `/admin` page with the beta numbers (sign-ups in
-  total, in the last 7 days and by day; trips, chats, saved places, guides, open bugs), the reports and
-  recommendation quality. The server also logs one `[xpmatch] db ready` line with the user, trip and
-  chat counts at boot, so the deploy log answers "how many users" without database access.
+  total, in the last 7 days and by day; trips, chats, saved places, guides, open bugs), a **Members**
+  roster (who signed up, their email, sign-up date, whether they finished the quiz, home city and
+  activity), the reports and recommendation quality. The server also logs one `[xpmatch] db ready` line
+  with the user, trip and chat counts at boot, so the deploy log answers "how many users" without
+  database access.
 - **Taste profile that learns from reactions** — Rate any place (Loved it / It was fine / Not for me
   with reason chips) on cards, the sheet, trips and Saved; "Not for me" hides the card. Reactions
   feed a per-domain taste profile (Your taste in Update my assistant), repeated reasons become
