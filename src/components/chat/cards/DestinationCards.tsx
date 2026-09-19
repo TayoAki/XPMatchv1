@@ -45,7 +45,7 @@ function DestinationCard({
   if (reaction.current?.verdict === "disliked" && d.name) return <HiddenPlaceCard name={d.name} feedbackId={reaction.current.id} />;
   return (
             <CardShell highlighted={pin.isSelected} onMouseEnter={() => pin.hover(true)} onMouseLeave={() => pin.hover(false)}>
-              <CardPhoto place={pin.place} queries={[d.name ?? "", label]} alt={label} className="aspect-[16/10]">
+              <CardPhoto place={pin.place} queries={[d.name ?? "", label]} alt={label} className="aspect-[16/10]" onOpen={pin.place ? pin.open : undefined}>
                 <SaveButton place={pin.place} kind="destination" title={d.name} subtitle={d.country} destination={d.name} className="absolute right-2 top-2" />
                 <div className="absolute bottom-2 left-3 right-3 text-white drop-shadow">
                   <div className="text-[17px] font-semibold">{d.name}</div>

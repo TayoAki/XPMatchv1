@@ -101,6 +101,28 @@ test("phone: three-screen quiz, home feed, tab bar, proposal, map over chat, tri
     await page.waitForURL((u) => u.pathname === "/");
   });
 
+  await test.step("recommendation cards swipe as a row and a tap opens the place over the chat", async () => {
+    const input = page.getByPlaceholder("Ask XPMatch");
+    await input.fill("Find hotels in Rome");
+    await page.locator('[data-testid="copilot-send-button"]:not([disabled])').waitFor({ timeout: 30_000 });
+    await input.press("Enter");
+    await expect(page.getByText("Where to stay in Rome")).toBeVisible({ timeout: 60_000 });
+    const row = page.getByTestId("card-row").first();
+    // Two cards side by side in a row wider than the phone, scrolling inside the row, not the page.
+    await expect.poll(async () => row.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
+    await expectFits(page, "the hotel cards");
+    const photo = page.getByRole("button", { name: "Open Hotel Artemide" });
+    await photo.scrollIntoViewIfNeeded();
+    await photo.click();
+    const placeSheet = page.getByTestId("mobile-place-sheet");
+    await expect(placeSheet).toBeVisible();
+    await expect(placeSheet.getByRole("heading", { name: "Hotel Artemide" })).toBeVisible();
+    await placeSheet.getByRole("button", { name: "Close" }).click();
+    await expect(placeSheet).toBeHidden();
+    await page.getByTestId("mobile-map-sheet").getByRole("button", { name: "Close" }).click();
+    await expect(page.getByTestId("mobile-map-sheet")).toBeHidden();
+  });
+
   await test.step("a trip proposal fits the screen and the map opens over the chat", async () => {
     const input = page.getByPlaceholder("Ask XPMatch");
     await input.fill("Plan a trip to Rome for two of us in October");
@@ -118,7 +140,8 @@ test("phone: three-screen quiz, home feed, tab bar, proposal, map over chat, tri
     await expect(sheet).toBeVisible();
     await expect(sheet.getByTestId("map-panel")).toBeVisible();
     const pinList = sheet.getByTestId("mobile-pin-list");
-    await expect(pinList.getByRole("button")).toHaveCount(5, { timeout: 30_000 });
+    // The two hotels from the previous step plus the proposal's five stops.
+    await expect(pinList.getByRole("button")).toHaveCount(7, { timeout: 30_000 });
     // A pinned row opens the place as a sheet over the map; closing it returns to the map, then to the chat.
     await pinList.getByRole("button").first().click();
     const placeSheet = page.getByTestId("mobile-place-sheet");
@@ -133,7 +156,18 @@ test("phone: three-screen quiz, home feed, tab bar, proposal, map over chat, tri
     await expect(sheet).toBeHidden();
 
     await proposal.getByRole("button", { name: "Save to my trips" }).click();
-    await proposal.getByRole("link", { name: /Saved to Trips/ }).click();
+    // "Saved to Trips" opens the board as a sheet over the chat; "Open trip" leads to the full page.
+    await proposal.getByRole("button", { name: /Saved to Trips/ }).click();
+    const board = page.getByTestId("trip-board-sheet");
+    await expect(board).toBeVisible();
+    await expect(board.getByTestId("stop-card").first()).toBeVisible({ timeout: 60_000 });
+    await expect(board.getByTestId("stop-card")).toHaveCount(5);
+    await expectFits(page, "the board sheet");
+    await board.getByRole("button", { name: "Close" }).click();
+    await expect(board).toBeHidden();
+    await expect(proposal).toBeVisible();
+    await proposal.getByRole("button", { name: /Saved to Trips/ }).click();
+    await board.getByRole("link", { name: "Open trip" }).click();
     await page.waitForURL(/\/trips\/[0-9a-f-]{36}/, { timeout: 30_000 });
   });
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type HTMLAttributes, type ReactNode } from "react";
+import { Children, useState, type HTMLAttributes, type MouseEvent, type ReactNode } from "react";
 import clsx from "clsx";
 import { ExternalLink, Heart, MapPin, Plus, TriangleAlert } from "lucide-react";
 import { ToolCallStatus } from "@copilotkit/core";
@@ -10,8 +10,23 @@ import { useUiState } from "@/components/providers/UiState";
 import { useTripScope } from "@/components/trips/TripScope";
 import { PlaceImage } from "@/components/ui/PlaceImage";
 
+/**
+ * Cards of one recommendation set: a two-column grid from tablet width up; on phones a
+ * swipeable row that snaps card by card, with the next card peeking in from the right.
+ */
 export function CardGrid({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={clsx("mt-2 grid gap-3 sm:grid-cols-2", className)}>{children}</div>;
+  return (
+    <div
+      className={clsx("xp-no-scrollbar mt-2 flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0", className)}
+      data-testid="card-row"
+    >
+      {Children.map(children, (child) =>
+        child === null || child === undefined || child === false ? null : (
+          <div className="flex w-[300px] shrink-0 snap-start sm:w-auto sm:shrink [&>*]:w-full">{child}</div>
+        ),
+      )}
+    </div>
+  );
 }
 
 export function CardShell({
@@ -51,6 +66,8 @@ export function ViewOnMapButton({ pin }: { pin: { place?: unknown; open: () => v
 /**
  * Card image: the Google Places photo of the resolved pin when we have it,
  * otherwise the Wikipedia/gradient fallback while the place is still resolving.
+ * With `onOpen` (the pin is known) a tap on the photo opens the place sheet;
+ * the buttons laid over it keep their own clicks.
  */
 export function CardPhoto({
   place,
@@ -58,18 +75,25 @@ export function CardPhoto({
   alt,
   className,
   children,
+  onOpen,
 }: {
   place?: ResolvedPlace;
   queries: string[];
   alt: string;
   className?: string;
   children?: ReactNode;
+  onOpen?: () => void;
 }) {
   const [failed, setFailed] = useState<string | null>(null);
   const src = place?.photos?.[0];
+  const open = (e: MouseEvent<HTMLElement>) => {
+    if (!onOpen || (e.target as HTMLElement).closest("button, a")) return;
+    onOpen();
+  };
+  const openProps = onOpen ? { role: "button" as const, tabIndex: 0, "aria-label": `Open ${alt}`, onClick: open, className: "cursor-pointer" } : {};
   if (src && failed !== src) {
     return (
-      <div className={clsx("relative overflow-hidden bg-neutral-200", className)}>
+      <div {...openProps} className={clsx("relative overflow-hidden bg-neutral-200", onOpen && "cursor-pointer", className)}>
         {/* eslint-disable-next-line @next/next/no-img-element -- proxied Places photo */}
         <img src={src} alt={alt} onError={() => setFailed(src)} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
         {children}
@@ -77,9 +101,11 @@ export function CardPhoto({
     );
   }
   return (
-    <PlaceImage queries={queries} alt={alt} className={className}>
-      {children}
-    </PlaceImage>
+    <div {...openProps} className={clsx("contents", onOpen && "cursor-pointer")}>
+      <PlaceImage queries={queries} alt={alt} className={className}>
+        {children}
+      </PlaceImage>
+    </div>
   );
 }
 

@@ -50,7 +50,7 @@ function AttractionCard({
   if (reaction.current?.verdict === "disliked" && a.name) return <HiddenPlaceCard name={a.name} feedbackId={reaction.current.id} />;
   return (
             <CardShell highlighted={pin.isSelected} onMouseEnter={() => pin.hover(true)} onMouseLeave={() => pin.hover(false)}>
-              <CardPhoto place={pin.place} queries={[a.name ?? "", dest]} alt={a.name ?? "Attraction"} className="aspect-[16/9]">
+              <CardPhoto place={pin.place} queries={[a.name ?? "", dest]} alt={a.name ?? "Attraction"} className="aspect-[16/9]" onOpen={pin.place ? pin.open : undefined}>
                 <SaveButton place={pin.place} kind="attraction" title={a.name} subtitle={[a.category, dest].filter(Boolean).join(" · ")} destination={dest} url={googleMapsSearchUrl(query)} className="absolute right-2 top-2" />
                 {a.category ? <span className="absolute left-3 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[12px] font-semibold">{a.category}</span> : null}
               </CardPhoto>

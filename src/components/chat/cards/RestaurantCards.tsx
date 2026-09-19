@@ -51,7 +51,7 @@ function RestaurantCard({
   return (
             <CardShell highlighted={pin.isSelected} onMouseEnter={() => pin.hover(true)} onMouseLeave={() => pin.hover(false)}>
               <div className="flex gap-3 p-3">
-                <CardPhoto place={pin.place} queries={[r.neighborhood ? `${r.neighborhood}, ${dest}` : "", dest]} alt={r.name ?? "Restaurant"} className="h-24 w-24 shrink-0 rounded-xl" />
+                <CardPhoto place={pin.place} queries={[r.neighborhood ? `${r.neighborhood}, ${dest}` : "", dest]} alt={r.name ?? "Restaurant"} className="h-24 w-24 shrink-0 rounded-xl" onOpen={pin.place ? pin.open : undefined} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
                     <div className="text-[15px] font-semibold">{r.name}</div>

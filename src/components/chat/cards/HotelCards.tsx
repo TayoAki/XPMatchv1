@@ -58,7 +58,7 @@ function HotelCard({
   if (reaction.current?.verdict === "disliked" && h.name) return <HiddenPlaceCard name={h.name} feedbackId={reaction.current.id} />;
   return (
             <CardShell highlighted={pin.isSelected} onMouseEnter={() => pin.hover(true)} onMouseLeave={() => pin.hover(false)}>
-              <CardPhoto place={pin.place} queries={[h.area ? `${h.area}, ${dest}` : "", dest]} alt={h.name ?? "Hotel"} className="aspect-[16/9]">
+              <CardPhoto place={pin.place} queries={[h.area ? `${h.area}, ${dest}` : "", dest]} alt={h.name ?? "Hotel"} className="aspect-[16/9]" onOpen={pin.place ? pin.open : undefined}>
                 <SaveButton
                   place={pin.place}
                   kind="hotel"
