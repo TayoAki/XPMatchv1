@@ -190,7 +190,7 @@ export function DayColumn({
       <SortableContext items={day.stops.map((s) => s.id)} strategy={verticalListSortingStrategy}>
         <ul
           ref={setNodeRef}
-          className={clsx("mt-2 grid min-h-[56px] gap-2 rounded-2xl transition-colors", isOver && "bg-blue-50 ring-2 ring-blue-200")}
+          className={clsx("mt-2 grid grid-cols-[minmax(0,1fr)] min-h-[56px] gap-2 rounded-2xl transition-colors", isOver && "bg-blue-50 ring-2 ring-blue-200")}
           aria-label={`Day ${index + 1} stops`}
         >
           {rows}

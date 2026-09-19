@@ -23,6 +23,8 @@ import { ratingCandidates, tripEnded } from "@/lib/feedback/post-trip";
 const BUDGET_LABEL: Record<string, string> = { budget: "Budget", "mid-range": "Mid-range", premium: "Premium", luxury: "Luxury" };
 
 type TripView = "tiles" | "board";
+/** Phones show the page as tabs: the overview (title, chips, prompt, chats), the board and the tiles. */
+type MobileTab = "overview" | "board" | "tiles";
 const VIEW_KEY = "xp-trip-view";
 
 const noSubscribe = () => () => {};
@@ -38,6 +40,16 @@ function readInitialView(): TripView {
     // Storage can be unavailable (private mode); the default view is fine.
   }
   return "tiles";
+}
+
+/** Whether the URL asked for a specific view (`?view=board` from chat links). */
+function readViewParam(): TripView | null {
+  try {
+    const fromUrl = new URLSearchParams(window.location.search).get("view");
+    return fromUrl === "board" || fromUrl === "tiles" ? fromUrl : null;
+  } catch {
+    return null;
+  }
 }
 
 /** `?rate=1` (the link from Updates) opens the post-trip rating as soon as the trip loads. */
@@ -95,6 +107,37 @@ function ViewToggle({ view, onChange }: { view: TripView; onChange: (view: TripV
   );
 }
 
+function MobileTabs({ tab, onChange }: { tab: MobileTab; onChange: (tab: MobileTab) => void }) {
+  const options: { key: MobileTab; label: string; icon: typeof LayoutGrid }[] = [
+    { key: "overview", label: "Overview", icon: MessageCircle },
+    { key: "board", label: "Board", icon: KanbanSquare },
+    { key: "tiles", label: "Tiles", icon: LayoutGrid },
+  ];
+  return (
+    <div role="tablist" aria-label="Trip sections" data-testid="trip-tabs" className="flex shrink-0 gap-1 border-b border-border bg-white px-2 pt-1">
+      {options.map((o) => {
+        const Icon = o.icon;
+        const active = tab === o.key;
+        return (
+          <button
+            key={o.key}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(o.key)}
+            className={clsx(
+              "inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 border-b-2 text-[14px] font-semibold",
+              active ? "border-neutral-900 text-foreground" : "border-transparent text-neutral-500",
+            )}
+          >
+            <Icon className="h-4 w-4" /> {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function TripPageInner({ tripId }: { tripId: string }) {
   const { trip, error, setTrip } = useTripDetail(tripId);
   const { removeTrip, feedback } = useTravelStore();
@@ -102,8 +145,11 @@ function TripPageInner({ tripId }: { tripId: string }) {
   const send = useSendMessage();
   const [section, setSection] = useState<TripSection | null>(null);
   const initialView = useSyncExternalStore(noSubscribe, readInitialView, () => "tiles" as TripView);
+  const viewParam = useSyncExternalStore(noSubscribe, readViewParam, () => null);
   const [chosenView, setChosenView] = useState<TripView | null>(null);
   const view = chosenView ?? initialView;
+  const [chosenTab, setChosenTab] = useState<MobileTab | null>(null);
+  const [mapShown, setMapShown] = useState(true);
   const rateFromUrl = useSyncExternalStore(noSubscribe, readRateParam, () => false);
   const [ratingState, setRatingState] = useState<"auto" | "open" | "closed">("auto");
   const ratingOpen = ratingState === "open" || (ratingState === "auto" && rateFromUrl);
@@ -217,16 +263,18 @@ function TripPageInner({ tripId }: { tripId: string }) {
     <TripMap trip={trip} selectedKey={selectedKey} onSelect={setSelectedKey} hoveredKey={hoveredKey} onHover={setHoveredKey} className={className} />
   );
 
-  return (
-    <div className="flex h-full min-h-0">
-      <section className="xp-scroll min-w-0 flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-[760px] px-8 py-6">
+  // Phones open on the board when the trip already has stops or a chat link asked for it.
+  const hasStops = trip.itinerary.some((day) => day.stops.length > 0);
+  const tab: MobileTab = chosenTab ?? (viewParam === "board" || (viewParam === null && hasStops) ? "board" : viewParam === "tiles" ? "tiles" : "overview");
+
+  const overview = (
+    <div className={clsx("mx-auto max-w-[760px]", wide ? "px-8 py-6" : "px-4 py-5")}>
           <Link href="/trips" className="inline-flex items-center gap-1 text-[13px] font-medium text-neutral-600 hover:text-foreground">
             <ArrowLeft className="h-4 w-4" /> Your trips
           </Link>
 
-          <div className="mt-4 flex items-start justify-between gap-4">
-            <h1 className="text-[34px] font-semibold leading-tight tracking-tight">{trip.title}</h1>
+          <div className="mt-4 flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+            <h1 className="min-w-0 flex-1 basis-[200px] text-[26px] font-semibold leading-tight tracking-tight sm:text-[34px]">{trip.title}</h1>
             <div className="relative flex shrink-0 items-center gap-2" ref={menuRef}>
               {canEdit ? (
                 <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
@@ -363,31 +411,71 @@ function TripPageInner({ tripId }: { tripId: string }) {
               </ul>
             )}
           </section>
+    </div>
+  );
 
-          {!wide ? (
-            <div className="mt-8 grid gap-6">
-              <ViewToggle view={view} onChange={changeView} />
-              {view === "board" ? map("relative h-[360px] overflow-hidden rounded-3xl") : null}
-              {panel}
-              {view === "tiles" ? map("relative h-[360px] overflow-hidden rounded-3xl") : null}
-            </div>
-          ) : null}
-        </div>
-      </section>
-
-      {wide ? (
-        <aside className="flex w-[46%] min-w-[440px] max-w-[900px] shrink-0 flex-col border-l border-border/60 bg-white">
-          <div className="flex items-center justify-between border-b border-border/60 px-5 py-3">
-            <ViewToggle view={view} onChange={changeView} />
-            {view === "board" ? <span className="text-[12px] text-muted">Drag stops between days; hover to find them on the map</span> : null}
-          </div>
-          <div className="xp-scroll min-h-0 flex-1 overflow-y-auto p-5">{panel}</div>
-          <div className="h-[44%] min-h-[300px] shrink-0 border-t border-border/60">{map()}</div>
-        </aside>
-      ) : null}
-
+  const dialogs = (
+    <>
       {editOpen ? <TripDetailsDialog trip={trip} onClose={() => setEditOpen(false)} onSaved={setTrip} /> : null}
       {ratingOpen ? <PostTripRating trip={trip} onClose={() => setRatingState("closed")} /> : null}
+    </>
+  );
+
+  if (!wide) {
+    // Tabs instead of one long scroll: the itinerary is one tap away instead of buried under the header.
+    const mobilePanel =
+      tab === "board" ? (
+        <TripBoard trip={trip} canEdit={canEdit} onTrip={setTrip} onSelectPlace={setSelectedKey} hoveredKey={hoveredKey} onHover={setHoveredKey} />
+      ) : (
+        <TripSections
+          trip={trip}
+          canEdit={canEdit}
+          isOwner={isOwner}
+          section={section}
+          onSection={setSection}
+          onTrip={setTrip}
+          onSelectPlace={setSelectedKey}
+          onOpenBoard={() => setChosenTab("board")}
+        />
+      );
+    return (
+      <div className="flex h-full min-h-0 flex-col">
+        <MobileTabs tab={tab} onChange={setChosenTab} />
+        <section className="xp-scroll min-h-0 flex-1 overflow-y-auto" data-testid="trip-tab-panel">
+          {tab === "overview" ? (
+            overview
+          ) : (
+            <div className="px-4 py-4">
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <div className="min-w-0 truncate text-[15px] font-semibold">{trip.title}</div>
+                <button type="button" onClick={() => setMapShown((v) => !v)} aria-pressed={mapShown} className="shrink-0 rounded-full border border-border px-3 py-1 text-[12px] font-medium hover:bg-surface">
+                  {mapShown ? "Hide map" : "Show map"}
+                </button>
+              </div>
+              {mapShown ? <div className="mb-4">{map("relative h-[220px] overflow-hidden rounded-3xl")}</div> : null}
+              {mobilePanel}
+            </div>
+          )}
+        </section>
+        {dialogs}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-full min-h-0">
+      <section className="xp-scroll min-w-0 flex-1 overflow-y-auto">{overview}</section>
+
+      <aside className="flex w-[46%] min-w-[440px] max-w-[900px] shrink-0 flex-col border-l border-border/60 bg-white">
+        <div className="flex items-center justify-between border-b border-border/60 px-5 py-3">
+          <ViewToggle view={view} onChange={changeView} />
+          {view === "board" ? <span className="text-[12px] text-muted">Drag stops between days; hover to find them on the map</span> : null}
+        </div>
+        <div className="xp-scroll min-h-0 flex-1 overflow-y-auto p-5">{panel}</div>
+        <div className="h-[44%] min-h-[300px] shrink-0 border-t border-border/60">{map()}</div>
+      </aside>
+
+      {dialogs}
     </div>
   );
 }

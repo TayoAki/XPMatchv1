@@ -103,7 +103,7 @@ function ProposalStop({ stop, index, toolCallId, destination }: { stop: StreamSt
               <Star className="h-3 w-3 fill-current" /> {place.rating.toFixed(1)}
             </span>
           ) : null}
-          {meta ? <span className="truncate">{meta}</span> : null}
+          {meta ? <span className="min-w-0 truncate">{meta}</span> : null}
           {!place && kind ? <span className="italic">Finding it in {destination || "the destination"}…</span> : null}
         </div>
         {stop.note ? <div className="text-[12px] text-neutral-600">{stop.note}</div> : null}

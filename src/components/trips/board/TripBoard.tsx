@@ -164,7 +164,7 @@ export function TripBoard({ trip, canEdit, onTrip, onSelectPlace, hoveredKey, on
   const onAddToDay = (item: TripItem, dayIndex: number) => persist(insertStop(days, dayIndex, stopFromItem(item)));
 
   return (
-    <div className="grid gap-4" data-testid="trip-board">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-4" data-testid="trip-board">
       <div className="flex flex-wrap items-center gap-2 text-[13px] font-medium">
         <span className="inline-flex h-8 items-center gap-1.5 rounded-full bg-surface px-3">
           <Calendar className="h-3.5 w-3.5" /> {dates || "No dates yet"}
@@ -202,7 +202,7 @@ export function TripBoard({ trip, canEdit, onTrip, onSelectPlace, hoveredKey, on
       {error ? <p className="text-[13px] text-red-600">{error}</p> : null}
 
       <DndContext id="trip-board" sensors={sensors} collisionDetection={boardCollision} {...handlers}>
-        <div className="grid gap-3">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
           {days.map((day, i) => (
             <DayColumn
               key={i}

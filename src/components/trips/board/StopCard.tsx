@@ -115,8 +115,9 @@ export function StopCard({ stop, index, color, dayIndex, dayCount, canEdit, hove
       </span>
       <StopThumb stop={stop} />
       <div className="min-w-0 flex-1">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
+        {/* Wraps on phones: the actions drop under the title instead of widening the whole board. */}
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="min-w-0 flex-1 basis-[150px]">
             {place ? (
               <button type="button" onClick={() => onSelectPlace(key)} className="block max-w-full truncate text-left text-[15px] font-semibold hover:underline">
                 {stop.title}
@@ -140,11 +141,11 @@ export function StopCard({ stop, index, color, dayIndex, dayCount, canEdit, hove
                   <Star className="h-3.5 w-3.5 fill-current" /> {place.rating.toFixed(1)}
                 </span>
               ) : null}
-              {meta ? <span className="truncate">{meta}</span> : null}
+              {meta ? <span className="min-w-0 truncate">{meta}</span> : null}
               {!place && stop.kind ? <span className="italic">{pending ? "Finding it on the map…" : "Not found on the map"}</span> : null}
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-0.5">
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-0.5">
             {place ? <ReactionControl name={stop.title} kind={place.kind} place={place} source="trip" size="sm" className="mr-1" /> : null}
             {place ? (
               <button
