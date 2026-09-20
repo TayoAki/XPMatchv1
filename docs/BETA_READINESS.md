@@ -20,8 +20,12 @@ app; the home picks race after the quiz.
 3. (You) Restrict the keys in Google Cloud Console: browser key → Websites `app.xpmatchme.com/*` and
    `xpmatch-production.up.railway.app/*`, API Maps JavaScript only; server key → Places API (New) and
    Routes API, and enable the Routes API on the project. Then open the map on both domains once.
-4. (You) Spend caps: a spending limit on the OpenRouter key and a budget alert on the Google Cloud
-   project. Nothing in the app caps a signed-in account's model or Places calls.
+4. (You) Spend caps: a spending limit on the OpenRouter key ($25/month) and, on the Google Cloud
+   project, budget alerts at $50 and $100 plus per-day quotas (Text Search 250, Place Details 250,
+   Place Photos 2,000, map loads 2,000; worst day about $45). Nothing in the app caps a signed-in
+   account's model or Places calls. `docs/COGS.md` has the per-action prices, the free tiers in app
+   terms (about $95/month for 25 active testers today) and the place-catalog plan that takes it to
+   about $30.
 5. (You) Turn on backups for the Postgres volume in the Railway dashboard (Postgres service › Volume ›
    Backups). One instance, one volume, no backups today.
 6. (You, 15 minutes) Walk the phone flows on a real iPhone (Safari) and an Android phone: sign up, the
@@ -103,8 +107,8 @@ Blockers, in order (about an hour of work, none of it code):
    A rotated browser key is baked into the build, so redeploy after changing it.
 3. **Spend caps at the providers.** Nothing in the app limits how many model or Places calls a signed-in
    account can make (the only rate limit is on imports). For an invited beta a spending limit on the
-   OpenRouter key and a Google Cloud budget alert are enough (`docs/COGS.md`: about $9 per active user
-   per month at list prices); an open beta needs per-user limits in the app first.
+   OpenRouter key and a Google Cloud budget alert are enough (`docs/COGS.md`: about $10 per active user
+   per month at list prices, $3–4 after free tiers); an open beta needs per-user limits in the app first.
 4. **Forgotten passwords** (done): "Forgot password?" on the sign-in page emails a single-use,
    30-minute link through Resend, and an admin can issue the same link by hand from `/admin` › Members ›
    **Reset link**; `/reset?token=…` sets the new password and signs every other device out. Needs
@@ -177,9 +181,9 @@ no invite code.
 4. **Model.** `OPENROUTER_MODEL` on a tool-capable model (`openai/gpt-4o-mini` default). Helper calls
    (review answers, imports, reservations) use the same model unless `HELPER_MODEL` is set; screenshots and
    confirmation images use `HELPER_VISION_MODEL` (default `openai/gpt-4o-mini`).
-5. **Spend guardrails.** Google Cloud budget alert on the Places project (see `docs/COGS.md`: about $9 per
-   active user per month at list prices, dominated by Places; the Routes API adds cents); OpenRouter
-   spending limit on the key.
+5. **Spend guardrails.** Google Cloud budget alert on the Places project (see `docs/COGS.md`: about $10 per
+   active user per month at list prices, dominated by Places and photos; the Routes API adds cents);
+   OpenRouter spending limit on the key.
 6. **Smoke test on production**, signed in as a fresh user: onboarding → "Find hotels in Rome" → cards with
    pins and photos → Rate a card → Ask about a place on the sheet → Compare two → create a trip from the
    proposal → Board: add two ideas to Day 1, drag one, see the pins, check the leg reads "via Google" and
