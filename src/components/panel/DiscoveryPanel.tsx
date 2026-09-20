@@ -239,7 +239,7 @@ export function DiscoveryFeed({ compact = false, picksFirst = false }: { compact
         <div className={clsx("mt-3 grid", compact ? "grid-cols-2 gap-3" : "grid-cols-3 gap-4")}>
           {INSPIRATION.slice(0, 6).map((item) => (
             <button key={item.slug} type="button" onClick={() => send(item.prompt)} className="text-left">
-              <PlaceImage queries={[item.name, `${item.name}, ${item.country}`]} alt={item.name} className={clsx("rounded-2xl", compact ? "h-[150px]" : "h-[208px]")}>
+              <PlaceImage queries={[item.wiki ?? item.name, `${item.name}, ${item.country}`]} alt={item.name} className={clsx("rounded-2xl", compact ? "h-[150px]" : "h-[208px]")}>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
                 <div className="absolute inset-x-4 bottom-4 text-white">
                   <div className="text-[15px] font-semibold">{item.name}</div>

@@ -6,17 +6,45 @@ import { wikipediaSummaryUrl } from "@/lib/travel/links";
 
 const cache = new Map<string, Promise<string | null>>();
 
+/** The width to ask Wikipedia for: a card is at most ~530px wide at 2x, and the API scales down, never up. */
+const THUMB_WIDTH = 800;
+
+/**
+ * Wikipedia's page image at the size we need. The `pageimages` query takes a width (`pithumbsize`)
+ * and follows redirects; rewriting the REST summary's 320px thumbnail URL to a bigger size is
+ * rejected by Wikimedia's thumbnailer (HTTP 400), which is what blanked every fallback photo.
+ */
 async function lookupThumbnail(title: string): Promise<string | null> {
+  const params = new URLSearchParams({
+    action: "query",
+    format: "json",
+    formatversion: "2",
+    prop: "pageimages",
+    piprop: "thumbnail",
+    pithumbsize: String(THUMB_WIDTH),
+    redirects: "1",
+    titles: title,
+    origin: "*",
+  });
   try {
-    const res = await fetch(wikipediaSummaryUrl(title), {
+    const res = await fetch(`https://en.wikipedia.org/w/api.php?${params.toString()}`, {
       headers: { Accept: "application/json" },
       signal: AbortSignal.timeout(6000),
     });
+    if (res.ok) {
+      const data = (await res.json()) as { query?: { pages?: { thumbnail?: { source?: string } }[] } };
+      const src = data.query?.pages?.[0]?.thumbnail?.source;
+      if (src) return src;
+    }
+  } catch {
+    // fall through to the summary endpoint
+  }
+  // Fallback: the summary's own thumbnail at its native size (small, but it loads).
+  try {
+    const res = await fetch(wikipediaSummaryUrl(title), { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(6000) });
     if (!res.ok) return null;
-    const data = (await res.json()) as { thumbnail?: { source?: string }; originalimage?: { source?: string } };
-    const src = data.thumbnail?.source ?? null;
-    // Ask for a larger rendition than the default 320px thumbnail.
-    return src ? src.replace(/\/\d+px-/, "/800px-") : null;
+    const data = (await res.json()) as { thumbnail?: { source?: string } };
+    return data.thumbnail?.source ?? null;
   } catch {
     return null;
   }

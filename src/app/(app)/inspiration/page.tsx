@@ -113,7 +113,7 @@ export default function InspirationPage() {
               <div className="xp-no-scrollbar mt-3 flex gap-4 overflow-x-auto pb-1">
                 {items.map((item) => (
                   <button key={item.slug} type="button" onClick={() => send(item.prompt)} className="shrink-0 text-left">
-                    <PlaceImage queries={[item.name, `${item.name}, ${item.country}`]} alt={item.name} className="h-[200px] w-[260px] rounded-2xl">
+                    <PlaceImage queries={[item.wiki ?? item.name, `${item.name}, ${item.country}`]} alt={item.name} className="h-[200px] w-[260px] rounded-2xl">
                       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
                       <div className="absolute inset-x-4 bottom-4 text-white">
                         <div className="text-[15px] font-semibold">{item.name}</div>

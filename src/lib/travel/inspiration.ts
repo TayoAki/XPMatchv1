@@ -7,6 +7,8 @@ export interface InspirationItem {
   bestMonths: string;
   prompt: string;
   gradient: string;
+  /** Wikipedia article title when the plain name is ambiguous (e.g. "Banff" is a disambiguation page). */
+  wiki?: string;
 }
 
 /** Curated, static inspiration used on the home panel, Explore and Inspiration pages. */
@@ -64,6 +66,7 @@ export const INSPIRATION: InspirationItem[] = [
   {
     slug: "banff",
     name: "Banff",
+    wiki: "Banff National Park",
     country: "Canada",
     tagline: "Turquoise lakes and big-sky hikes",
     bestFor: ["outdoors", "photography", "family"],
@@ -114,6 +117,7 @@ export const INSPIRATION: InspirationItem[] = [
   {
     slug: "austin",
     name: "Austin",
+    wiki: "Austin, Texas",
     country: "USA",
     tagline: "Live music, breakfast tacos and lake days",
     bestFor: ["music", "food", "outdoors"],
