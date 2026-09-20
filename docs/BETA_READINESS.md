@@ -3,6 +3,56 @@
 What a small group of beta testers gets, what to check before inviting them, what to tell them, and what
 to watch while they use it.
 
+## Pre-beta checklist (September 20, 2026)
+
+Done since the audit: `ADMIN_EMAILS` set (Tayo, Faven); password resets by admin link and by
+"Forgot password?" email through Resend (`RESEND_API_KEY`, `EMAIL_FROM` set); the chat-first phone
+app; the home picks race after the quiz.
+
+**Must do before the first invite**
+
+1. (You) Send yourself a "Forgot password?" email from `app.xpmatchme.com` and open the link. The
+   sandbox cannot reach Resend, so this is the one path that has not run against the real provider;
+   if nothing arrives, Resend › Emails shows the attempt and the reason (usually a sender domain
+   mismatch: `EMAIL_FROM` must be on the domain verified in Resend).
+2. (You) Rotate every key that was pasted in chat and put the new values in Railway: OpenRouter, both
+   Google keys, Resend. Redeploy after rotating the browser key (it is baked into the build).
+3. (You) Restrict the keys in Google Cloud Console: browser key → Websites `app.xpmatchme.com/*` and
+   `xpmatch-production.up.railway.app/*`, API Maps JavaScript only; server key → Places API (New) and
+   Routes API, and enable the Routes API on the project. Then open the map on both domains once.
+4. (You) Spend caps: a spending limit on the OpenRouter key and a budget alert on the Google Cloud
+   project. Nothing in the app caps a signed-in account's model or Places calls.
+5. (You) Turn on backups for the Postgres volume in the Railway dashboard (Postgres service › Volume ›
+   Backups). One instance, one volume, no backups today.
+6. (You, 15 minutes) Walk the phone flows on a real iPhone (Safari) and an Android phone: sign up, the
+   three questions, a proposal, the map and place sheets, the board sheet, a reorder. The phone work is
+   verified in emulated Chromium only.
+7. (You) Smoke test production as a fresh account on desktop: the wizard → home picks → "Find hotels
+   in Rome" → Rate a card → Ask about a place → Compare two → a trip from the proposal → the board →
+   report a bug → see it under Admin.
+8. (You) Re-run Update my assistant on your own and Faven's accounts; they predate the in-depth quiz,
+   so their picks are generic.
+9. (Me, small) Login throttling on `/api/auth/login` with the rate limiter the reset flow added, and
+   `npm audit fix` for the six transitive advisories, re-running the suite.
+10. (Me, draft; you, review) Terms and Privacy pages behind the sidebar footer, with the one paragraph
+    testers need: chats and uploaded confirmations go to the model provider; screenshots in bug reports
+    are kept until resolved; how to ask for deletion.
+
+**Should do in the first week**
+
+11. (You) Error monitoring: Sentry (free tier) or at least Railway notifications on failed deploys and
+    restarts, so crashes are not discovered by testers.
+12. (Me, small) "Delete my account" under Update my assistant, so deletion requests are not manual SQL.
+13. (Me, small, optional) An invite code on sign-up (`BETA_INVITE_CODE`) if the URL gets shared beyond
+    the invited group; today anyone with the link can create an account.
+14. (You) Set `OPENROUTER_SITE_URL` to `https://app.xpmatchme.com` (attribution only; cosmetic).
+15. (Both) Agree the feedback loop: the in-app bug button reaches Admin and the Updates of every
+    admin; decide who checks it daily and where product feedback (not bugs) goes.
+
+**What to tell testers** is in the section further down; the short version: prices and hours are
+estimates, the match score is our estimate, use the thumbs, use the bug button, and confirmations you
+paste are sent to the model provider.
+
 ## Audit (September 19, 2026)
 
 **Verdict: ready for a small, invited beta (people you can reach directly, roughly 10–25) once the four
@@ -31,8 +81,8 @@ What was checked and passed:
 
 Blockers, in order (about an hour of work, none of it code):
 
-1. **`ADMIN_EMAILS` is not set in production**, so nobody sees bug reports, the beta numbers, the
-   member roster or the quiz answers. Set it to the team's account emails (a redeploy follows).
+1. **`ADMIN_EMAILS`** (done the same day): set to the team's account emails, so bug reports, the beta
+   numbers, the member roster and the quiz answers are visible under `/admin`.
 2. **Keys.** Rotate the OpenRouter key and both Google keys that were pasted in chat during
    development; restrict the browser key to `app.xpmatchme.com` and the Railway domain (Maps
    JavaScript API only) and the server key to Places API (New) and Routes API; enable the Routes API.
