@@ -3,7 +3,8 @@ import { queryAll, queryOne } from "@/server/db";
 import { json, parseBody, requireUser, route } from "@/server/http";
 import { loadTrip, loadTripsForUser } from "@/server/models";
 import { resolveDestination } from "@/server/places";
-import { resolveItinerary } from "@/server/itinerary";
+import { countPendingLookups, resolveItinerary } from "@/server/itinerary";
+import { assertLookupBudget } from "@/server/lookup-budget";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +52,7 @@ export const GET = route(async () => {
 export const POST = route(async (request) => {
   const user = await requireUser(request);
   const body = await parseBody(request, createSchema);
+  assertLookupBudget(user.id, countPendingLookups(body.itinerary ?? []) + (body.place ? 0 : 1));
   // Best effort: pin the destination so the trip has a cover photo and a map center.
   const place = body.place ?? (await resolveDestination(body.destination).catch(() => null));
   const itinerary = await resolveItinerary(body.itinerary ?? [], (place as { lat?: number } | null)?.lat !== undefined ? (place as never) : null);

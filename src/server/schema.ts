@@ -269,4 +269,50 @@ export const MIGRATIONS: Migration[] = [
       `CREATE INDEX IF NOT EXISTS password_resets_user_idx ON password_resets(user_id)`,
     ],
   },
+  {
+    id: "0007_place_catalog",
+    statements: [
+      // Every place Google has returned to us, stored once (by place id) and served to everyone.
+      `CREATE TABLE IF NOT EXISTS places (
+        place_id text PRIMARY KEY,
+        kind text NOT NULL,
+        name text NOT NULL,
+        name_norm text NOT NULL,
+        locality text,
+        destination_id text,
+        lat double precision NOT NULL,
+        lng double precision NOT NULL,
+        data jsonb NOT NULL,
+        google_fetched_at timestamptz NOT NULL DEFAULT now(),
+        created_at timestamptz NOT NULL DEFAULT now(),
+        updated_at timestamptz NOT NULL DEFAULT now()
+      )`,
+      `CREATE INDEX IF NOT EXISTS places_kind_lat_lng_idx ON places(kind, lat, lng)`,
+      `CREATE INDEX IF NOT EXISTS places_destination_idx ON places(destination_id)`,
+      // What a lookup query (normalized) resolved to, per kind and destination: the durable version of the old in-process search cache.
+      `CREATE TABLE IF NOT EXISTS place_aliases (
+        alias text NOT NULL,
+        kind text NOT NULL,
+        destination_id text NOT NULL DEFAULT '',
+        place_id text NOT NULL REFERENCES places(place_id) ON DELETE CASCADE,
+        source text NOT NULL DEFAULT 'lookup',
+        hits int NOT NULL DEFAULT 1,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        updated_at timestamptz NOT NULL DEFAULT now(),
+        PRIMARY KEY (alias, kind, destination_id)
+      )`,
+      // Ordered results of list searches (Explore, home picks, seeding), shared by every user and process.
+      `CREATE TABLE IF NOT EXISTS search_cache (
+        key text PRIMARY KEY,
+        place_ids jsonb NOT NULL,
+        fetched_at timestamptz NOT NULL DEFAULT now()
+      )`,
+      // Resolved Google photo URLs, so an image is bought once per place rather than once per process.
+      `CREATE TABLE IF NOT EXISTS photo_urls (
+        key text PRIMARY KEY,
+        uri text NOT NULL,
+        fetched_at timestamptz NOT NULL DEFAULT now()
+      )`,
+    ],
+  },
 ];

@@ -51,6 +51,14 @@ export const QUIZ_FIELD_LABELS: { key: string; label: string }[] = [
 ];
 
 /** Beta numbers shown on the admin page: who signed up and what they have made so far. */
+/** The place catalog: places stored once and served to everyone, and how often lookups were answered from it. */
+export interface CatalogStats {
+  places: number;
+  destinations: number;
+  aliases: number;
+  aliasHits: number;
+}
+
 export interface BetaStats {
   users: number;
   usersLast7Days: number;

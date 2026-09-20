@@ -1,5 +1,18 @@
 import { findCity } from "@/lib/places/gazetteer";
 import type { LatLng, PlaceKind, ResolvedPlace } from "@/lib/places/types";
+import {
+  findAlias,
+  fuzzyCatalogMatch,
+  getCatalogPlace,
+  getPhotoUrl,
+  getSearchCache,
+  isCatalogFresh,
+  saveAlias,
+  setPhotoUrl,
+  setSearchCache,
+  upsertPlaces,
+  type CatalogPlace,
+} from "./catalog";
 
 /**
  * Server-side place resolution. Uses the Google Places API (New) when a key is
@@ -10,6 +23,11 @@ import type { LatLng, PlaceKind, ResolvedPlace } from "@/lib/places/types";
 /** Google Places API (New) base; overridable so tests can run against a stub server. */
 const PLACES_BASE = (process.env.PLACES_BASE_URL?.trim() || "https://places.googleapis.com/v1").replace(/\/$/, "");
 
+/**
+ * List-search mask (Explore, home picks, seeding): what a card, a pin and the match score need.
+ * No editorial summary: that one field moved every search to the Enterprise + Atmosphere tier;
+ * the place sheet still gets it from Place Details.
+ */
 const SEARCH_FIELDS = [
   "places.id",
   "places.displayName",
@@ -21,11 +39,18 @@ const SEARCH_FIELDS = [
   "places.userRatingCount",
   "places.primaryTypeDisplayName",
   "places.photos.name",
-  "places.editorialSummary",
   "places.googleMapsUri",
   "places.websiteUri",
   "places.priceLevel",
 ].join(",");
+
+/** The same fields for one place by id (Place Details), fetched only when a lookup finds a new id. */
+const CARD_DETAIL_FIELDS = SEARCH_FIELDS.split(",")
+  .map((f) => f.replace(/^places\./, ""))
+  .join(",");
+
+/** A Text Search that asks for ids only is free without limit. */
+const IDS_ONLY_FIELDS = "places.id";
 
 /**
  * Details field mask: everything the sheet shows plus the evidence the review Q&A,
@@ -200,20 +225,64 @@ function remember<T>(cache: Map<string, Promise<T>>, key: string, make: () => Pr
   return p;
 }
 
-/* ---------------------------- google ---------------------------- */
+/* ------------------------ google + catalog ------------------------ */
 
-async function googleTextSearch(query: string, kind: PlaceKind, bias?: LatLng): Promise<ResolvedPlace | null> {
-  const body: Record<string, unknown> = { textQuery: query, maxResultCount: 1, languageCode: "en" };
-  if (bias && kind !== "destination") {
-    body.locationBias = { circle: { center: { latitude: bias.lat, longitude: bias.lng }, radius: 40000 } };
+/** One place by id with the card mask (Place Details, Enterprise tier). */
+async function fetchCardDetails(id: string, kind: PlaceKind): Promise<ResolvedPlace | null> {
+  const raw = await googleFetch<GooglePlace>(`${PLACES_BASE}/places/${encodeURIComponent(id)}`, { method: "GET" }, CARD_DETAIL_FIELDS);
+  return toResolved(raw, kind);
+}
+
+/** A catalog hit as the caller's kind, refreshed from Google when older than 30 days. */
+async function freshen(hit: CatalogPlace, kind: PlaceKind): Promise<ResolvedPlace> {
+  const place = { ...hit.place, kind };
+  if (isCatalogFresh(hit) || !placesApiKey()) return place;
+  try {
+    const fresh = await fetchCardDetails(hit.place.id, kind);
+    if (fresh) {
+      await upsertPlaces([fresh]);
+      return fresh;
+    }
+  } catch (err) {
+    console.warn("[places] refresh failed, serving the stored copy:", err instanceof Error ? err.message : err);
   }
-  const data = await googleFetch<{ places?: GooglePlace[] }>(
-    `${PLACES_BASE}/places:searchText`,
-    { method: "POST", body: JSON.stringify(body) },
-    SEARCH_FIELDS,
-  );
-  const first = data.places?.[0];
-  return first ? toResolved(first, kind) : null;
+  return place;
+}
+
+const aliasDestination = (destination: ResolvedPlace | null | undefined) => (destination && destination.source === "google" ? destination.id : "");
+
+/** The catalog's answer for a query: a remembered alias, else a stored place whose name matches, near the destination. */
+async function catalogLookup(query: string, kind: PlaceKind, destination: ResolvedPlace | null | undefined): Promise<ResolvedPlace | null> {
+  const destId = aliasDestination(destination);
+  const alias = await findAlias(query, kind, destId);
+  if (alias) return freshen(alias, kind);
+  if (kind !== "destination" && destination) {
+    const fuzzy = await fuzzyCatalogMatch(query, kind, destination);
+    if (fuzzy) {
+      await saveAlias(query, kind, destId, fuzzy.place.id, "fuzzy");
+      return freshen(fuzzy, kind);
+    }
+  }
+  return null;
+}
+
+/**
+ * Google's answer for a query: a free ids-only Text Search, then the catalog by id, and
+ * Place Details only for an id we have never stored.
+ */
+async function googleResolve(query: string, kind: PlaceKind, destination?: ResolvedPlace): Promise<ResolvedPlace | null> {
+  const body: Record<string, unknown> = { textQuery: query, maxResultCount: 1, languageCode: "en" };
+  if (destination && kind !== "destination") {
+    body.locationBias = { circle: { center: { latitude: destination.lat, longitude: destination.lng }, radius: 40000 } };
+  }
+  const data = await googleFetch<{ places?: { id?: string }[] }>(`${PLACES_BASE}/places:searchText`, { method: "POST", body: JSON.stringify(body) }, IDS_ONLY_FIELDS);
+  const id = data.places?.[0]?.id;
+  if (!id) return null;
+  const known = await getCatalogPlace(id);
+  if (known) return freshen(known, kind);
+  const place = await fetchCardDetails(id, kind);
+  if (place) await upsertPlaces([place], kind === "destination" ? place.id : aliasDestination(destination) || null);
+  return place;
 }
 
 /* --------------------------- fallbacks --------------------------- */
@@ -274,10 +343,15 @@ function jitter(seed: string, center: LatLng, kind: PlaceKind): LatLng {
 export async function resolveDestination(query: string): Promise<ResolvedPlace | null> {
   const key = `dest|${query.trim().toLowerCase()}`;
   return remember(searchCache, key, async () => {
+    const stored = await catalogLookup(query, "destination", null);
+    if (stored) return stored;
     if (placesApiKey()) {
       try {
-        const hit = await googleTextSearch(query, "destination");
-        if (hit) return hit;
+        const hit = await googleResolve(query, "destination");
+        if (hit) {
+          await saveAlias(query, "destination", "", hit.id, "lookup");
+          return hit;
+        }
       } catch (err) {
         console.warn("[places] destination search failed, using fallback:", err instanceof Error ? err.message : err);
       }
@@ -293,10 +367,15 @@ export async function resolvePointOfInterest(
 ): Promise<ResolvedPlace | null> {
   const key = `poi|${kind}|${query.trim().toLowerCase()}|${destination?.id ?? ""}`;
   return remember(searchCache, key, async () => {
+    const stored = await catalogLookup(query, kind, destination);
+    if (stored) return stored;
     if (placesApiKey()) {
       try {
-        const hit = await googleTextSearch(query, kind, destination ?? undefined);
-        if (hit) return hit;
+        const hit = await googleResolve(query, kind, destination ?? undefined);
+        if (hit) {
+          await saveAlias(query, kind, aliasDestination(destination), hit.id, "lookup");
+          return hit;
+        }
       } catch (err) {
         console.warn("[places] search failed, using estimate:", err instanceof Error ? err.message : err);
       }
@@ -337,10 +416,17 @@ const NEARBY_TYPES: Record<Exclude<NearbyCategory, "for-you">, { types: string[]
   stays: { types: ["hotel", "motel", "resort_hotel", "bed_and_breakfast", "inn", "hostel", "extended_stay_hotel", "guest_house", "lodging"], kind: "hotel" },
 };
 
-// Same fields as search minus the editorial summary (keeps Explore on a cheaper SKU).
-const NEARBY_FIELDS = SEARCH_FIELDS.split(",").filter((f) => f !== "places.editorialSummary").join(",");
+const NEARBY_FIELDS = SEARCH_FIELDS;
 const NEARBY_RADIUS_M = 25000;
 const NEARBY_TTL_MS = 10 * 60_000;
+/** How long a list search (Explore, home picks) is served from the shared cache in Postgres. */
+const LIST_CACHE_MS = 24 * 60 * 60_000;
+
+/** Cache key for a list search: the area is rounded to about a kilometer so neighbors share it. */
+function listKey(scope: string, kind: string, query: string, center: LatLng, limit: number, filters: NearbyFilters): string {
+  const f = `${(filters.priceLevels ?? []).join("+")}|${filters.minRating ?? ""}|${filters.openNow ? "open" : ""}`;
+  return `${scope}|${kind}|${query.trim().toLowerCase()}|${f}|${center.lat.toFixed(2)}|${center.lng.toFixed(2)}|${limit}`;
+}
 const nearbyCache = new Map<string, { at: number; promise: Promise<ResolvedPlace[]> }>();
 
 const present = (p: ResolvedPlace | null): p is ResolvedPlace => p !== null;
@@ -394,7 +480,14 @@ async function googleTextMany(query: string, kind: PlaceKind, center: LatLng, li
 /** Several places for a free-text query near a point (the home picks build profile-driven queries with it). */
 export async function searchTextPlaces(query: string, kind: PlaceKind, center: LatLng, limit = 8, filters: NearbyFilters = {}): Promise<ResolvedPlace[]> {
   if (!placesApiKey()) return [];
-  return googleTextMany(query, kind, center, limit, filters);
+  const key = listKey("text", kind, query, center, limit, filters);
+  // "Open now" changes by the hour, so it never comes from the day-long cache.
+  const cached = filters.openNow ? null : await getSearchCache(key, LIST_CACHE_MS);
+  if (cached) return cached.map((p) => ({ ...p, kind }));
+  const places = await googleTextMany(query, kind, center, limit, filters);
+  await upsertPlaces(places);
+  if (!filters.openNow) await setSearchCache(key, places);
+  return places;
 }
 
 function interleave(a: ResolvedPlace[], b: ResolvedPlace[]): ResolvedPlace[] {
@@ -453,7 +546,7 @@ export async function searchNearby(
   const key = `${category}|${q}|${(effective.priceLevels ?? []).join("+")}|${effective.minRating ?? ""}|${effective.openNow ? "open" : ""}|${center.lat.toFixed(3)}|${center.lng.toFixed(3)}|${limit}`;
   const hit = nearbyCache.get(key);
   if (hit && Date.now() - hit.at < NEARBY_TTL_MS) return hit.promise;
-  const promise = (async () => {
+  const fetchFresh = async (): Promise<ResolvedPlace[]> => {
     if (q || hasFilters) {
       // Free text or filters: Text Search understands both; category tabs without either use the cheaper Nearby Search.
       const kind: PlaceKind = category === "restaurants" ? "restaurant" : category === "stays" ? "hotel" : "attraction";
@@ -468,6 +561,15 @@ export async function searchNearby(
     }
     const cfg = NEARBY_TYPES[category];
     return googleNearby(center, cfg.types, cfg.kind, limit);
+  };
+  const promise = (async () => {
+    const dbKey = listKey("nearby", category, q, center, limit, effective);
+    const cached = effective.openNow ? null : await getSearchCache(dbKey, LIST_CACHE_MS);
+    if (cached) return cached;
+    const places = await fetchFresh();
+    await upsertPlaces(places);
+    if (!effective.openNow) await setSearchCache(dbKey, places);
+    return places;
   })().catch((err: unknown) => {
     nearbyCache.delete(key);
     throw err;
@@ -479,8 +581,15 @@ export async function searchNearby(
 
 const photoUriCache = new Map<string, { uri: string; at: number }>();
 const PHOTO_URI_TTL_MS = 2 * 60 * 60_000;
+/** The shared copy in Postgres outlives a process; a URL that stopped working is refreshed by the photo route. */
+const PHOTO_URL_DB_TTL_MS = 24 * 60 * 60_000;
 
-/** Resolves a Places photo reference to its temporary googleusercontent URL (cached for two hours). */
+function rememberPhotoUri(cacheKey: string, uri: string) {
+  if (photoUriCache.size >= 2000) photoUriCache.delete(photoUriCache.keys().next().value as string);
+  photoUriCache.set(cacheKey, { uri, at: Date.now() });
+}
+
+/** Resolves a Places photo reference to its googleusercontent URL: process cache, then the shared table, then Google. */
 export async function resolvePhotoUri(photoName: string, width: number, fresh = false): Promise<string | null> {
   const key = placesApiKey();
   if (!key) return null;
@@ -488,12 +597,19 @@ export async function resolvePhotoUri(photoName: string, width: number, fresh = 
   const cacheKey = `${photoName}|${px}`;
   const hit = photoUriCache.get(cacheKey);
   if (hit && !fresh && Date.now() - hit.at < PHOTO_URI_TTL_MS) return hit.uri;
+  if (!fresh) {
+    const stored = await getPhotoUrl(cacheKey, PHOTO_URL_DB_TTL_MS);
+    if (stored) {
+      rememberPhotoUri(cacheKey, stored);
+      return stored;
+    }
+  }
   const url = `${PLACES_BASE}/${photoName}/media?maxWidthPx=${px}&skipHttpRedirect=true&key=${key}`;
   const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
   if (!res.ok) return null;
   const data = (await res.json()) as { photoUri?: string };
   if (!data.photoUri) return null;
-  if (photoUriCache.size >= 2000) photoUriCache.delete(photoUriCache.keys().next().value as string);
-  photoUriCache.set(cacheKey, { uri: data.photoUri, at: Date.now() });
+  rememberPhotoUri(cacheKey, data.photoUri);
+  await setPhotoUrl(cacheKey, data.photoUri);
   return data.photoUri;
 }

@@ -224,9 +224,16 @@ const server = http.createServer((req, res) => {
       if (toolName === "import_inspiration") return streamReply(res, { text: "Those are on the cards above. Want them in a trip?" });
       if (toolName === "import_reservation") return streamReply(res, { text: "Got it — the bookings are on the cards above. Add them to a trip?" });
       if (toolName === "create_trip") return streamReply(res, { text: "Saved — the trip is in your Trips with the board ready. Want hotels next?" });
+      if (toolName === "show_package") return streamReply(res, { text: "Your package is above. Swap anything you like, or turn it into a trip." });
       return streamReply(res, { text: "Done — those are on the cards above. Want stays or things to do next?" });
     }
-    if (/plan (?:a|my) trip to rome|itinerary for rome/.test(text) && tools.includes("create_trip")) {
+    if (/package/.test(text) && tools.includes("show_package")) {
+      return streamReply(res, {
+        text: "Here is a Rome package built around your tastes.",
+        toolCall: { name: "show_package", args: { destination: "Rome, Italy", intro: "Central stay, the big sights at opening, and the trattorias you would pick yourself." } },
+      });
+    }
+    if (/plan (?:a|my) trip to rome|itinerary for rome|turn this package into a trip/.test(text) && tools.includes("create_trip")) {
       return streamReply(res, {
         text: "Here is a plan that fits you.",
         toolCall: {

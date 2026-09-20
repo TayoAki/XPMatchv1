@@ -1,6 +1,8 @@
 import type { PlaceKind, ResolveRequest, ResolveResponse } from "@/lib/places/types";
 import { placesProvider, resolveDestination, resolvePointOfInterest } from "@/server/places";
 import { getSessionUser } from "@/server/auth";
+import { HttpError } from "@/server/http";
+import { assertLookupBudget } from "@/server/lookup-budget";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +13,8 @@ const KINDS: PlaceKind[] = ["destination", "hotel", "restaurant", "attraction"];
  * (and ratings/photos when Google Places is configured).
  */
 export async function POST(request: Request) {
-  if (!(await getSessionUser())) return Response.json({ error: "Please sign in" }, { status: 401 });
+  const user = await getSessionUser();
+  if (!user) return Response.json({ error: "Please sign in" }, { status: 401 });
   let body: ResolveRequest;
   try {
     body = (await request.json()) as ResolveRequest;
@@ -22,6 +25,12 @@ export async function POST(request: Request) {
     .filter((i) => i && typeof i.key === "string" && typeof i.query === "string" && KINDS.includes(i.kind))
     .slice(0, 12)
     .map((i) => ({ ...i, query: i.query.slice(0, 160) }));
+  try {
+    assertLookupBudget(user.id, items.length + (body.destination?.trim() ? 1 : 0));
+  } catch (err) {
+    if (err instanceof HttpError) return Response.json({ error: err.message }, { status: err.status, headers: { "Cache-Control": "no-store" } });
+    throw err;
+  }
 
   if (process.env.PLACES_DEBUG) {
     console.log("[places] resolve", JSON.stringify({ destination: body.destination, items: items.map((i) => `${i.kind}:${i.query}`) }));

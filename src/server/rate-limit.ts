@@ -19,14 +19,23 @@ function prune(now: number, windowMs: number) {
 
 /** True when `key` has been seen fewer than `limit` times in the last `windowMs`; records the hit. */
 export function allow(key: string, limit: number, windowMs: number): boolean {
+  return charge(key, 1, limit, windowMs);
+}
+
+/**
+ * Like `allow`, for work that counts more than once (a resolve request with twelve places).
+ * Records `amount` hits when they fit under `limit`, none when they would not.
+ */
+export function charge(key: string, amount: number, limit: number, windowMs: number): boolean {
   const now = Date.now();
   prune(now, windowMs);
   const times = (hits.get(key) ?? []).filter((t) => now - t < windowMs);
-  if (times.length >= limit) {
+  const n = Math.max(0, Math.round(amount));
+  if (times.length + n > limit) {
     hits.set(key, times);
     return false;
   }
-  times.push(now);
+  for (let i = 0; i < n; i++) times.push(now);
   hits.set(key, times);
   return true;
 }

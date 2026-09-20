@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import clsx from "clsx";
-import { Bug, Sparkles, ThumbsDown, ThumbsUp, Users } from "lucide-react";
+import { Bug, Database, Sparkles, ThumbsDown, ThumbsUp, Users } from "lucide-react";
 import { api } from "@/lib/api";
-import { QUIZ_FIELD_LABELS, type AdminUser, type BetaStats, type QuizAnswers, type QuizStatus } from "@/lib/admin/types";
+import { QUIZ_FIELD_LABELS, type AdminUser, type BetaStats, type CatalogStats, type QuizAnswers, type QuizStatus } from "@/lib/admin/types";
 import { BUG_SEVERITIES, type BugReport, type BugStatus } from "@/lib/bugs/types";
 import type { RecQuality } from "@/lib/recs/types";
 import { useTravelStore } from "@/lib/store";
 import { PageFrame, EmptyState } from "@/components/PageFrame";
 import { Button } from "@/components/ui/Button";
+import { TextInput } from "@/components/ui/Field";
 
 type Filter = BugStatus | "all";
 
@@ -175,6 +176,73 @@ function Members({ users }: { users: AdminUser[] | null }) {
   );
 }
 
+interface SeedResponse {
+  destination: { id: string; name: string; locality: string | null };
+  queries: number;
+  places: number;
+  byKind: { hotel: number; restaurant: number; attraction: number };
+}
+
+/** The place catalog: what is stored, how often lookups came from it, and a way to fill a city ahead of testers. */
+function Catalog({ catalog, onChanged }: { catalog: CatalogStats | null; onChanged: () => void }) {
+  const [destination, setDestination] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+
+  const seed = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!destination.trim()) return;
+    setBusy(true);
+    setResult(null);
+    try {
+      const res = await api<SeedResponse>("/api/admin/seed", { method: "POST", json: { destination: destination.trim() } });
+      setResult(
+        `${res.destination.name}: ${res.places} places from ${res.queries} searches (${res.byKind.hotel} stays, ${res.byKind.restaurant} restaurants, ${res.byKind.attraction} things to do).`,
+      );
+      setDestination("");
+      onChanged();
+    } catch (err) {
+      setResult(err instanceof Error ? err.message : "Seeding failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="mt-8" data-testid="place-catalog">
+      <h2 className="flex items-center gap-2 text-[19px] font-semibold tracking-tight">
+        <Database className="h-5 w-5" /> Place catalog
+      </h2>
+      <p className="mt-1 text-[13px] text-muted">
+        Every place Google has returned to us, stored once and served to everyone. Seeding a city runs 19 list searches so the first
+        traveler there already finds it in our database.
+      </p>
+      {catalog ? (
+        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          <Stat label="Places" value={catalog.places} testId="stat-places" note={`${catalog.destinations} destinations`} />
+          <Stat label="Remembered lookups" value={catalog.aliases} note="queries that resolve without Google" />
+          <Stat label="Served from the catalog" value={catalog.aliasHits} note="lookups answered by a remembered query" />
+        </div>
+      ) : (
+        <p className="mt-2 text-[13px] text-muted">Loading…</p>
+      )}
+      <form onSubmit={seed} className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="w-full max-w-xs">
+          <TextInput value={destination} onChange={(e) => setDestination(e.target.value)} placeholder="Lisbon, Portugal" aria-label="City to seed" maxLength={120} />
+        </div>
+        <Button type="submit" size="sm" disabled={busy || !destination.trim()} data-testid="seed-city">
+          {busy ? "Seeding…" : "Seed city"}
+        </Button>
+      </form>
+      {result ? (
+        <p className="mt-2 text-[13px] text-neutral-700" data-testid="seed-result">
+          {result}
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
 function Rate({ up, down }: { up: number; down: number }) {
   const total = up + down;
   return (
@@ -193,6 +261,8 @@ export function AdminClient() {
   const [quality, setQuality] = useState<(RecQuality & { travelers: number }) | null>(null);
   const [stats, setStats] = useState<BetaStats | null>(null);
   const [quiz, setQuiz] = useState<QuizAnswers | null>(null);
+  const [catalog, setCatalog] = useState<CatalogStats | null>(null);
+  const [statsVersion, setStatsVersion] = useState(0);
   const [members, setMembers] = useState<AdminUser[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const admin = !!user?.admin;
@@ -200,13 +270,22 @@ export function AdminClient() {
   useEffect(() => {
     if (!hydrated || !admin) return;
     let active = true;
-    api<{ stats: BetaStats; quiz: QuizAnswers }>("/api/admin/stats")
+    api<{ stats: BetaStats; quiz: QuizAnswers; catalog: CatalogStats }>("/api/admin/stats")
       .then((data) => {
         if (!active) return;
         setStats(data.stats);
         setQuiz(data.quiz);
+        setCatalog(data.catalog);
       })
       .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [hydrated, admin, statsVersion]);
+
+  useEffect(() => {
+    if (!hydrated || !admin) return;
+    let active = true;
     api<{ users: AdminUser[] }>("/api/admin/users")
       .then((data) => active && setMembers(data.users))
       .catch(() => undefined);
@@ -285,6 +364,8 @@ export function AdminClient() {
       </section>
 
       <Members users={members} />
+
+      <Catalog catalog={catalog} onChanged={() => setStatsVersion((v) => v + 1)} />
 
       <section className="mt-8" data-testid="quiz-answers">
         <h2 className="text-[19px] font-semibold tracking-tight">What people answered</h2>
