@@ -87,6 +87,23 @@ scheduling chip open the itinerary board as a full-height sheet (short map, then
 2. **Destination** — as soon as a place is clear the assistant calls `focus_map`: the map centers on
    it, a "Looks like you're headed to Rome" callout appears with a **Create trip** button, the chat is
    titled "Exploring Rome" and the planner bar's *Where* fills in.
+2a. **The package** — with the destination clear, the assistant's first card is one personalized
+   package (`show_package`): the app, not the model, picks the best stay, things to do (two, three or
+   four by pace) and three places to eat from its own place catalog, scored by the match model with a
+   walkable-from-the-stay bonus, one category per slot, a spread of prices and the traveler's day
+   rhythm. Three tabs hold the variants (**Your match**, the second interest leading such as "More
+   nature & hiking", and a shift: "Quieter and closer", "A notch up" or "Easier on the budget"),
+   each with its average match. Every slot shows photo, kind, match score, rating, price, a one-line
+   why, and **Swap** (two ready alternates, "Not this kind" to drop the category), **Lock** (kept
+   through every rebuild and variant), thumbs (**Not for me** swaps it out and records the miss),
+   **Add to trip**, Save and **Show on the map**. Chips under the set narrow the whole package
+   (**Easier on the budget** / **A notch up**, **Relaxed** / **Balanced** / **Packed**, **Walkable
+   from the stay**) and the "Built from" facts are toggles (leave Museums out and the things to do
+   re-pick). **Turn into a trip** sends the exact places to the assistant, which proposes the trip
+   with `create_trip`. The package's places are the map's pins for that message; a swap or rebuild
+   replaces them. The follow-up card tools (hotels, restaurants, things to do) stay for "more
+   hotels" or "swap the dinner" requests. A city the catalog has never seen is seeded first (a few
+   list searches), so the first traveler there pays cents and the next ones nothing.
 3. **Recommendations** — the assistant renders cards for destinations, hotels, flights, restaurants and
    things to do. Each card links to live inventory (Google Flights, Booking.com/Google Hotels, Google
    Maps, OpenTable, GetYourGuide) and has **Save** (heart), **View on map**, **Add to trip** and
@@ -336,10 +353,14 @@ newest first with name, handle, email, sign-up date, quiz status (completed / sk
 `profiles.onboarded` and whether the saved preferences hold real answers), home city, trip / chat / saved
 counts, last activity and an **Access** column with **Reset link** (`POST /api/admin/users/[id]/reset`:
 a single-use, 30-minute password reset link the admin sends to the traveler by hand, with Copy and New
-link). It then lists reports newest first (open / resolved / all, mark resolved /
-reopen, show screenshot) and ends with the **Recommendation quality** summary: hit rate of thumbs across
-every traveler, by kind and by context (chat, home, explore, board), why picks miss, and the recent misses
-with the score that was shown. The same counts are printed once at boot (`[xpmatch] db ready (pg):
+link). The **Place catalog** section follows: how many places and destinations are stored, how many
+lookups resolve without Google (remembered queries and how often they were served), the package
+numbers (shown, travelers, swaps, locks, thumbs, trips, keep rate, trip rate, variant picks) and a
+**Seed city** form (`POST /api/admin/seed`: 19 list searches for a destination, about twenty places
+each, reported as stays / restaurants / things to do). It then lists reports newest first (open /
+resolved / all, mark resolved / reopen, show screenshot) and ends with the **Recommendation quality**
+summary: hit rate of thumbs across every traveler, by kind and by context (chat, home, explore,
+board), why picks miss, and the recent misses with the score that was shown. The same counts are printed once at boot (`[xpmatch] db ready (pg):
 users=… trips=… chats=…`), so the Railway deploy log shows them without a database connection.
 
 ## 11. Routes

@@ -22,6 +22,7 @@ import {
   showDestinationsSchema,
   showFlightsSchema,
   showHotelsSchema,
+  showPackageSchema,
   showRestaurantsSchema,
   updateTravelerProfileSchema,
   type AskAboutPlaceArgs,
@@ -37,6 +38,7 @@ import {
   type ShowDestinationsArgs,
   type ShowFlightsArgs,
   type ShowHotelsArgs,
+  type ShowPackageArgs,
   type ShowRestaurantsArgs,
   type Streaming,
   type UpdateTravelerProfileArgs,
@@ -47,6 +49,7 @@ import { HotelCards } from "@/components/chat/cards/HotelCards";
 import { FlightCards } from "@/components/chat/cards/FlightCards";
 import { RestaurantCards } from "@/components/chat/cards/RestaurantCards";
 import { AttractionCards } from "@/components/chat/cards/AttractionCards";
+import { PackageCard } from "@/components/chat/cards/PackageCard";
 import { TripProposalCard } from "@/components/chat/cards/TripProposalCard";
 import { ProfileUpdatedChip } from "@/components/chat/cards/ProfileUpdatedChip";
 import { FocusCallout } from "@/components/chat/cards/FocusCallout";
@@ -84,6 +87,9 @@ const RestaurantsRenderer = ({ args, status, toolCallId }: RenderProps<ShowResta
 );
 const AttractionsRenderer = ({ args, status, toolCallId }: RenderProps<ShowAttractionsArgs>) => (
   <AttractionCards args={args as Streaming<ShowAttractionsArgs>} status={status} toolCallId={toolCallId} />
+);
+const PackageRenderer = ({ args, status, toolCallId }: RenderProps<ShowPackageArgs>) => (
+  <PackageCard args={args as Streaming<ShowPackageArgs>} status={status} toolCallId={toolCallId} />
 );
 const FocusRenderer = ({ args, status }: RenderProps<FocusMapArgs>) => (
   <FocusCallout args={args as Streaming<FocusMapArgs>} status={status} />
@@ -289,6 +295,26 @@ export function TravelCopilot() {
     },
   });
 
+  // Places the catalog already holds for the destination in focus: the model prefers these exact
+  // names, so its cards resolve from our database instead of a Google lookup.
+  const focusName = mapView.focus?.source === "google" ? mapView.focus.name : null;
+  const [pool, setPool] = useState<{ destination: string; places: { name: string; kind: string; category: string; price: string; rating: number | null }[] } | null>(null);
+  useEffect(() => {
+    if (!focusName) return;
+    let active = true;
+    api<{ destination: string; places: { name: string; kind: string; category: string; price: string; rating: number | null }[] }>(`/api/catalog/pool?destination=${encodeURIComponent(focusName)}`)
+      .then((data) => active && setPool(data))
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [focusName]);
+  useAgentContext({
+    description:
+      "Places XPMatch's own catalog already holds for the destination in focus. Prefer these exact names in cards and itineraries (they cost nothing to look up); name a place outside the list only when nothing here fits the request.",
+    value: pool && focusName && pool.destination === focusName ? pool.places : "none loaded",
+  });
+
   const constraints = useConstraints(mapView.threadId);
   useAgentContext({
     description: "Active search constraints (the chips the traveler currently sees; honor hard ones, prefer soft ones, until they change topic)",
@@ -334,6 +360,20 @@ export function TravelCopilot() {
         return `Centering the map on ${location}. Recommendations you show will be pinned there. Continue.`;
       },
       render: FocusRenderer,
+    },
+    [],
+  );
+
+  useFrontendTool(
+    {
+      name: "show_package",
+      description:
+        "Open a destination with ONE personalized package card: the best stay, things to do and places to eat for this traveler, chosen by the app from its own place catalog and scored against the profile, with swap and lock controls, three variants and a Turn-into-a-trip button. Call it first (after focus_map) whenever a destination is clear and the traveler has not asked for one specific kind of place. You name the destination and may add one or two sentences; the app picks the places.",
+      parameters: showPackageSchema,
+      followUp: true,
+      handler: async ({ destination }) =>
+        `The ${destination} package card is displayed (stay, things to do, places to eat, each with a match score, swap, lock and thumbs; three variants; Turn into a trip). Do not list the places. Add at most one sentence and offer to swap, narrow, or turn it into a trip.`,
+      render: PackageRenderer,
     },
     [],
   );

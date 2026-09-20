@@ -109,17 +109,9 @@ export function buildHomeQueries(profile: TravelerProfile): Record<HomeRowKey, R
   return { things: uniq(things.map((t) => t.query)).map((q) => things.find((t) => t.query === q)!), stays: uniq(stays.map((s) => s.query)).map((q) => stays.find((s) => s.query === q)!), eat: uniq(eat.map((e) => e.query)).map((q) => eat.find((e) => e.query === q)!) };
 }
 
-const HOTEL_CATEGORY = /\b(hotel|hotels|lodging|inn|hostel|resort|motel|guest house|guesthouse|aparthotel|apartment|bed and breakfast|b&b|residence|pension)\b/i;
-const FOOD_CATEGORY =
-  /\b(restaurant|cafe|café|coffee|bar|pub|bakery|pizzeria|pizza|trattoria|osteria|bistro|brasserie|diner|eatery|steakhouse|steak house|grill|sushi|ramen|taqueria|food court|gelato|ice cream|dessert|cocktail|tea house|deli|takeout|fast food|noodle|burger|seafood|kitchen|wine bar|brewery|taproom)\b/i;
+import { inferKind } from "@/lib/places/kind";
 
-/** What Google's primary type says a place is; null when it says nothing. A hotel never belongs in "things to do". */
-export function inferKind(category: string | undefined): PlaceKind | null {
-  if (!category) return null;
-  if (HOTEL_CATEGORY.test(category)) return "hotel";
-  if (FOOD_CATEGORY.test(category)) return "restaurant";
-  return "attraction";
-}
+export { inferKind };
 
 const ROW_TITLE: Record<HomeRowKey, (destination: string) => string> = {
   things: (d) => `Things to do in ${d}`,

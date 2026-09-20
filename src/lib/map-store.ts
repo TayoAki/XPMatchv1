@@ -91,6 +91,26 @@ export const mapActions = {
     }
     patchThread(threadId, { places: nextPlaces, order, collapsed: false });
   },
+  /** Replaces every pin a tool call put on the map (a package that was swapped or rebuilt), keeping the order of pins that stay. */
+  replacePlaces(threadId: string, toolCallId: string, places: MapPlace[]) {
+    const t = threadOf(threadId);
+    const keep = new Set(places.map((p) => p.key));
+    const nextPlaces: Record<string, MapPlace> = {};
+    const order: string[] = [];
+    for (const key of t.order) {
+      const p = t.places[key];
+      if (!p) continue;
+      if (p.toolCallId === toolCallId && !keep.has(key)) continue;
+      nextPlaces[key] = p;
+      order.push(key);
+    }
+    for (const p of places) {
+      if (!nextPlaces[p.key]) order.push(p.key);
+      nextPlaces[p.key] = p;
+    }
+    const selectedKey = t.selectedKey && !nextPlaces[t.selectedKey] && t.selectedKey !== FOCUS_KEY ? null : t.selectedKey;
+    patchThread(threadId, { places: nextPlaces, order, selectedKey, collapsed: places.length ? false : t.collapsed });
+  },
   selectPlace(threadId: string, key: string | null) {
     patchThread(threadId, { selectedKey: key, collapsed: false });
   },

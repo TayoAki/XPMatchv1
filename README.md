@@ -22,6 +22,23 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   runs as three screens and long chip lists fold behind "Show all". Everything is sent to the
   agent as context on every run; profile fields heard in conversation go through
   `update_traveler_profile`.
+- **A place catalog: every place bought once** — every place Google returns is stored by place id
+  (`places`, with what a query resolved to in `place_aliases`, shared list-search results in
+  `search_cache` and resolved photo URLs in `photo_urls`) and served to everyone from then on. A
+  lookup goes remembered alias → fuzzy name match around the destination → a free ids-only Text
+  Search → Place Details only for an id never seen; Google's fields refresh after 30 days when a
+  place is shown. Admins seed a city from `/admin` (19 list searches, about twenty places each), the
+  assistant is told which places the catalog already holds for the destination in focus and prefers
+  them, and each account gets 400 lookups a day. `docs/COGS.md` has the before and after.
+- **One package to open a destination** — when a destination is clear, `show_package` opens with a
+  single personalized card built on the server from the catalog: the best stay, things to do and
+  places to eat for this traveler (the match model plus coherence around the stay, category
+  diversity, a price spread and the day rhythm), in three variants (your match, the second interest
+  leading, a pace or budget shift). Every slot has **Swap** with two ready alternates, **Lock**,
+  thumbs, Add to trip and Show on the map; chips narrow the whole package (budget a notch either way,
+  pace, walkable from the stay, the profile facts it was built from as toggles); **Turn into a trip**
+  hands the exact places to `create_trip`. Keeps, swaps, locks, thumbs and variant picks are stored
+  (`package_events`) and calibrate the match factors per traveler; admins see keep and trip rates.
 - **Home picks with a match score** — "For you in Rome" (the next trip, the dreamed-of destination,
   the planner's Where or the home city, switchable) lines up three things to do, three stays and
   three places to eat from Google Places, queried from the deep profile and scored by a deterministic
@@ -274,6 +291,12 @@ src/components/panel/DiscoveryPanel.tsx      Right-hand discovery panel
 src/components/map/*                         Google Map panel, markers, place sheet, card ↔ pin hook
 src/lib/map-store.ts                         Per-thread map state (focus, pins, selection)
 src/server/places.ts + src/app/api/places/*  Places API (New) resolution, details, photo proxy
+src/server/catalog.ts + src/lib/places/names.ts   The place catalog: stored places, aliases, fuzzy name match, shared caches
+src/server/seed.ts + src/app/api/admin/seed  List searches that fill a city; the admin Seed city button
+src/server/packages.ts + src/app/api/packages/*   Package builder (variants, alternates, coherence) and the events log
+src/server/package-learning.ts               Calibration from package events and the admin package numbers
+src/components/chat/cards/PackageCard.tsx    The package opener card: variants, swap, lock, narrowing, Turn into a trip
+src/components/map/PinStrip.tsx              Mini cards under the map, in step with the pins
 src/components/shell/*                       Sidebar, top bar, app shell
 ```
 

@@ -315,4 +315,24 @@ export const MIGRATIONS: Migration[] = [
       )`,
     ],
   },
+  {
+    id: "0008_package_events",
+    statements: [
+      // What travelers do with a package (variant picked, swaps, locks, thumbs, turned into a trip): the learning signal.
+      `CREATE TABLE IF NOT EXISTS package_events (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        destination_id text NOT NULL,
+        variant text NOT NULL,
+        slot text,
+        action text NOT NULL,
+        from_place_id text,
+        to_place_id text,
+        reason text,
+        factors jsonb NOT NULL DEFAULT '[]'::jsonb,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )`,
+      `CREATE INDEX IF NOT EXISTS package_events_user_idx ON package_events(user_id, created_at DESC)`,
+    ],
+  },
 ];

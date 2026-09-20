@@ -1,5 +1,17 @@
 # Packages plan: the catalog, the package card, the science and three options
 
+**Status (September 20, 2026):** built and deployed. Phase 0 (daily lookup budget, cheaper search
+mask), phase 1 (the catalog: `places`, `place_aliases`, `search_cache`, `photo_urls`, the alias →
+fuzzy → ids-only → Details pipeline, seeding from the admin page, the catalog pool in the model's
+context), phase 2 (the package builder with three variants and alternates, `show_package` as the
+opener, the card with swap, lock, thumbs, narrowing chips and Turn into a trip, `package_events`),
+phase 3 (mini cards under the map, in step with the pins) and phase 5 (calibration from package
+events, package numbers on the admin page) are in. Phase 6 (a CDN in front of the photo route) is
+the one item that needs the domain owner. Choices taken: 1 stay + 3 things to do + 3 places to eat
+(two or four things by pace); the package opens every destination chat; cards keep Google's stars
+(Enterprise Details on a miss, since rating is the quality signal); variant axes as proposed; "full
+explore" is the place sheet.
+
 What this covers: what the place catalog costs to build, fill and keep; the package card that
 replaces the separate hotel / restaurant / things-to-do sets as the default opener; how a traveler
 narrows a package and swaps single items; the scoring model behind each package and how it learns;

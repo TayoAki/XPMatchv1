@@ -227,7 +227,7 @@ const server = http.createServer((req, res) => {
       if (toolName === "show_package") return streamReply(res, { text: "Your package is above. Swap anything you like, or turn it into a trip." });
       return streamReply(res, { text: "Done — those are on the cards above. Want stays or things to do next?" });
     }
-    if (/package/.test(text) && tools.includes("show_package")) {
+    if (/package/.test(text) && !/into a trip/.test(text) && tools.includes("show_package")) {
       return streamReply(res, {
         text: "Here is a Rome package built around your tastes.",
         toolCall: { name: "show_package", args: { destination: "Rome, Italy", intro: "Central stay, the big sights at opening, and the trattorias you would pick yourself." } },

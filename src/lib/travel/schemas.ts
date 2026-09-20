@@ -113,6 +113,14 @@ export const showAttractionsSchema = z.object({
   attractions: z.array(attractionSchema).min(1).max(8),
 });
 
+/** The package opener: the app picks the places from its catalog; the model names the destination and adds a line. */
+export const showPackageSchema = z.object({
+  destination: z.string().describe("Destination as it appears on Google Maps, 'City, Country'"),
+  intro: z.string().optional().describe("One or two sentences in your voice on why a package here fits this traveler (the app chooses the places)"),
+});
+
+export type ShowPackageArgs = z.infer<typeof showPackageSchema>;
+
 export const itineraryStopSchema = z.object({
   name: z.string().describe("The place exactly as named on Google Maps (e.g. 'Colosseum', 'Roscioli Salumeria con Cucina'), or a plain activity like 'Check in and drop bags'"),
   kind: z.enum(["hotel", "restaurant", "attraction"]).optional().describe("Set when the stop is a real place so it can be pinned on the map"),

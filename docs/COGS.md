@@ -1,6 +1,11 @@
 # XPMatch cost of goods sold (COGS)
 
-Unit costs as the app stands on September 20, 2026, priced against Google's current core-services
+**Status:** the place catalog and the package opener described in sections 6 and 7 are built
+(`docs/PACKAGES_PLAN.md`), so the "Catalog + packages" columns in `docs/PACKAGES_PLAN.md` are the
+running model; the "today" figures below describe the app before that change and remain the
+reference for what each Google call costs.
+
+Unit costs as the app stood on September 20, 2026 before the catalog, priced against Google's current core-services
 list (per 1,000 calls, with the monthly free calls per SKU: Essentials 10,000, Pro 5,000,
 Enterprise 1,000). Usage assumptions are stated so the model can be re-run with real numbers from the
 Google Cloud billing console once testers are on.
