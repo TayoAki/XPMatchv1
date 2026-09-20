@@ -32,11 +32,25 @@ app; the home picks race after the quiz.
    report a bug → see it under Admin.
 8. (You) Re-run Update my assistant on your own and Faven's accounts; they predate the in-depth quiz,
    so their picks are generic.
-9. (Me, small) Login throttling on `/api/auth/login` with the rate limiter the reset flow added, and
-   `npm audit fix` for the six transitive advisories, re-running the suite.
-10. (Me, draft; you, review) Terms and Privacy pages behind the sidebar footer, with the one paragraph
-    testers need: chats and uploaded confirmations go to the model provider; screenshots in bug reports
-    are kept until resolved; how to ask for deletion.
+9. (Done) Sign-in throttling: ten tries per email and a hundred per network address every 15 minutes,
+   a hundred sign-ups per address per hour; the dependency advisories cleared with an `undici`
+   override (the vulnerable copy sat under a Vertex provider the app never calls).
+10. (Done) The sidebar footer and the sign-up form link to the Terms of Service and Privacy Policy on
+    `www.xpmatchme.com` (both effective September 16, 2026, XPMatch, Inc.). Both were written for the
+    website and the Fit Score; before the app beta the Privacy Policy needs an app section covering:
+    chats, trips, saved places, itineraries, reactions and learned preferences; the in-depth profile
+    (dietary needs and halal/kosher are health- and religion-adjacent, so name them and, where GDPR
+    applies, ask for explicit consent); bug reports with screenshots and uploaded confirmations
+    (names, codes, dates, prices); that messages, the profile summary and pasted or uploaded content go
+    to AI model providers (OpenRouter and the model behind it) to generate answers; that place searches
+    and the map go to Google Maps Platform, which sets its own cookies (the "no third-party cookies"
+    line is no longer true on the app); the sign-in session cookie; "Use my location" on Explore sends
+    precise location for that search and is not stored (the policy says precise location is never
+    collected); guides are public under your name and trips are visible to members you add; the team
+    may read chats and bug reports during the beta to fix problems; a contact email, not only the
+    contact page. The Terms need: "generated with AI" next to the recommendations disclaimer, chats,
+    trips, guides and imports under "Your content" with guides public, the governing-law state named,
+    and a contact email. Age is 18 in the Terms and 13/16 in the Privacy Policy; align on 18.
 
 **Should do in the first week**
 
@@ -116,8 +130,8 @@ First week after inviting:
    rule for screenshots and confirmations are due.
 10. **Account deletion**: no self-service way to delete an account; handle requests by hand in Postgres
     until there is one.
-11. **Login throttling**: no lockout or throttle on `/api/auth/login` (bcrypt slows guessing, nothing
-    stops it). Fine for a private beta; add before an open one.
+11. **Login throttling** (done September 20): ten sign-in tries per email and a hundred per network
+    address every 15 minutes, a hundred sign-ups per address per hour, all in-process.
 12. Cosmetic: `/api/config` (public) reveals the model name; the chat disclaimer shows it too.
 
 Also worth doing before the first invite: re-run Update my assistant on the team's own accounts (they

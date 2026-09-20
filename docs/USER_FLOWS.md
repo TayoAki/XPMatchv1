@@ -49,6 +49,10 @@ button, plus a **Learn from our chats** switch that stops the assistant from off
 **Log in / log out** — `/login` accepts email + password and returns to the page the visitor wanted
 (`?next=`). Sessions last 30 days and slide on use. Log out is in the account menu at the bottom of the
 sidebar. Signed-out visitors are redirected to `/login` by `src/proxy.ts`; API routes return 401.
+Sign-in is throttled (ten tries per email and a hundred per network address every 15 minutes, answered
+with 429 "Too many sign-in attempts"); sign-up allows a hundred accounts per address per hour. The
+sign-up form and the sidebar footer link to the Terms of Service and Privacy Policy on
+`www.xpmatchme.com`.
 
 **Forgot your password** — **Forgot password?** on the sign-in page (`/forgot`) asks for your email and
 answers "if an account exists, a reset link is on its way" whether or not one does, so the form cannot

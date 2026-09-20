@@ -91,6 +91,19 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       <Button type="submit" size="lg" disabled={busy} className="mt-1 w-full">
         {busy ? "One moment…" : mode === "signup" ? "Create account" : "Sign in"}
       </Button>
+      {mode === "signup" ? (
+        <p className="text-center text-[12px] text-muted">
+          By creating an account you agree to the{" "}
+          <a href="https://www.xpmatchme.com/terms-of-service" target="_blank" rel="noreferrer noopener" className="font-medium text-foreground underline-offset-2 hover:underline">
+            Terms
+          </a>{" "}
+          and{" "}
+          <a href="https://www.xpmatchme.com/privacy-policy" target="_blank" rel="noreferrer noopener" className="font-medium text-foreground underline-offset-2 hover:underline">
+            Privacy Policy
+          </a>
+          .
+        </p>
+      ) : null}
       <p className="text-center text-[13px] text-muted">
         {mode === "signup" ? "Already have an account? " : "New here? "}
         <Link href={otherHref} className="font-semibold text-foreground underline-offset-2 hover:underline">

@@ -184,7 +184,15 @@ export function Sidebar() {
 
       <div className="mt-4 px-1 text-[11px] leading-relaxed text-muted">
         <div>Company · Contact · Help</div>
-        <div>Terms · Privacy</div>
+        <div>
+          <a href="https://www.xpmatchme.com/terms-of-service" target="_blank" rel="noreferrer noopener" className="hover:underline">
+            Terms
+          </a>
+          {" · "}
+          <a href="https://www.xpmatchme.com/privacy-policy" target="_blank" rel="noreferrer noopener" className="hover:underline">
+            Privacy
+          </a>
+        </div>
         <div className="mt-1">© {new Date().getFullYear()} XPMatch, Inc.</div>
       </div>
     </aside>
