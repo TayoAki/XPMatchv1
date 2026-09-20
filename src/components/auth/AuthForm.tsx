@@ -76,6 +76,13 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           required
         />
       </Field>
+      {mode === "login" ? (
+        <p className="-mt-2 text-right text-[13px]">
+          <Link href="/forgot" className="font-medium text-neutral-600 underline-offset-2 hover:underline">
+            Forgot password?
+          </Link>
+        </p>
+      ) : null}
       {error ? (
         <p role="alert" className="rounded-xl bg-red-50 px-3 py-2 text-[13px] text-red-700">
           {error}

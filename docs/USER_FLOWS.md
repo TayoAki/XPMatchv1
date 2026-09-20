@@ -50,13 +50,15 @@ button, plus a **Learn from our chats** switch that stops the assistant from off
 (`?next=`). Sessions last 30 days and slide on use. Log out is in the account menu at the bottom of the
 sidebar. Signed-out visitors are redirected to `/login` by `src/proxy.ts`; API routes return 401.
 
-**Forgot your password** — ask the XPMatch team. An admin opens `/admin` › Members, taps **Reset link**
-on your row and sends you the link (text, email, however you talk). The link opens `/reset?token=…`
-without signing in, shows which account it is for, takes a new password (typed twice, 8+ characters)
-and signs that browser in; every other device is signed out at the same time. Links work once and
-expire after 30 minutes (`password_resets` stores only a hash of the token; a new link replaces an
-unused older one). There is no self-service "Forgot password?" email yet: that needs an email provider,
-and it will reuse the same link.
+**Forgot your password** — **Forgot password?** on the sign-in page (`/forgot`) asks for your email and
+answers "if an account exists, a reset link is on its way" whether or not one does, so the form cannot
+be used to find out who has an account (`POST /api/auth/forgot`, rate-limited per address and per
+email; the email goes out through Resend from `EMAIL_FROM`). The link opens `/reset?token=…` without
+signing in, shows which account it is for, takes a new password (typed twice, 8+ characters) and signs
+that browser in; every other device is signed out at the same time. Links work once and expire after
+30 minutes (`password_resets` stores only a hash of the token; a new link replaces an unused older one).
+An admin can also issue the same link by hand: `/admin` › Members › **Reset link** on your row, sent
+however you talk. Without `RESEND_API_KEY` the form still answers normally but nothing is sent.
 
 ## 2. Chat (home)
 
@@ -340,7 +342,7 @@ users=… trips=… chats=…`), so the Railway deploy log shows them without a 
 
 | Route | Screen |
 | --- | --- |
-| `/login`, `/signup`, `/reset` (`?token=`) | Account, and the page a password reset link opens |
+| `/login`, `/signup`, `/forgot`, `/reset` (`?token=`) | Account, the "Forgot password?" form, and the page a reset link opens |
 | `/admin` | Bug reports and recommendation quality (admins) |
 | `/` (`?thread=`, `?trip=`, `?prompt=`) | Chat and map; history expands under Chats in the sidebar; `/chats` redirects here |
 | `/trips`, `/trips/[id]` (`?view=board`, `?rate=1`) | Trips list and trip page (board view, post-trip rating) |

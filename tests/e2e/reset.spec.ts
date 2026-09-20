@@ -1,7 +1,20 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type APIRequestContext } from "@playwright/test";
 import { completeOnboarding, ensureAccount, eventually, login, PASSWORD, signupApi, uniqueEmail } from "./helpers";
 
 const NEW_PASSWORD = "brand-new-secret-9";
+/** The Resend stand-in started by start-app.mjs keeps every email the app sends. */
+const MAILBOX = `http://localhost:${process.env.RESEND_PORT || 4548}/emails`;
+
+interface StubEmail {
+  to: string[];
+  subject: string;
+  text: string;
+  html?: string;
+}
+
+async function emailsTo(request: APIRequestContext, to: string): Promise<StubEmail[]> {
+  return ((await (await request.get(`${MAILBOX}?to=${encodeURIComponent(to)}`)).json()) as { emails: StubEmail[] }).emails;
+}
 
 test("password reset: the admin issues a link, the traveler sets a new password, other sessions and the link stop working", async ({ page, browser, baseURL, request }) => {
   test.setTimeout(240_000);
@@ -70,4 +83,51 @@ test("password reset: the admin issues a link, the traveler sets a new password,
     expect(newLogin.ok(), await newLogin.text()).toBeTruthy();
     await other.close();
   });
+});
+
+test("forgot password: the email carries a working link, and an unknown email gets the same answer without an email", async ({ browser, baseURL, request }) => {
+  test.setTimeout(180_000);
+  const email = uniqueEmail("forgot");
+  await signupApi(request, { name: "Fay Forgot", email }, baseURL!);
+  const context = await browser.newContext({ baseURL });
+  const page = await context.newPage();
+
+  await test.step("the sign-in page leads to the request form", async () => {
+    await page.goto("/login");
+    await page.getByRole("link", { name: "Forgot password?" }).click();
+    await page.waitForURL(/\/forgot/);
+    await page.getByPlaceholder("you@example.com").fill(email);
+    await page.getByRole("button", { name: "Email me a link" }).click();
+    await expect(page.getByTestId("forgot-sent")).toContainText("a reset link is on its way");
+  });
+
+  let link = "";
+  await test.step("the email holds the link and it sets the password", async () => {
+    const mailbox = await eventually(() => emailsTo(request, email), (list) => list.length >= 1);
+    const mail = mailbox[mailbox.length - 1];
+    expect(mail.subject).toBe("Reset your XPMatch password");
+    expect(mail.text).toContain("Fay");
+    link = mail.text.match(/https?:\/\/\S+\/reset\?token=[A-Za-z0-9_-]+/)?.[0] ?? "";
+    expect(link).toMatch(/\/reset\?token=/);
+    await page.goto(link);
+    const form = page.getByTestId("reset-form");
+    await expect(form).toContainText(email);
+    await form.getByLabel("New password").fill(NEW_PASSWORD);
+    await form.getByLabel("Confirm password").fill(NEW_PASSWORD);
+    await form.getByRole("button", { name: "Set password" }).click();
+    await page.waitForURL((u) => u.pathname === "/", { timeout: 30_000 });
+    const login = await request.post("/api/auth/login", { data: { email, password: NEW_PASSWORD }, headers: { Origin: baseURL! } });
+    expect(login.ok(), await login.text()).toBeTruthy();
+  });
+
+  await test.step("an email nobody signed up with gets the same message and no email", async () => {
+    const unknown = uniqueEmail("nobody");
+    await page.goto("/forgot");
+    await page.getByPlaceholder("you@example.com").fill(unknown);
+    await page.getByRole("button", { name: "Email me a link" }).click();
+    await expect(page.getByTestId("forgot-sent")).toContainText("a reset link is on its way");
+    expect(await emailsTo(request, unknown)).toHaveLength(0);
+  });
+
+  await context.close();
 });

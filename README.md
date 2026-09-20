@@ -92,8 +92,10 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   recommended place, dates and travelers. Prices are labeled as estimates.
 - **Accounts and per-user data** — email + password sign-up, sessions in HttpOnly cookies, and a
   profile, saved places, trips, chat list and notifications stored per user on the server. Forgotten
-  password: an admin issues a single-use, 30-minute reset link from the Members roster and sends it by
-  hand; `/reset?token=…` sets the new password, signs that browser in and signs every other device out.
+  password: "Forgot password?" on the sign-in page emails a single-use, 30-minute link through Resend
+  (the answer never reveals whether the account exists; requests are rate-limited), and an admin can
+  issue the same link by hand from the Members roster; `/reset?token=…` sets the new password, signs
+  that browser in and signs every other device out.
 - **Trips like Mindtrip** — `create_trip` proposes a day-by-day itinerary the traveler confirms in
   chat, the planner's "Create trip" makes one directly, and every trip has its own page: title and
   chips, a proactive nudge, "Ask anything else" (opens a chat attached to the trip), the trip's
@@ -189,6 +191,9 @@ Without a model key the app starts in demo mode. Model selection lives in `src/s
 | `PGLITE_DIR` | Where PGlite stores its files locally (default `.data/pglite`). |
 | `COPILOTKIT_TELEMETRY_DISABLED` | `true` to turn off CopilotKit's anonymous runtime telemetry. |
 | `ADMIN_EMAILS` | Comma-separated account emails that see `/admin` (beta numbers, bug reports, recommendation quality) and get an Update per report. |
+| `RESEND_API_KEY` | Turns on outgoing email through Resend ("Forgot password?" links). Unset: the form still answers, nothing is sent, and admins issue links by hand. |
+| `EMAIL_FROM` | Sender on the domain verified in Resend (default `XPMatch <no-reply@xpmatchme.com>`). |
+| `RESEND_BASE_URL` | Override Resend's API base URL (the end-to-end suite points it at a stub; never set in production). |
 | `APP_VERSION` | Optional build label attached to bug reports (Railway's `RAILWAY_GIT_COMMIT_SHA` is used when unset). |
 
 Note: CopilotKit generates follow-up suggestions with a forced tool call, which Claude Fable 5.1

@@ -41,10 +41,12 @@ Blockers, in order (about an hour of work, none of it code):
    account can make (the only rate limit is on imports). For an invited beta a spending limit on the
    OpenRouter key and a Google Cloud budget alert are enough (`docs/COGS.md`: about $9 per active user
    per month at list prices); an open beta needs per-user limits in the app first.
-4. **Forgotten passwords** (done the same day): an admin issues a single-use, 30-minute reset link from
-   `/admin` › Members › **Reset link** and sends it by hand; `/reset?token=…` sets the new password and
-   signs every other device out. Still missing: a self-service "Forgot password?" email, which needs an
-   email provider (Resend and a verified `xpmatchme.com`) and reuses the same link.
+4. **Forgotten passwords** (done): "Forgot password?" on the sign-in page emails a single-use,
+   30-minute link through Resend, and an admin can issue the same link by hand from `/admin` › Members ›
+   **Reset link**; `/reset?token=…` sets the new password and signs every other device out. Needs
+   `RESEND_API_KEY` set on Railway (paste it in the Railway dashboard, never in chat) and `EMAIL_FROM` on
+   the domain verified in Resend (default `XPMatch <no-reply@xpmatchme.com>`); without the key the
+   form still answers normally but nothing is sent.
 
 First week after inviting:
 
@@ -121,7 +123,7 @@ no invite code.
    Create › Import › **A reservation** with a real hotel confirmation → Add to trip → the Bookings tile
    shows the code and dates and the board lists it on its day → Update my assistant › Your taste.
 7. **Not set in production:** `IMPORT_ALLOW_LOOPBACK`, `PLACES_BASE_URL`, `ROUTES_BASE_URL`,
-   `OPENROUTER_BASE_URL`.
+   `OPENROUTER_BASE_URL`, `RESEND_BASE_URL`.
 8. **Admins.** Set `ADMIN_EMAILS` on Railway to the team's account emails (comma-separated) so bug
    reports reach someone: those accounts get an Update per report and the Admin item in the sidebar.
    Without it reports are still stored, but nobody is told.
@@ -182,8 +184,8 @@ no invite code.
 - Review answers depend on the five reviews and attributes Google returns; the card says when evidence is
   thin.
 - The map needs a valid browser key for the deployed domain; without it the panel shows a list fallback.
-- Single region, single Postgres; no email verification, and password resets are issued by an admin
-  (no self-service email yet; that and flight price tracking were Wave 4, skipped by decision).
+- Single region, single Postgres; no email verification at sign-up (flight price tracking and
+  verification were Wave 4, skipped by decision). Password resets are self-service by email.
 
 ## Next after beta
 

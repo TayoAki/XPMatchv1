@@ -60,7 +60,11 @@ export function ResetForm() {
           <p className="mt-1 text-[14px] text-muted">{link.message}</p>
         </div>
         <p className="text-[13px] text-muted">
-          Reset links work once and expire after 30 minutes. Ask the XPMatch team for a fresh one, or{" "}
+          Reset links work once and expire after 30 minutes.{" "}
+          <Link href="/forgot" className="font-semibold text-foreground underline-offset-2 hover:underline">
+            Request a new one
+          </Link>
+          , or{" "}
           <Link href="/login" className="font-semibold text-foreground underline-offset-2 hover:underline">
             sign in
           </Link>{" "}

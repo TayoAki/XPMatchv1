@@ -11,6 +11,7 @@ const appPort = Number(process.env.APP_PORT || 3000);
 const modelPort = Number(process.env.MODEL_PORT || 4545);
 const placesPort = Number(process.env.PLACES_PORT || 4546);
 const sitePort = Number(process.env.SITE_PORT || 4547);
+const resendPort = Number(process.env.RESEND_PORT || 4548);
 const dataDir = process.env.PGLITE_DIR || path.join(root, ".data", `e2e-${appPort}`);
 const startMocks = process.env.START_MOCKS !== "0";
 const production = process.env.E2E_PRODUCTION === "1";
@@ -30,6 +31,8 @@ if (startMocks) {
   spawnChild("node", [path.join(here, "mock-openrouter.mjs")], { PORT: String(modelPort), LOG: path.join(dataDir, "model-requests.log") }, "mock model");
   spawnChild("node", [path.join(here, "mock-places.mjs")], { PORT: String(placesPort) }, "mock places");
   spawnChild("node", [path.join(here, "mock-site.mjs")], { PORT: String(sitePort) }, "mock site");
+  // The email stub keeps what the app sends (password reset links) for the reset spec to read.
+  spawnChild("node", [path.join(here, "mock-resend.mjs")], { PORT: String(resendPort) }, "mock resend");
 }
 
 const appEnv = {
@@ -46,6 +49,10 @@ const appEnv = {
   IMPORT_ALLOW_LOOPBACK: "1",
   // The onboarding spec signs in as this admin to read bug reports and recommendation quality.
   ADMIN_EMAILS: "admin@example.com",
+  // Password reset emails go to the stub instead of Resend.
+  RESEND_API_KEY: "re_e2e_stand_in",
+  RESEND_BASE_URL: `http://localhost:${resendPort}`,
+  EMAIL_FROM: "XPMatch <no-reply@xpmatchme.test>",
   // The next dev badge would sit on the Chat tab of the phone tab bar and swallow taps.
   NEXT_DEV_INDICATORS: "0",
   COPILOTKIT_TELEMETRY_DISABLED: "true",

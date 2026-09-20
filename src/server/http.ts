@@ -70,3 +70,11 @@ export async function parseBody<S extends ZodTypeAny>(request: Request, schema: 
 export async function resolveParams<T>(ctx: { params: Promise<T> | T }): Promise<T> {
   return await ctx.params;
 }
+
+/** The origin the browser is on: the app sits behind Railway's proxy and a custom domain, so the forwarded host wins. */
+export function requestOrigin(request: Request): string {
+  const first = (value: string | null) => value?.split(",")[0].trim() || "";
+  const host = first(request.headers.get("x-forwarded-host")) || first(request.headers.get("host")) || new URL(request.url).host;
+  const proto = first(request.headers.get("x-forwarded-proto")) || (/^(localhost|127\.)/.test(host) ? "http" : "https");
+  return `${proto}://${host}`;
+}
