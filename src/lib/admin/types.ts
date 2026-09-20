@@ -59,6 +59,22 @@ export interface CatalogStats {
   aliasHits: number;
 }
 
+/** Package numbers: how many were shown, what travelers did with them, how many became trips. */
+export interface PackageStats {
+  shown: number;
+  travelers: number;
+  swaps: number;
+  locks: number;
+  thumbsUp: number;
+  thumbsDown: number;
+  trips: number;
+  /** 0–100 slots left untouched, null before any package was shown. */
+  keepRate: number | null;
+  /** 0–100 packages turned into a trip, null before any was shown. */
+  tripRate: number | null;
+  variants: { variant: string; count: number }[];
+}
+
 export interface BetaStats {
   users: number;
   usersLast7Days: number;

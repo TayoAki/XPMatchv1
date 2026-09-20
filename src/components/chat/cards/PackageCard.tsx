@@ -67,7 +67,7 @@ function Small({ onClick, label, pressed, children }: { onClick: () => void; lab
 }
 
 interface EventInput {
-  action: "variant" | "swap" | "lock" | "unlock" | "thumbs_up" | "thumbs_down" | "narrow" | "to_trip" | "open";
+  action: "variant" | "swap" | "lock" | "unlock" | "thumbs_up" | "thumbs_down" | "narrow" | "keep" | "to_trip" | "open";
   slot?: string;
   fromPlaceId?: string;
   toPlaceId?: string;
@@ -86,7 +86,7 @@ export function PackageCard({ args, status, toolCallId }: { args: Streaming<Show
   const destinationQuery = args.destination ?? "";
   const ready = status === ToolCallStatus.Complete && !!destinationQuery;
   const threadId = useCardThreadId();
-  const { profile, taste, preferences, recFeedback, recordRecFeedback, hydrated } = useTravelStore();
+  const { profile, taste, preferences, recFeedback, packageCalibration, recordRecFeedback, hydrated } = useTravelStore();
   const { openAddToTrip } = useUiState();
   const send = useSendMessage();
 
@@ -132,9 +132,17 @@ export function PackageCard({ args, status, toolCallId }: { args: Streaming<Show
   // Scores recompute on the client so thumbs move the badges at once.
   const live = useMemo(() => {
     if (!variant) return new Map<string, MatchResult>();
-    const inputs = { profile, taste, preferences, recFeedback };
+    const inputs = { profile, taste, preferences, recFeedback, packageCalibration };
     return new Map(variant.items.map((it) => [it.slot, hydrated ? scoreMatch(candidateFromPlace(it.place), inputs) : it.match]));
-  }, [variant, profile, taste, preferences, recFeedback, hydrated]);
+  }, [variant, profile, taste, preferences, recFeedback, packageCalibration, hydrated]);
+
+  // One "shown" event per card, once the first build lands: the denominator for keep and trip rates.
+  const shownRef = useRef(false);
+  useEffect(() => {
+    if (!data || shownRef.current) return;
+    shownRef.current = true;
+    void api("/api/packages/events", { method: "POST", json: { destinationId: data.destination.id, variant: "match", action: "shown" } }).catch(() => undefined);
+  }, [data]);
 
   // The package's places are the map's pins for this tool call; a swap or rebuild replaces them.
   useEffect(() => {
@@ -232,6 +240,8 @@ export function PackageCard({ args, status, toolCallId }: { args: Streaming<Show
     const things = variant.items.filter((i) => i.kind === "attraction").map((i) => i.place.name);
     const eats = variant.items.filter((i) => i.kind === "restaurant").map((i) => i.place.name);
     logEvent({ action: "to_trip" });
+    // Every place carried into the trip counts as kept, with the factors that put it there.
+    for (const item of variant.items) logEvent({ action: "keep", slot: item.slot, fromPlaceId: item.place.id, factors: (live.get(item.slot) ?? item.match).factors });
     void send(
       `Turn this package into a trip to ${data.destination.name}: ${stay ? `stay at ${stay.place.name}; ` : ""}things to do: ${things.join(", ")}; places to eat: ${eats.join(", ")}. Keep these exact places and build a day-by-day itinerary around them.`,
     );

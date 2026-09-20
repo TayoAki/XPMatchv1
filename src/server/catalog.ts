@@ -80,8 +80,8 @@ export async function upsertPlaces(places: ResolvedPlace[], destinationId?: stri
   const dest = destinationId && !destinationId.startsWith("est:") ? destinationId : null;
   try {
     for (const place of real) {
-      // Stored under what its category says it is (a list search for hotels can return a bar next door).
-      const kind = catalogKind(place.kind, place.category);
+      // Stored under what its types and category say it is (a list search for hotels can return a bar next door, or the city).
+      const kind = catalogKind(place.kind, place.category, place.types);
       await queryAll(
         `INSERT INTO places (place_id, kind, name, name_norm, locality, destination_id, lat, lng, data, google_fetched_at, updated_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, now(), now())

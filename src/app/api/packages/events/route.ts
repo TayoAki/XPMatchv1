@@ -4,7 +4,7 @@ import { json, parseBody, requireUser, route } from "@/server/http";
 
 export const dynamic = "force-dynamic";
 
-export const PACKAGE_ACTIONS = ["variant", "swap", "lock", "unlock", "thumbs_up", "thumbs_down", "narrow", "to_trip", "open"] as const;
+export const PACKAGE_ACTIONS = ["shown", "variant", "swap", "lock", "unlock", "thumbs_up", "thumbs_down", "narrow", "keep", "to_trip", "open"] as const;
 
 const bodySchema = z.object({
   destinationId: z.string().max(200),

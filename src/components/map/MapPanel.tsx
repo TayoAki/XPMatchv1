@@ -6,6 +6,7 @@ import { FOCUS_KEY, mapActions, useMapView } from "@/lib/map-store";
 import { fetchWeather, resolvePlaces, type CurrentWeather } from "@/lib/places/client";
 import type { MapPlace } from "@/lib/places/types";
 import { GoogleMap, type MapStatus } from "./GoogleMap";
+import { PinStrip } from "./PinStrip";
 import { PlaceDetailSheet } from "./PlaceDetailSheet";
 
 /** Chat companion map: pins from the conversation, a destination chip, search, weather and the place sheet. */
@@ -119,10 +120,17 @@ export function MapPanel() {
         ) : null}
 
         {weather ? (
-          <div className="absolute bottom-6 left-4 flex h-9 items-center gap-1.5 rounded-full bg-white/95 px-3 text-[13px] font-medium shadow-md">
+          <div className={`absolute left-4 flex h-9 items-center gap-1.5 rounded-full bg-white/95 px-3 text-[13px] font-medium shadow-md ${placeList.length && !selected ? "bottom-[104px]" : "bottom-6"}`}>
             <Sun className="h-4 w-4 text-amber-500" />
             <span>{weather.tempF}°F</span>
             <span className="text-muted">{weather.summary}</span>
+          </div>
+        ) : null}
+
+        {/* Mini cards under the map: scan every pin without opening anything; a tap opens the full sheet. */}
+        {placeList.length && !selected ? (
+          <div className="absolute inset-x-0 bottom-0 z-[5] bg-gradient-to-t from-white/95 via-white/80 to-transparent pt-4">
+            <PinStrip places={placeList} selectedKey={selectedKey} hoveredKey={hoveredKey} onSelect={onSelect} onHover={onHover} />
           </div>
         ) : null}
 

@@ -7,6 +7,7 @@ import { mapActions, useMapView } from "@/lib/map-store";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { BottomSheet, type SheetSnap } from "@/components/ui/BottomSheet";
 import { GoogleMap } from "./GoogleMap";
+import { PinStrip } from "./PinStrip";
 import { PlaceDetailSheet } from "./PlaceDetailSheet";
 import { iconSvg } from "./markerIcons";
 
@@ -61,6 +62,7 @@ export function MobileMapSheet() {
           <div className={clsx("shrink-0", snap === "full" ? "h-[40dvh]" : "h-[200px]")} data-testid="map-panel">
             <GoogleMap focus={focus} pins={placeList} selectedKey={selectedKey} hoveredKey={hoveredKey} onSelect={onSelect} onHover={onHover} />
           </div>
+          <PinStrip places={placeList} selectedKey={selectedKey} hoveredKey={hoveredKey} onSelect={onSelect} onHover={onHover} className="shrink-0 border-b border-border" />
           <ul className="xp-scroll min-h-0 flex-1 overflow-y-auto px-2 py-2" data-testid="mobile-pin-list" aria-label="Pinned places">
             {placeList.map((p) => {
               const photo = p.photos?.[0];

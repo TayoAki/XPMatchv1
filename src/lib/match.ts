@@ -74,6 +74,8 @@ export interface MatchInputs {
   taste?: TasteProfile | null;
   preferences?: LearnedPreference[];
   recFeedback?: RecFeedback[];
+  /** Per-factor weights learned from what the traveler kept or swapped in packages (see `src/server/package-learning.ts`). */
+  packageCalibration?: Partial<Record<MatchFactor, number>>;
 }
 
 export const BASE_SCORE = 55;
@@ -172,7 +174,7 @@ export function scoreMatch(candidate: MatchCandidate, inputs: MatchInputs): Matc
   const calibration = calibrationFrom(inputs.recFeedback);
   const reasons: MatchReason[] = [];
   const add = (factor: MatchFactor, text: string, delta: number) => {
-    const weight = delta > 0 ? (calibration[factor] ?? 1) : 1;
+    const weight = delta > 0 ? (calibration[factor] ?? 1) * (inputs.packageCalibration?.[factor] ?? 1) : 1;
     reasons.push({ factor, text, delta: Math.round(delta * weight) });
   };
   const text = norm([candidate.category ?? "", candidate.text ?? "", candidate.name ?? ""].join(" "));

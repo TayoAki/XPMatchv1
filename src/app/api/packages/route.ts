@@ -2,6 +2,7 @@ import { z } from "zod";
 import { HttpError, json, parseBody, requireUser, route } from "@/server/http";
 import { assertLookupBudget } from "@/server/lookup-budget";
 import { loadPreferences, loadProfile } from "@/server/models";
+import { loadPackageCalibration } from "@/server/package-learning";
 import { buildPackages } from "@/server/packages";
 import { loadRecFeedback } from "@/server/recs";
 import { loadTaste } from "@/server/taste";
@@ -31,8 +32,14 @@ export const POST = route(async (request) => {
   const body = await parseBody(request, bodySchema);
   // Building a package is one lookup for the budget: the places come from the catalog, Google only seeds a thin city.
   assertLookupBudget(user.id, 1);
-  const [profile, taste, preferences, recFeedback] = await Promise.all([loadProfile(user.id, user.name), loadTaste(user.id), loadPreferences(user.id), loadRecFeedback(user.id)]);
-  const result = await buildPackages(body, { profile, taste, preferences, recFeedback });
+  const [profile, taste, preferences, recFeedback, packageCalibration] = await Promise.all([
+    loadProfile(user.id, user.name),
+    loadTaste(user.id),
+    loadPreferences(user.id),
+    loadRecFeedback(user.id),
+    loadPackageCalibration(user.id),
+  ]);
+  const result = await buildPackages(body, { profile, taste, preferences, recFeedback, packageCalibration });
   if (!result) throw new HttpError(404, `Couldn't place "${body.destination}" on the map`);
   return json({ package: result });
 });

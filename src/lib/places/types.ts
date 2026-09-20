@@ -34,6 +34,8 @@ export interface ResolvedPlace {
   googleMapsUri?: string;
   websiteUri?: string;
   viewport?: Viewport;
+  /** Google place types ("restaurant", "locality"), when the search asked for them. */
+  types?: string[];
   source: "google" | "estimate";
 }
 

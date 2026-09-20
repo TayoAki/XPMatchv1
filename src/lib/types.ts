@@ -253,6 +253,8 @@ export interface UserState {
   taste?: TasteProfile | null;
   /** Thumbs up / down on recommendations (beta polish). */
   recFeedback?: RecFeedback[];
+  /** Per-factor weights learned from what the traveler kept or swapped in packages. */
+  packageCalibration?: Record<string, number>;
 }
 
 export const DEFAULT_PROFILE: TravelerProfile = {

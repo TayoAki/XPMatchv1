@@ -1,4 +1,5 @@
 import { findCity } from "@/lib/places/gazetteer";
+import { isLocality } from "@/lib/places/kind";
 import type { LatLng, PlaceKind, ResolvedPlace } from "@/lib/places/types";
 import {
   findAlias,
@@ -42,6 +43,7 @@ const SEARCH_FIELDS = [
   "places.googleMapsUri",
   "places.websiteUri",
   "places.priceLevel",
+  "places.types",
 ].join(",");
 
 /** The same fields for one place by id (Place Details), fetched only when a lookup finds a new id. */
@@ -184,9 +186,13 @@ export function toResolved(place: GooglePlace, kind: PlaceKind): ResolvedPlace |
           west: place.viewport.low.longitude,
         }
       : undefined,
+    types: place.types?.slice(0, 12),
     source: "google",
   };
 }
+
+/** A list search for restaurants or sights never returns the city itself (a locality is a destination). */
+const notLocality = (p: ResolvedPlace) => !isLocality(p.types);
 
 async function googleFetch<T>(url: string, init: RequestInit, fieldMask: string): Promise<T> {
   const key = placesApiKey();
@@ -446,7 +452,7 @@ async function googleNearby(center: LatLng, types: string[], kind: PlaceKind, li
     },
     NEARBY_FIELDS,
   );
-  return (data.places ?? []).map((p) => toResolved(p, kind)).filter(present);
+  return (data.places ?? []).map((p) => toResolved(p, kind)).filter(present).filter(notLocality);
 }
 
 /** Filters Places Text Search applies server-side (from Explore's parsed query or the traveler's budget). */
@@ -474,7 +480,7 @@ async function googleTextMany(query: string, kind: PlaceKind, center: LatLng, li
     },
     NEARBY_FIELDS,
   );
-  return (data.places ?? []).map((p) => toResolved(p, kind)).filter(present);
+  return (data.places ?? []).map((p) => toResolved(p, kind)).filter(present).filter(notLocality);
 }
 
 /** Several places for a free-text query near a point (the home picks build profile-driven queries with it). */

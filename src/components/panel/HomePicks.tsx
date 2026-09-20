@@ -130,7 +130,7 @@ function RowSkeleton({ compact = false }: { compact?: boolean }) {
  * scored against the traveler's profile, with thumbs so the score learns.
  */
 export function HomePicks({ options, initialKey, compact = false }: { options: FocusOption[]; initialKey: string; compact?: boolean }) {
-  const { profile, taste, preferences, recFeedback, hydrated, profileSaving } = useTravelStore();
+  const { profile, taste, preferences, recFeedback, packageCalibration, hydrated, profileSaving } = useTravelStore();
   const { openAssistant } = useUiState();
   const [chosenKey, setChosenKey] = useState<string | null>(null);
   const [custom, setCustom] = useState<string | null>(null);
@@ -169,8 +169,8 @@ export function HomePicks({ options, initialKey, compact = false }: { options: F
   const data = state?.destination === destination ? state.data : null;
   const rows = useMemo(() => {
     if (!data) return null;
-    return data.rows.map((row) => ({ ...row, items: row.items.map((item) => ({ place: item.place, match: scoreMatch(candidateFromPlace(item.place), { profile, taste, preferences, recFeedback }) })) }));
-  }, [data, profile, taste, preferences, recFeedback]);
+    return data.rows.map((row) => ({ ...row, items: row.items.map((item) => ({ place: item.place, match: scoreMatch(candidateFromPlace(item.place), { profile, taste, preferences, recFeedback, packageCalibration }) })) }));
+  }, [data, profile, taste, preferences, recFeedback, packageCalibration]);
   const error = state?.destination === destination ? state.error : null;
   const headerName = data?.destination.name ?? destination;
 

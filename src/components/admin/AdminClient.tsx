@@ -4,7 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import clsx from "clsx";
 import { Bug, Database, Sparkles, ThumbsDown, ThumbsUp, Users } from "lucide-react";
 import { api } from "@/lib/api";
-import { QUIZ_FIELD_LABELS, type AdminUser, type BetaStats, type CatalogStats, type QuizAnswers, type QuizStatus } from "@/lib/admin/types";
+import { QUIZ_FIELD_LABELS, type AdminUser, type BetaStats, type CatalogStats, type PackageStats, type QuizAnswers, type QuizStatus } from "@/lib/admin/types";
 import { BUG_SEVERITIES, type BugReport, type BugStatus } from "@/lib/bugs/types";
 import type { RecQuality } from "@/lib/recs/types";
 import { useTravelStore } from "@/lib/store";
@@ -183,8 +183,8 @@ interface SeedResponse {
   byKind: { hotel: number; restaurant: number; attraction: number };
 }
 
-/** The place catalog: what is stored, how often lookups came from it, and a way to fill a city ahead of testers. */
-function Catalog({ catalog, onChanged }: { catalog: CatalogStats | null; onChanged: () => void }) {
+/** The place catalog: what is stored, how often lookups came from it, the package numbers, and a way to fill a city ahead of testers. */
+function Catalog({ catalog, packages, onChanged }: { catalog: CatalogStats | null; packages: PackageStats | null; onChanged: () => void }) {
   const [destination, setDestination] = useState("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<string | null>(null);
@@ -226,6 +226,16 @@ function Catalog({ catalog, onChanged }: { catalog: CatalogStats | null; onChang
       ) : (
         <p className="mt-2 text-[13px] text-muted">Loading…</p>
       )}
+      {packages ? (
+        <div className="mt-3 grid gap-3 sm:grid-cols-3" data-testid="package-stats">
+          <Stat label="Packages shown" value={packages.shown} testId="stat-packages" note={`${packages.travelers} travelers`} />
+          <Stat label="Keep rate" value={packages.keepRate ?? 0} note={packages.keepRate === null ? "no packages yet" : `% of slots left as picked · ${packages.swaps} swaps, ${packages.locks} locks`} />
+          <Stat label="Turned into trips" value={packages.trips} note={packages.tripRate === null ? "" : `${packages.tripRate}% of packages · ${packages.thumbsUp}↑ ${packages.thumbsDown}↓`} />
+        </div>
+      ) : null}
+      {packages && packages.variants.length ? (
+        <p className="mt-2 text-[12px] text-muted">Variant picks: {packages.variants.map((v) => `${v.variant} ×${v.count}`).join(", ")}.</p>
+      ) : null}
       <form onSubmit={seed} className="mt-3 flex flex-wrap items-center gap-2">
         <div className="w-full max-w-xs">
           <TextInput value={destination} onChange={(e) => setDestination(e.target.value)} placeholder="Lisbon, Portugal" aria-label="City to seed" maxLength={120} />
@@ -262,6 +272,7 @@ export function AdminClient() {
   const [stats, setStats] = useState<BetaStats | null>(null);
   const [quiz, setQuiz] = useState<QuizAnswers | null>(null);
   const [catalog, setCatalog] = useState<CatalogStats | null>(null);
+  const [packages, setPackages] = useState<PackageStats | null>(null);
   const [statsVersion, setStatsVersion] = useState(0);
   const [members, setMembers] = useState<AdminUser[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -270,12 +281,13 @@ export function AdminClient() {
   useEffect(() => {
     if (!hydrated || !admin) return;
     let active = true;
-    api<{ stats: BetaStats; quiz: QuizAnswers; catalog: CatalogStats }>("/api/admin/stats")
+    api<{ stats: BetaStats; quiz: QuizAnswers; catalog: CatalogStats; packages: PackageStats }>("/api/admin/stats")
       .then((data) => {
         if (!active) return;
         setStats(data.stats);
         setQuiz(data.quiz);
         setCatalog(data.catalog);
+        setPackages(data.packages);
       })
       .catch(() => undefined);
     return () => {
@@ -365,7 +377,7 @@ export function AdminClient() {
 
       <Members users={members} />
 
-      <Catalog catalog={catalog} onChanged={() => setStatsVersion((v) => v + 1)} />
+      <Catalog catalog={catalog} packages={packages} onChanged={() => setStatsVersion((v) => v + 1)} />
 
       <section className="mt-8" data-testid="quiz-answers">
         <h2 className="text-[19px] font-semibold tracking-tight">What people answered</h2>

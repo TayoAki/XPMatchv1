@@ -8,11 +8,11 @@ import { scoreMatch, type MatchCandidate, type MatchResult } from "@/lib/match";
 
 /** The match score for a candidate against the signed-in traveler (null until the store has hydrated). */
 export function useMatch(candidate: MatchCandidate | null | undefined): MatchResult | null {
-  const { profile, taste, preferences, recFeedback, hydrated } = useTravelStore();
+  const { profile, taste, preferences, recFeedback, packageCalibration, hydrated } = useTravelStore();
   return useMemo(() => {
     if (!candidate || !hydrated) return null;
-    return scoreMatch(candidate, { profile, taste, preferences, recFeedback });
-  }, [candidate, hydrated, profile, taste, preferences, recFeedback]);
+    return scoreMatch(candidate, { profile, taste, preferences, recFeedback, packageCalibration });
+  }, [candidate, hydrated, profile, taste, preferences, recFeedback, packageCalibration]);
 }
 
 const TONE: Record<MatchResult["label"], string> = {

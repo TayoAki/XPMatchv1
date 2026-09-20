@@ -367,7 +367,7 @@ function distanceKm(a, b) {
   return 2 * 6371 * Math.asin(Math.sqrt(h));
 }
 
-const SEARCH_FIELDS = ["id", "displayName", "formattedAddress", "addressComponents", "location", "viewport", "rating", "userRatingCount", "primaryTypeDisplayName", "photos", "editorialSummary", "googleMapsUri", "websiteUri", "priceLevel"];
+const SEARCH_FIELDS = ["id", "displayName", "formattedAddress", "addressComponents", "location", "viewport", "rating", "userRatingCount", "primaryTypeDisplayName", "photos", "editorialSummary", "googleMapsUri", "websiteUri", "priceLevel", "types"];
 
 function project(place, fields) {
   const out = {};

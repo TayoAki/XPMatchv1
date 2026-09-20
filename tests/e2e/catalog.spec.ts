@@ -10,6 +10,7 @@ test("catalog: lookups are stored once and an admin can seed a city", async ({ p
     const section = page.getByTestId("place-catalog");
     await expect(section).toBeVisible({ timeout: 30_000 });
     await expect(section.getByTestId("stat-places")).toBeVisible({ timeout: 30_000 });
+    await expect(section.getByTestId("stat-packages")).toBeVisible();
   });
 
   await test.step("seeding a city fills the catalog from list searches", async () => {

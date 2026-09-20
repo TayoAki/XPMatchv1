@@ -86,4 +86,22 @@ describe("catalogKind", () => {
     expect(catalogKind("destination", "Hotel")).toBe("destination");
     expect(inferKind("Neighborhood")).toBe("attraction");
   });
+
+  it("files a city returned by a list search as a destination, whatever was asked for", () => {
+    expect(catalogKind("restaurant", undefined, ["locality", "political"])).toBe("destination");
+    expect(catalogKind("attraction", "Neighborhood", ["neighborhood", "political"])).toBe("attraction");
+  });
+});
+
+describe("package calibration", () => {
+  it("scales a factor's points by what the traveler kept or swapped in packages", () => {
+    const boutique = place({ kind: "hotel", name: "Hotel Artemide", category: "Boutique hotel", priceLevel: "$$", rating: 4.6, userRatingCount: 5000 });
+    const base = scoreMatch(candidateFromPlace(boutique), { profile });
+    const damped = scoreMatch(candidateFromPlace(boutique), { profile, packageCalibration: { "stay-type": 0.6 } });
+    const stayBase = base.reasons.find((r) => r.factor === "stay-type")?.delta ?? 0;
+    const stayDamped = damped.reasons.find((r) => r.factor === "stay-type")?.delta ?? 0;
+    expect(stayBase).toBe(10);
+    expect(stayDamped).toBe(6);
+    expect(damped.score).toBeLessThan(base.score);
+  });
 });

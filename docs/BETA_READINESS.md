@@ -7,7 +7,13 @@ to watch while they use it.
 
 Done since the audit: `ADMIN_EMAILS` set (Tayo, Faven); password resets by admin link and by
 "Forgot password?" email through Resend (`RESEND_API_KEY`, `EMAIL_FROM` set); the chat-first phone
-app; the home picks race after the quiz.
+app; the home picks race after the quiz; the place catalog (every Google place stored once and
+served from Postgres, lookups answered from remembered queries, 400 lookups a day per account, a
+Seed city button on `/admin`) and the package opener (one personalized card per destination with
+three variants, swap, lock, thumbs, narrowing chips and Turn into a trip, mini cards under the map,
+keeps and swaps calibrating the match score; `docs/PACKAGES_PLAN.md`). Before inviting, seed the
+cities testers are likely to ask for from `/admin` so their first package is answered from the
+catalog.
 
 **Must do before the first invite**
 

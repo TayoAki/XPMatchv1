@@ -6,7 +6,7 @@ import type { PlaceKind, ResolvedPlace } from "@/lib/places/types";
 import { feedbackKey, type FeedbackSource, type FeedbackVerdict, type PlaceFeedback, type TasteProfile } from "@/lib/feedback/types";
 import type { Reservation } from "@/lib/reservations/types";
 import type { RecContext, RecFeedback, RecVerdict } from "@/lib/recs/types";
-import { recKey } from "@/lib/match";
+import { recKey, type MatchFactor } from "@/lib/match";
 import {
   DEFAULT_PLANNER,
   DEFAULT_PROFILE,
@@ -135,6 +135,8 @@ export interface TravelStoreState {
   feedback: PlaceFeedback[];
   taste: TasteProfile | null;
   recFeedback: RecFeedback[];
+  /** Per-factor weights learned from packages (kept vs swapped), applied on top of the thumbs calibration. */
+  packageCalibration: Partial<Record<MatchFactor, number>>;
   proactiveDismissedAt: string | null;
   hydrated: boolean;
   /** True while a profile save is in flight; the home picks wait for it so they reflect the new answers. */
@@ -160,6 +162,7 @@ const DEFAULT_STATE: TravelStoreState = {
   feedback: [],
   taste: null,
   recFeedback: [],
+  packageCalibration: {},
   proactiveDismissedAt: null,
   hydrated: false,
   profileSaving: false,
@@ -298,6 +301,7 @@ export const travelActions = {
           feedback: data.feedback ?? [],
           taste: data.taste ?? null,
           recFeedback: data.recFeedback ?? [],
+          packageCalibration: (data.packageCalibration ?? {}) as Partial<Record<MatchFactor, number>>,
           hydrated: true,
         });
       } catch (err) {
