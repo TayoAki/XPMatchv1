@@ -151,9 +151,15 @@ function TripPageInner({ tripId }: { tripId: string }) {
   // Sections and map live in a side column on wide screens and under the chats otherwise (rendered once).
   const wide = useMediaQuery("(min-width: 1280px)");
 
-  /** Picking a place anywhere brings the map over the tiles so the pin is in view. */
+  /**
+   * A stop or idea clicked on the board or in a tile: the map comes over the tiles with that pin
+   * chosen and in view. The pin's sheet stays closed so the map itself is what shows; tapping the
+   * pin on the map opens the sheet.
+   */
+  const [locateKey, setLocateKey] = useState<string | null>(null);
   const selectPlace = (key: string | null) => {
-    setSelectedKey(key);
+    setLocateKey(key);
+    setSelectedKey(null);
     if (key) setChosenRight("map");
   };
   /** Opening a tile section takes the tiles back over the map. */
@@ -239,7 +245,7 @@ function TripPageInner({ tripId }: { tripId: string }) {
   const pinCount = tripPinCount(trip);
 
   const map = (className?: string) => (
-    <TripMap trip={trip} selectedKey={selectedKey} onSelect={setSelectedKey} hoveredKey={hoveredKey} onHover={setHoveredKey} className={className} />
+    <TripMap trip={trip} selectedKey={selectedKey} onSelect={setSelectedKey} highlightKey={locateKey} hoveredKey={hoveredKey} onHover={setHoveredKey} className={className} />
   );
 
   // Phones open on the board when the trip already has stops or a chat link asked for it.
@@ -519,7 +525,7 @@ function TripPageInner({ tripId }: { tripId: string }) {
         <aside className="flex w-[40%] min-w-[400px] max-w-[720px] shrink-0 flex-col border-l border-border/60 bg-white" data-testid="trip-side">
           <div className="flex items-center justify-between gap-2 border-b border-border/60 px-4 py-2">
             <RightToggle view={rightView} pinCount={pinCount} onChange={setChosenRight} />
-            <span className="truncate text-[12px] text-muted">{rightView === "map" ? "Hover a stop on the board to find it" : "Everything else about the trip"}</span>
+            <span className="truncate text-[12px] text-muted">{rightView === "map" ? "Click a stop on the board to find it; tap a pin for details" : "Everything else about the trip"}</span>
           </div>
           <div className="relative min-h-0 flex-1">
             <div className="xp-scroll h-full overflow-y-auto p-4" aria-hidden={rightView === "map"}>

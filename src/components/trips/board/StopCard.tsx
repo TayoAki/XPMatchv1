@@ -102,10 +102,18 @@ export function StopCard({ stop, index, color, dayIndex, dayCount, canEdit, hove
       data-stop-id={stop.id}
       onMouseEnter={() => onHover?.(key)}
       onMouseLeave={() => onHover?.(null)}
+      onClick={(e) => {
+        // A click anywhere on the card shows the stop on the map; its own controls, links and fields keep their jobs.
+        if (!place || editing) return;
+        const target = e.target as HTMLElement;
+        if (target.closest("button, a, input, textarea, select, label, [data-testid='stop-details']")) return;
+        onSelectPlace(key);
+      }}
       className={clsx(
         "relative flex gap-2 rounded-2xl border bg-white p-3 transition-colors",
         hovered ? "border-neutral-900" : "border-border",
         isDragging && "z-10 opacity-70 shadow-lg",
+        place && !editing && "cursor-pointer",
       )}
     >
       {canEdit && !phone ? (

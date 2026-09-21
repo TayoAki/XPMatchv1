@@ -14,6 +14,8 @@ export interface PlacesMapProps {
   routes?: MapRoute[];
   selectedKey: string | null;
   onSelect: (key: string | null) => void;
+  /** A pin to bring into view and mark as chosen without opening its sheet (a stop clicked on the board). */
+  highlightKey?: string | null;
   hoveredKey?: string | null;
   onHover?: (key: string | null) => void;
   labels?: boolean;
@@ -23,17 +25,18 @@ export interface PlacesMapProps {
 }
 
 /** Map of a set of places with the destination chip and the place sheet. Used by trips, guides and Explore. */
-export function PlacesMap({ focus, focusLabel, pins, routes, selectedKey, onSelect, hoveredKey, onHover, labels = true, className, testId, children }: PlacesMapProps) {
+export function PlacesMap({ focus, focusLabel, pins, routes, selectedKey, onSelect, highlightKey = null, hoveredKey, onHover, labels = true, className, testId, children }: PlacesMapProps) {
   const [localHovered, setLocalHovered] = useState<string | null>(null);
   const hovered = hoveredKey === undefined ? localHovered : hoveredKey;
   const hover = onHover ?? setLocalHovered;
+  // The sheet follows a real selection; a highlighted pin only gets the chosen marker and a pan.
   const selected: ResolvedPlace | null =
     selectedKey === FOCUS_PIN_KEY ? focus : selectedKey ? pins.find((p) => p.key === selectedKey) ?? null : null;
   const label = focusLabel ?? focus?.name;
 
   return (
     <div className={className ?? "relative h-full w-full"} data-testid={testId ?? "places-map"}>
-      <GoogleMap focus={focus} pins={pins} routes={routes} selectedKey={selectedKey} hoveredKey={hovered} onSelect={onSelect} onHover={hover} labels={labels}>
+      <GoogleMap focus={focus} pins={pins} routes={routes} selectedKey={selectedKey ?? highlightKey} hoveredKey={hovered} onSelect={onSelect} onHover={hover} labels={labels}>
         {label ? (
           <div className="absolute left-4 top-4 flex items-center gap-2">
             <button

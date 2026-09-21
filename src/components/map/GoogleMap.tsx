@@ -307,7 +307,7 @@ export function GoogleMap({
       {status !== "ready" ? <MapFallback status={status} error={error} focus={focus} pins={pins} /> : null}
       <ul className="sr-only" aria-label="Places on the map" data-testid="map-pin-list">
         {pins.map((p) => (
-          <li key={p.key} data-pin-key={p.key}>
+          <li key={p.key} data-pin-key={p.key} data-selected={selectedKey === p.key ? "true" : undefined} aria-current={selectedKey === p.key ? "true" : undefined}>
             {[p.badge ? `${p.badge}.` : "", p.name, p.group ? `· ${p.group}` : ""].filter(Boolean).join(" ")}
           </li>
         ))}

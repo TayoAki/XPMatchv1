@@ -215,8 +215,9 @@ things, so nothing competes for attention:
   "How was Rome?" banner sits above it when the trip has ended).
 - **Tiles on the right** — Ideas, Itinerary, Bookings, Media, Trip preferences, Calendar and Members,
   opening in place. A **Tiles | Map · N pinned** switch at the top of the column brings the **map over
-  the tiles** and back; the map also comes over on its own when a stop or idea is sent to the map
-  ("Show on the map", a stop's name), and the tiles come back when a tile section is opened.
+  the tiles** and back. Clicking a stop on the board (anywhere on its card) or "Show on the map" on
+  an idea brings the map over with that pin marked and panned into view, without opening its sheet;
+  tapping the pin on the map opens the sheet. Opening a tile section brings the tiles back.
   `?view=board` from a chat link opens with the map showing.
 - **The assistant in one box along the bottom** — the four starters (Find hotels / Top things to do /
   Build the itinerary / Neighborhood guide), the **Ask about this trip** input and the trip's recent

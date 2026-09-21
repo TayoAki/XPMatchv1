@@ -29,6 +29,7 @@ export function TripMap({
   trip,
   selectedKey,
   onSelect,
+  highlightKey = null,
   hoveredKey,
   onHover,
   className,
@@ -36,6 +37,8 @@ export function TripMap({
   trip: TripDetail;
   selectedKey: string | null;
   onSelect: (key: string | null) => void;
+  /** A stop clicked on the board: shown as chosen and panned to, without its sheet. */
+  highlightKey?: string | null;
   hoveredKey?: string | null;
   onHover?: (key: string | null) => void;
   className?: string;
@@ -51,7 +54,8 @@ export function TripMap({
     const scheduled = scheduledItemIds(days);
     const pins: Pin[] = [];
     const routes: MapRoute[] = [];
-    const selectedDay = selectedKey ? days.findIndex((d) => d.stops.some((s) => s.place && stopPinKey(s) === selectedKey)) : -1;
+    const shownKey = selectedKey ?? highlightKey;
+    const selectedDay = shownKey ? days.findIndex((d) => d.stops.some((s) => s.place && stopPinKey(s) === shownKey)) : -1;
     days.forEach((day, i) => {
       const visible = activeFilter === "all" || activeFilter === i || selectedDay === i;
       if (!visible) return;
@@ -73,7 +77,7 @@ export function TripMap({
       }
     }
     return { pins, routes };
-  }, [days, trip.items, activeFilter, selectedKey]);
+  }, [days, trip.items, activeFilter, selectedKey, highlightKey]);
 
   return (
     <PlacesMap
@@ -83,6 +87,7 @@ export function TripMap({
       routes={routes}
       selectedKey={selectedKey}
       onSelect={onSelect}
+      highlightKey={highlightKey}
       hoveredKey={hoveredKey}
       onHover={onHover}
       className={className}

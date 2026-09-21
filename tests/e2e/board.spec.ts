@@ -66,6 +66,12 @@ test("board: schedule ideas, keyboard reorder, day layers, chat scheduling", asy
     );
   });
 
+  await test.step("clicking the stop card shows it on the map without opening its sheet", async () => {
+    await day(1).getByTestId("stop-card").first().getByText("4.7").click();
+    await expect(pinList.locator('[data-selected="true"]')).toContainText("Colosseum");
+    await expect(page.getByTestId("place-sheet")).toHaveCount(0);
+  });
+
   await test.step("a second stop shows an estimated travel leg", async () => {
     await page.getByLabel("Add Pantheon to a day").selectOption("0");
     await expect(day(1).getByTestId("stop-card")).toHaveCount(2);
