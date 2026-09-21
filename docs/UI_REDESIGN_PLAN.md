@@ -61,7 +61,8 @@ What it means for us:
 | Create a trip (hero and header) | Opens the existing Create a trip dialog prefilled from the planner; creates the trip and opens its page, or "Start planning" sends the plan prompt to `/chat` | Same flow, two entry points, as the guide requires |
 | Concierge launcher | Fixed pill on Discover and content pages; hidden on `/chat`; navigates to `/chat` | Full-width conversation |
 | Phones | Also land on Discover; the first run shows the three-question quiz card in the hero slot until onboarded; the tab bar becomes Discover · Trips · Saved · Concierge · More | Consistency with desktop; keeps the phone first run |
-| Photography | Four licensed photographs in `public/images/travel/` with verified captions; Wikipedia thumbnails stay the fallback | The mockup's images are generated and cannot ship |
+| Photography | Google Places photos through the existing `/api/places/photo` proxy, keyed to real destinations (the hero follows the traveler's next destination; each collection card shows a representative destination), with the photo's author attribution rendered; Wikipedia thumbnails stay the fallback; no stock files, no generated images | The app already buys and caches Places photos for every card; the mockup's images are generated and cannot ship |
+| Logo | The existing brand mark: the sparkle icon and the "xpmatch." wordmark, recolored to the brand ink | No other logo asset exists in the repo |
 | Fonts | Inter and Source Serif 4 through `next/font/google`; vendored files if the build sandbox blocks the download | Inter is named in the CSS today but never loaded |
 | Dialogs | Our Modal and BottomSheet primitives, not native `<dialog>` | Already accessible and tested |
 
@@ -159,8 +160,8 @@ Phase 1 ships alone: every page looks calmer and teal, nothing moves, every exis
 existing fixed-height shell (the page body scrolls, not the window; the header sits above the
 scrolling `main`).
 
-- Brand: sparkle plus "xpmatch." wordmark as today, accessible name "XPMatch home"; swaps to the
-  approved SVG when supplied.
+- Brand: the existing sparkle plus "xpmatch." wordmark (the logo we have), accessible name
+  "XPMatch home", ink-colored on white.
 - Nav: Discover (`/`), My trips (`/trips`), Saved (`/saved`); `aria-current="page"` and a 1 px brand
   underline on the active link; `/guides` counts as Discover.
 - Right group: Updates bell with the unread count badge; profile button (avatar circle with the
@@ -231,26 +232,36 @@ when a destination is set, otherwise navigates to `/chat`.
 
 ### 5.6 `HeroImage`
 
-A `<picture>` with AVIF and JPEG sources at 960 and 1920 widths, `object-fit: cover`, an
-`alt` that describes the scene, `fetchPriority="high"`, the serif motto "More than a trip / A
-brighter you" as HTML, and a caption that names the real location of the licensed photograph. 535 px
-tall on desktop, 16:9 between 768 and 1099 px, 4:3 on phones, 12 px radius on desktop only.
+The photo is a Google Places photo of the destination in focus, so the hero changes with the
+traveler: the order is the next upcoming trip, then the profile's next destination, then the
+planner's Where, then the home city, then a curated default (Paros, Greece, as in the mockup). The
+page resolves that destination through `/api/places/resolve` (catalog first, so a destination costs
+one lookup per 30 days across all users) and renders `place.photos[0]` through the photo proxy at a
+1920 px maximum width, `object-fit: cover`, `fetchPriority="high"`, with an `alt` naming the
+destination. Layers in HTML: the serif motto "More than a trip / A brighter you", the caption with
+the resolved destination name and country, and the photo's author attribution (section 6). 535 px
+tall on desktop, 16:9 between 768 and 1099 px, 4:3 on phones, 12 px radius on desktop only. While
+the photo loads the slot keeps its height on the warm surface; if Places returns no photo the
+Wikipedia thumbnail is used; if that fails too, a flat brand-colored panel keeps the text readable.
 
 ### 5.7 `CollectionCard`
 
 An `<article>` with a link (image, gradient, serif title and description) and a sibling heart
 button (`aria-pressed`, "Save By the water"), 1.95:1 image ratio, 10 px radius, subtle scale on
-hover only when hover is available. Data in `src/lib/travel/collections.ts`:
+hover only when hover is available. Each card's photo is the Google Places photo of a representative
+destination, resolved and proxied the same way as the hero, with its attribution line. Data in
+`src/lib/travel/collections.ts`:
 
-| Collection | Inspiration tags | Link |
-| --- | --- | --- |
-| By the water | beach, romance | `/inspiration?collection=water` |
-| Close to nature | outdoors, road trip, photography | `/inspiration?collection=nature` |
-| Immersed in culture | culture, art, food | `/inspiration?collection=culture` |
+| Collection | Inspiration tags | Representative destination (photo) | Link |
+| --- | --- | --- | --- |
+| By the water | beach, romance | Amalfi Coast, Italy | `/inspiration?collection=water` |
+| Close to nature | outdoors, road trip, photography | Banff National Park, Canada | `/inspiration?collection=nature` |
+| Immersed in culture | culture, art, food | Kyoto, Japan | `/inspiration?collection=culture` |
 
-The Inspiration page reads the `collection` query and filters its curated rows by those tags; the
-heart saves a `collection` item (new `SavedKind`), and the Saved page shows collections in their
-own group.
+Later, once the Inspiration scoring exists, the representative destination becomes the highest
+matching destination in the collection for that traveler, so the three photos personalize too. The
+Inspiration page reads the `collection` query and filters its curated rows by those tags; the heart
+saves a `collection` item (new `SavedKind`), and the Saved page shows collections in their own group.
 
 ### 5.8 `ConciergeLauncher`
 
@@ -276,16 +287,33 @@ launcher is not rendered on phones (the tab carries it).
 
 ## 6. Assets
 
-| Asset | Requirement | Fallback until supplied |
-| --- | --- | --- |
-| Hero | A licensed Mediterranean terrace or coast photograph, 2000–2400 px wide, exported at 960 and 1920 in AVIF and JPEG, caption naming its real location | Wikipedia thumbnail of the destination in focus through `PlaceImage`, caption from the same lookup |
-| By the water, Close to nature, Immersed in culture | Licensed landscape photographs, 1200 px, focal points recorded in the data file | `PlaceImage` for a representative destination per collection (Amalfi Coast, Banff National Park, Kyoto) |
-| Wordmark | Approved SVG | Text wordmark as today |
-| Avatar | User-uploaded photo later | Initial in a brand-colored circle |
+No image files are added to the repo. Every photograph comes from the Google Places API through the
+existing server proxy, the same way the recommendation cards already work, so nothing on the page
+shows a place that does not exist.
 
-Sourcing: Unsplash (commercial use permitted) or Wikimedia Commons (attribution kept in
-`public/images/travel/CREDITS.md`). Never the mockup itself, never generated resort imagery
-presented as a bookable property. Transfer budgets: hero ≤ 400 KB, cards ≤ 180 KB each.
+| Asset | Source | Fallback |
+| --- | --- | --- |
+| Hero | Places photo of the destination in focus, proxied at 1920 px, caption from the resolved place | Wikipedia thumbnail through `PlaceImage`, then a flat brand panel |
+| Collection cards | Places photo of each collection's representative destination, proxied at 1200 px | `PlaceImage` for the same destination |
+| Picks, Jump back in, guides | Unchanged: Places photos of the places themselves | Unchanged |
+| Wordmark | The existing sparkle and "xpmatch." text | — |
+| Avatar | Initial in a brand-colored circle; an uploaded photo later | — |
+
+What the Places policies require and what changes to meet them:
+
+- **Attribution.** Google requires the photo's author attribution to be shown with any Places photo.
+  The app does not render it today: `photos.name` is in the field masks but `authorAttributions`
+  is not. Phase 1 adds `places.photos.authorAttributions` to the search and card masks (same
+  Essentials tier as `photos`, no cost change), stores `{ displayName, uri }` per photo on
+  `ResolvedPlace` and in the catalog row, and renders a small attribution line on every proxied photo
+  (hero, cards, picks, sheets). This is a compliance fix that the redesign makes visible.
+- **Caching.** Photo URIs stay cached 24 hours in Postgres and the proxy keeps its 24-hour
+  `Cache-Control`; image bytes are never stored. Place IDs are the only durable part, as in
+  `docs/COGS.md`.
+- **Cost.** The hero and the three cards are four photos per destination per day shared by every
+  visitor through the proxy cache, plus one catalog-first destination lookup per destination per
+  30 days. At list price that is under a cent per destination per day; the CDN in front of the photo
+  route (already in the cost plan) removes most of it.
 
 ---
 
@@ -329,7 +357,8 @@ centered above 1720 px. Reduced motion disables the card scale and button transi
 | `mobile.spec.ts` | Tab labels Chat, Explore; More sheet links | Discover, Concierge; Explore in the More sheet |
 | `trips.spec.ts` | nav link "Trips" | "My trips" |
 | `guides.spec.ts` | nav link "Saved" inside `navigation`, heading "Create" | Unchanged for Saved; "Create" heading stays on `/create` |
-| New `discover.spec.ts` | — | Hero renders; composer sends to `/chat` and the message appears; each planner field applies and cancels; date order validation; Create a trip from the hero opens the dialog prefilled; collection card link and heart; launcher navigates; phone layout at 390 px |
+| New `discover.spec.ts` | — | Hero renders with a photo and attribution from the Places mock; composer sends to `/chat` and the message appears; each planner field applies and cancels; date order validation; Create a trip from the hero opens the dialog prefilled; collection card link and heart; launcher navigates; phone layout at 390 px |
+| `mock-places.mjs` | Fixtures carry `photos.name` | Add `authorAttributions` to the fixtures so the attribution line is testable |
 | Visual check | — | A Playwright script captures `/` at 1586 × 992 after fonts and images load and saves it next to the reference for the overlay comparison |
 
 Unit tests are unaffected. The full e2e suite runs before every phase push.
@@ -340,8 +369,8 @@ Unit tests are unaffected. The full e2e suite runs before every phase push.
 
 | Phase | Work | Effort | Verification and deploy |
 | --- | --- | --- | --- |
-| 0 | Confirm the decisions in section 2; gather the four photographs, the wordmark, the fonts | half a day, mostly the founder | — |
-| 1 | Tokens, fonts, Button and field restyle, the neutral-to-brand sweep, CopilotKit and marker colors | 1 day | tsc, lint, unit, full e2e, build; deploy (visual only) |
+| 0 | Confirm the decisions in section 2 | an hour, the founder | — |
+| 1 | Tokens, fonts, Button and field restyle, the neutral-to-brand sweep, CopilotKit and marker colors; photo author attributions in the field masks, the catalog and on every proxied photo | 1–1.5 days | tsc, lint, unit, full e2e, build; deploy (visual only) |
 | 2 | `SiteHeader`, `/chat` route with redirects, `MobileTabBar` relabel, chat page strip with Recent and planner chips, remove Sidebar and TopBar, test helper migration | 1.5–2 days | full e2e updated; deploy |
 | 3 | Discover page: hero, composer, planner fields and editors (Popover on desktop, BottomSheet on phones), CTA row, hero image, collection cards with save, restyled picks and Jump back in, community row, launcher, phone first run, `discover.spec.ts` | 2–3 days | full e2e; screenshot overlay at 1586 × 992; deploy |
 | 4 | Polish: type calibration against the reference, responsive checks at 1440, 1280, 1024, 768, 390, 320, contrast on final photographs, reduced motion, docs (`USER_FLOWS.md`, README screenshots); optional desktop slide-over concierge sharing the thread | 1 day (+1 for the slide-over) | full e2e; deploy |
@@ -364,6 +393,9 @@ deploy checked. Total about six working days of build time.
   optional last step.
 - The header is inside the fixed-height app shell rather than the window flow, so phones keep the
   tab bar and composer behavior built in the mobile plan.
+- Photographs come from Google Places through the proxy, not from static files, so there is no
+  `<picture>`, AVIF or `srcset` pipeline; the proxy serves the photo at the requested maximum width
+  and the layout reserves the slot's height while it loads.
 - The API contracts in the guide are illustrative; XPMatch keeps its existing routes
   (`/api/places/resolve`, `/api/trips`, `/api/saved`, the CopilotKit runtime).
 
