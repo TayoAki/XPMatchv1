@@ -2,7 +2,10 @@
 
 Written September 21, 2026. Companion documents: `docs/COGS.md` (unit costs), `docs/PACKAGES_PLAN.md`
 (the package product), `docs/COMPETITIVE_RESEARCH.md` (how competitors work), `docs/BETA_READINESS.md`
-(what is live). Method: the demand-first business operating system (niche validation → offer design →
+(what is live), and the three working documents under this plan: `docs/COMPETITOR_LANDSCAPE.md` (who
+the competitors are, what they earn, who bought them, what users like and dislike),
+`docs/REVENUE_MODEL.md` (where the money is and what we integrate) and `docs/OPERATING_SYSTEM.md`
+(the systems that run the business without a person as the bottleneck). Method: the demand-first business operating system (niche validation → offer design →
 LAPS selling → delivery and brand → productization), applied to the five areas asked for: **Sales,
 Marketing, Onboarding, Fulfillment, Retention**. Every number below is either a verified external
 figure (Sources at the end), a figure from our own cost docs, or a target labeled as such.
