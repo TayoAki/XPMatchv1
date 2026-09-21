@@ -13,7 +13,10 @@ test("accounts, chat cards, saving, trips and sessions", async ({ page, browser 
 
   await test.step("signup and onboarding save to the server", async () => {
     await signup(page, { email, homeAirport: "ATL", styles: ["Food & drink"] });
-    await expect(page.getByText("@tayo-akigbogun")).toBeVisible();
+    await page.getByRole("button", { name: "Account menu" }).click();
+    await expect(page.getByTestId("account-menu")).toContainText("@tayo-akigbogun");
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("account-menu")).toHaveCount(0);
   });
 
   await test.step("hotel cards render from the model and a card can be saved", async () => {
@@ -24,7 +27,7 @@ test("accounts, chat cards, saving, trips and sessions", async ({ page, browser 
   });
 
   await test.step("the planner creates a trip on the server", async () => {
-    await page.getByRole("button", { name: "Create a trip" }).click();
+    await page.getByRole("banner").getByRole("button", { name: "Create a trip" }).click();
     await page.getByPlaceholder(/Dallas, Lisbon/).fill("Rome");
     await page.getByRole("textbox", { name: "From", exact: true }).fill("2026-10-10");
     await page.getByRole("textbox", { name: "To", exact: true }).fill("2026-10-13");
@@ -34,12 +37,14 @@ test("accounts, chat cards, saving, trips and sessions", async ({ page, browser 
   });
 
   await test.step("reload keeps profile, saved item and chat", async () => {
-    await page.goto("/");
+    await page.goto("/chat");
     await expect(page.getByRole("heading", { name: /Where to today, Tayo\?/ })).toBeVisible({ timeout: 20_000 });
     await page.getByRole("navigation").getByRole("link", { name: "Saved", exact: true }).click();
     await expect(page.getByText("Hotel de Russie").first()).toBeVisible();
-    await page.getByRole("navigation").getByRole("link", { name: /^Chats/ }).click();
-    await expect(page.getByRole("link", { name: /Find hotels in Rome|Exploring Rome/ }).first()).toBeVisible();
+    await page.goto("/chat");
+    await page.getByTestId("chat-menu-button").click();
+    await expect(page.getByTestId("chat-nav-list").getByRole("link", { name: /Find hotels in Rome|Exploring Rome/ }).first()).toBeVisible();
+    await page.keyboard.press("Escape");
   });
 
   await test.step("logout then login works", async () => {
@@ -49,7 +54,10 @@ test("accounts, chat cards, saving, trips and sessions", async ({ page, browser 
     await page.getByPlaceholder("you@example.com").fill(email);
     await page.locator('input[type="password"]').fill(PASSWORD);
     await page.getByRole("button", { name: "Sign in" }).click();
-    await expect(page.getByRole("heading", { name: /Where to today, Tayo\?/ })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("heading", { name: /Go somewhere that stays with you/ })).toBeVisible({ timeout: 20_000 });
+    await page.getByRole("button", { name: "Account menu" }).click();
+    await expect(page.getByTestId("account-menu")).toContainText("Tayo Akigbogun");
+    await page.keyboard.press("Escape");
   });
 
   await test.step("a wrong password is rejected", async () => {

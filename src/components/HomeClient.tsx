@@ -4,12 +4,13 @@ import { TravelChat } from "@/components/chat/TravelChat";
 import { MobileMapSheet } from "@/components/map/MobileMapSheet";
 import { TripBoardSheet } from "@/components/trips/TripBoardSheet";
 import { RightPanel } from "@/components/panel/RightPanel";
+import { ChatStrip } from "@/components/shell/ChatStrip";
 import { useUiState } from "@/components/providers/UiState";
 import { TripScopeProvider } from "@/components/trips/TripScope";
 import { useTravelStore } from "@/lib/store";
 import { useMediaQuery } from "@/lib/use-media-query";
 
-/** The chat experience: the active chat and the discovery/map panel (history lives in the sidebar). */
+/** The concierge page (`/chat`): the strip with the chat menu and planner chips, the active chat and the discovery/map panel. */
 export function HomeClient({ threadId, initialPrompt, tripId }: { threadId?: string; initialPrompt?: string; tripId?: string }) {
   const { newChatNonce } = useUiState();
   const { chats } = useTravelStore();
@@ -21,17 +22,20 @@ export function HomeClient({ threadId, initialPrompt, tripId }: { threadId?: str
   const chatKey = threadId ?? `new-${newChatNonce}-${tripId ?? ""}`;
   return (
     <TripScopeProvider tripId={effectiveTripId}>
-      <div className="flex h-full min-h-0">
-        <section className="relative flex min-w-0 flex-1 flex-col">
-          <TravelChat key={chatKey} threadId={threadId} initialPrompt={initialPrompt} tripId={effectiveTripId ?? undefined} />
-          <MobileMapSheet />
-          <TripBoardSheet />
-        </section>
-        {wide ? (
-          <aside className="w-[44%] min-w-[420px] max-w-[900px] shrink-0 border-l border-border/60 bg-white">
-            <RightPanel />
-          </aside>
-        ) : null}
+      <div className="flex h-full min-h-0 flex-col">
+        <ChatStrip />
+        <div className="flex min-h-0 flex-1">
+          <section className="relative flex min-w-0 flex-1 flex-col">
+            <TravelChat key={chatKey} threadId={threadId} initialPrompt={initialPrompt} tripId={effectiveTripId ?? undefined} />
+            <MobileMapSheet />
+            <TripBoardSheet />
+          </section>
+          {wide ? (
+            <aside className="w-[44%] min-w-[420px] max-w-[900px] shrink-0 border-l border-border/60 bg-white">
+              <RightPanel />
+            </aside>
+          ) : null}
+        </div>
       </div>
     </TripScopeProvider>
   );

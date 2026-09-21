@@ -47,6 +47,59 @@ export const PLACES = [
     photos: [{ name: "places/austell/photos/p1", authorAttributions: [{ displayName: "A Google user", uri: "https://maps.google.com/maps/contrib/0" }] }],
     googleMapsUri: "https://maps.google.com/?cid=austell",
   },
+  // Destinations the Discover page shows every visitor: the hero default and the three collection cards.
+  {
+    id: "paros",
+    kind: "destination",
+    types: ["locality", "political"],
+    primaryType: "locality",
+    displayName: { text: "Paros" },
+    formattedAddress: "Paros, Greece",
+    addressComponents: comps("Paros", "South Aegean", "Greece"),
+    location: loc(37.0853, 25.15),
+    editorialSummary: { text: "Cycladic island of marble villages, windsurfing bays and quiet beaches." },
+    photos: [{ name: "places/paros/photos/p1", authorAttributions: [{ displayName: "A Google user", uri: "https://maps.google.com/maps/contrib/0" }] }],
+    googleMapsUri: "https://maps.google.com/?cid=paros",
+  },
+  {
+    id: "amalfi-coast",
+    kind: "destination",
+    types: ["locality", "political"],
+    primaryType: "locality",
+    displayName: { text: "Amalfi Coast" },
+    formattedAddress: "Amalfi Coast, Italy",
+    addressComponents: comps("Amalfi", "Campania", "Italy"),
+    location: loc(40.634, 14.6027),
+    editorialSummary: { text: "Cliffside villages, lemon groves and the Tyrrhenian Sea." },
+    photos: [{ name: "places/amalfi-coast/photos/p1", authorAttributions: [{ displayName: "A Google user", uri: "https://maps.google.com/maps/contrib/0" }] }],
+    googleMapsUri: "https://maps.google.com/?cid=amalfi-coast",
+  },
+  {
+    id: "banff-national-park",
+    kind: "destination",
+    types: ["locality", "political"],
+    primaryType: "locality",
+    displayName: { text: "Banff National Park" },
+    formattedAddress: "Banff National Park, Improvement District No. 9, AB, Canada",
+    addressComponents: comps("Banff", "Alberta", "Canada"),
+    location: loc(51.4968, -115.9281),
+    editorialSummary: { text: "Turquoise lakes and big-sky hikes in the Canadian Rockies." },
+    photos: [{ name: "places/banff-national-park/photos/p1", authorAttributions: [{ displayName: "A Google user", uri: "https://maps.google.com/maps/contrib/0" }] }],
+    googleMapsUri: "https://maps.google.com/?cid=banff-national-park",
+  },
+  {
+    id: "kyoto",
+    kind: "destination",
+    types: ["locality", "political"],
+    primaryType: "locality",
+    displayName: { text: "Kyoto" },
+    formattedAddress: "Kyoto, Japan",
+    addressComponents: comps("Kyoto", "Kyoto Prefecture", "Japan"),
+    location: loc(35.0116, 135.7681),
+    editorialSummary: { text: "Temples at dawn, kaiseki at dusk." },
+    photos: [{ name: "places/kyoto/photos/p1", authorAttributions: [{ displayName: "A Google user", uri: "https://maps.google.com/maps/contrib/0" }] }],
+    googleMapsUri: "https://maps.google.com/?cid=kyoto",
+  },
   {
     id: "hotel-de-russie",
     kind: "hotel",
@@ -400,7 +453,7 @@ function textSearch(body) {
       if (d < 40) score += 1;
       else score -= 50;
     }
-    if (p.kind === "destination" && !/\brome\b|\broma\b|\baustell\b/.test(q)) score -= 20;
+    if (p.kind === "destination" && !/\brome\b|\broma\b|\baustell\b|\bparos\b|\bamalfi\b|\bbanff\b|\bkyoto\b/.test(q)) score -= 20;
     // "hotels in Rome" is a query for hotels, not for the city: Google would not answer with the locality.
     if (p.kind === "destination" && Object.values(KIND_WORDS).some((re) => re.test(q))) score -= 50;
     return { p, score };

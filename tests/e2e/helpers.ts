@@ -71,7 +71,19 @@ export async function signup(page: Page, options: OnboardingAnswers & { name?: s
   await page.locator('input[type="password"]').fill(PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
   await completeOnboarding(page, options);
-  await page.getByRole("heading", { name: new RegExp(`Where to today, ${name.split(" ")[0]}\\?`) }).waitFor({ timeout: 15_000 });
+  // Signing up lands on Discover; the hero is the sign the shell is up and the wizard is gone.
+  await page.getByRole("heading", { name: /Go somewhere that stays with you/ }).waitFor({ timeout: 15_000 });
+}
+
+/** Opens the concierge page unless it is already the page on screen (a chat, a thread or a trip-scoped chat). */
+export async function goToChat(page: Page) {
+  let pathname = "";
+  try {
+    pathname = new URL(page.url()).pathname;
+  } catch {
+    // about:blank
+  }
+  if (pathname !== "/chat") await page.goto("/chat");
 }
 
 /** Creates an account through the API (a second traveler for sharing scenarios). */
@@ -94,9 +106,10 @@ export async function login(page: Page, email: string, options: { finishOnboardi
   if (options.finishOnboarding) await completeOnboarding(page);
 }
 
-/** Types into the chat and sends once agent discovery has enabled the composer. */
+/** Types into the chat (opening the concierge page first when needed) and sends once agent discovery has enabled the composer. */
 export async function sendChat(page: Page, text: string) {
-  const input = page.getByPlaceholder("Ask XPMatch");
+  await goToChat(page);
+  const input = page.getByPlaceholder("Ask your concierge");
   await input.fill(text);
   await page.locator('[data-testid="copilot-send-button"]:not([disabled])').waitFor({ timeout: 30_000 });
   await input.press("Enter");

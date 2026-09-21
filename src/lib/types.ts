@@ -102,7 +102,7 @@ export interface TripPlanner {
   budgetTier: BudgetTier | "";
 }
 
-export type SavedKind = "destination" | "hotel" | "flight" | "restaurant" | "attraction" | "guide";
+export type SavedKind = "destination" | "hotel" | "flight" | "restaurant" | "attraction" | "guide" | "collection";
 
 export interface SavedItem {
   id: string;

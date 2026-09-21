@@ -118,7 +118,7 @@ test("in-depth onboarding drives home picks with match scores and thumbs; itiner
 
   await test.step("Update my assistant keeps every answer editable in one place", async () => {
     await page.getByRole("button", { name: "Account menu" }).click();
-    // The welcome hero has its own "Update my assistant" button; the sidebar's menu item comes first in the DOM.
+    // The account menu's item comes first in the DOM (the chat's welcome hero has its own button).
     await page.getByRole("button", { name: "Update my assistant" }).first().click();
     const dialog = page.getByRole("dialog", { name: "Update my assistant" });
     await expect(dialog.getByTestId("interest-chips").getByRole("button", { name: "Museums & art", exact: true })).toHaveAttribute("aria-pressed", "true");
@@ -128,7 +128,8 @@ test("in-depth onboarding drives home picks with match scores and thumbs; itiner
     await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
   });
 
-  await test.step("a bug report with a screenshot is sent from the sidebar", async () => {
+  await test.step("a bug report with a screenshot is sent from the account menu", async () => {
+    await page.getByRole("button", { name: "Account menu" }).click();
     await page.getByRole("button", { name: "Report a bug" }).first().click();
     const dialog = page.getByRole("dialog", { name: "Report a bug" });
     await dialog.getByRole("button", { name: /Looks wrong/ }).click();

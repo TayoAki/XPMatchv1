@@ -29,6 +29,24 @@ function relativeTripPhrase(trip: Trip): string {
   return `${trip.destination} in ${start.toLocaleDateString("en-US", { month: "long" })}`;
 }
 
+/** Where the traveler is headed, for the proactive nudge and the hero chips: the next trip, the dream destination, then the planner. */
+export function useDiscoveryFocus(): { destination: string; phrase: string } | null {
+  const { profile, planner, trips } = useTravelStore();
+  return useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    const upcoming = trips
+      .filter((t) => !t.endDate || t.endDate >= today)
+      .sort((a, b) => (a.startDate ?? "9999").localeCompare(b.startDate ?? "9999"))[0];
+    if (upcoming) return { destination: upcoming.destination, phrase: relativeTripPhrase(upcoming) };
+    if (profile.nextDestination.trim()) return { destination: profile.nextDestination.trim(), phrase: `${profile.nextDestination.trim()}${profile.nextWhen.trim() ? ` in ${profile.nextWhen.trim()}` : ""}` };
+    if (planner.where.trim()) {
+      const dates = formatDateRange(planner.startDate, planner.endDate);
+      return { destination: planner.where.trim(), phrase: `${planner.where.trim()}${dates ? ` ${dates}` : ""}` };
+    }
+    return null;
+  }, [trips, planner, profile.nextDestination, profile.nextWhen]);
+}
+
 interface JumpItem {
   key: string;
   kind: string;
@@ -63,39 +81,17 @@ function JumpCover({ item, compact, children }: { item: JumpItem; compact: boole
   );
 }
 
-/**
- * The discovery content: the proactive card, Jump back in, the home picks and inspiration.
- * The side panel renders it on wide screens; the phone home renders it compact under the composer.
- * With `picksFirst` (phones, after the in-chat quiz) the picks arrive first, framed as the
- * assistant's opening message, and the proactive card stays out of the way.
- */
-export function DiscoveryFeed({ compact = false, picksFirst = false }: { compact?: boolean; picksFirst?: boolean }) {
-  const { profile, planner, trips, chats, saved, proactiveDismissedAt, dismissProactive } = useTravelStore();
+/** The row of trips, recent chats and saved destinations to pick up again. */
+export function JumpBackIn({ compact = false }: { compact?: boolean }) {
+  const { trips, chats, saved } = useTravelStore();
   const send = useSendMessage();
 
-  const homeCity = profile.homeCity.trim();
-  const focus = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10);
-    const upcoming = trips
-      .filter((t) => !t.endDate || t.endDate >= today)
-      .sort((a, b) => (a.startDate ?? "9999").localeCompare(b.startDate ?? "9999"))[0];
-    if (upcoming) return { destination: upcoming.destination, phrase: relativeTripPhrase(upcoming) };
-    if (profile.nextDestination.trim()) return { destination: profile.nextDestination.trim(), phrase: `${profile.nextDestination.trim()}${profile.nextWhen.trim() ? ` in ${profile.nextWhen.trim()}` : ""}` };
-    if (planner.where.trim()) {
-      const dates = formatDateRange(planner.startDate, planner.endDate);
-      return { destination: planner.where.trim(), phrase: `${planner.where.trim()}${dates ? ` ${dates}` : ""}` };
-    }
-    return null;
-  }, [trips, planner, profile.nextDestination, profile.nextWhen]);
-
-  const showProactive = isProactiveVisible(proactiveDismissedAt);
-
-  const jumpBackIn = useMemo(() => {
-    const items: JumpItem[] = [];
+  const items = useMemo(() => {
+    const list: JumpItem[] = [];
     const tripPhoto = (t: Trip | undefined): string | undefined => t?.place?.photos?.[0];
     const tripCredit = (t: Trip | undefined): PhotoCreditInfo | undefined => t?.place?.photoCredits?.[0];
     for (const t of trips.slice(0, 3)) {
-      items.push({
+      list.push({
         key: `trip-${t.id}`,
         kind: "Trip",
         title: t.title,
@@ -109,7 +105,7 @@ export function DiscoveryFeed({ compact = false, picksFirst = false }: { compact
     for (const c of chats.slice(0, 3)) {
       const trip = c.tripId ? trips.find((t) => t.id === c.tripId) : undefined;
       const destination = c.destination ?? trip?.destination;
-      items.push({
+      list.push({
         key: `chat-${c.id}`,
         kind: "Chat",
         title: c.title,
@@ -118,11 +114,11 @@ export function DiscoveryFeed({ compact = false, picksFirst = false }: { compact
         credit: c.place?.photos?.[0] ? c.place.photoCredits?.[0] : tripCredit(trip),
         queries: destination ? [destination] : [],
         onClick: () => undefined,
-        href: `/?thread=${encodeURIComponent(c.id)}`,
+        href: `/chat?thread=${encodeURIComponent(c.id)}`,
       });
     }
     for (const s of saved.filter((x) => x.kind === "destination").slice(0, 2)) {
-      items.push({
+      list.push({
         key: `saved-${s.id}`,
         kind: "Saved",
         title: s.title,
@@ -133,8 +129,57 @@ export function DiscoveryFeed({ compact = false, picksFirst = false }: { compact
         onClick: () => send(`Tell me more about ${s.title} and when I should go.`),
       });
     }
-    return items.slice(0, 6);
+    return list.slice(0, 6);
   }, [trips, chats, saved, send]);
+
+  return (
+    <section className={compact ? "mt-6" : "mt-8"} data-testid="jump-back-in">
+      <h2 className={compact ? "text-[17px] font-semibold tracking-tight" : "text-[19px] font-semibold tracking-tight"}>Jump back in</h2>
+      <div className="xp-no-scrollbar mt-3 flex gap-4 overflow-x-auto pb-1">
+        {items.length === 0 ? (
+          <div className={clsx("flex w-full items-center justify-center rounded-2xl border border-dashed border-border text-[14px] text-muted", compact ? "h-[120px]" : "h-[208px]")}>
+            Your trips, chats and saved places will show up here.
+          </div>
+        ) : null}
+        {items.map((item) => {
+          const card = (
+            <JumpCover item={item} compact={compact}>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+              <div className="absolute inset-x-4 bottom-4 text-left text-white">
+                <span className="rounded-md bg-white/25 px-2 py-0.5 text-[11px] font-semibold backdrop-blur">{item.kind}</span>
+                <div className="mt-1.5 line-clamp-2 text-[15px] font-semibold leading-snug">{item.title}</div>
+                {item.subtitle ? <div className="mt-0.5 truncate text-[12px] opacity-90">{item.subtitle}</div> : null}
+              </div>
+            </JumpCover>
+          );
+          return item.href ? (
+            <Link key={item.key} href={item.href} className="shrink-0" data-testid="jump-card">
+              {card}
+            </Link>
+          ) : (
+            <button key={item.key} type="button" onClick={item.onClick} className="shrink-0 text-left" data-testid="jump-card">
+              {card}
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+/**
+ * The discovery content: the proactive card, Jump back in, the home picks and inspiration.
+ * The side panel on the concierge page renders it on wide screens; the phone chat renders it
+ * compact under the composer. With `picksFirst` (phones, after the in-chat quiz) the picks
+ * arrive first, framed as the assistant's opening message, and the proactive card stays out
+ * of the way.
+ */
+export function DiscoveryFeed({ compact = false, picksFirst = false }: { compact?: boolean; picksFirst?: boolean }) {
+  const { profile, planner, trips, proactiveDismissedAt, dismissProactive } = useTravelStore();
+  const send = useSendMessage();
+  const focus = useDiscoveryFocus();
+  const homeCity = profile.homeCity.trim();
+  const showProactive = isProactiveVisible(proactiveDismissedAt);
 
   const picks = useMemo(
     () => focusOptions({ trips, nextDestination: profile.nextDestination, nextWhen: profile.nextWhen, plannerWhere: planner.where, homeCity }),
@@ -203,37 +248,7 @@ export function DiscoveryFeed({ compact = false, picksFirst = false }: { compact
         </div>
       ) : null}
 
-      <section className={compact ? "mt-6" : "mt-8"} data-testid="jump-back-in">
-        <h2 className={headingClass}>Jump back in</h2>
-        <div className="xp-no-scrollbar mt-3 flex gap-4 overflow-x-auto pb-1">
-          {jumpBackIn.length === 0 ? (
-            <div className={clsx("flex w-full items-center justify-center rounded-2xl border border-dashed border-border text-[14px] text-muted", compact ? "h-[120px]" : "h-[208px]")}>
-              Your trips, chats and saved places will show up here.
-            </div>
-          ) : null}
-          {jumpBackIn.map((item) => {
-            const card = (
-              <JumpCover item={item} compact={compact}>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-                <div className="absolute inset-x-4 bottom-4 text-left text-white">
-                  <span className="rounded-md bg-white/25 px-2 py-0.5 text-[11px] font-semibold backdrop-blur">{item.kind}</span>
-                  <div className="mt-1.5 line-clamp-2 text-[15px] font-semibold leading-snug">{item.title}</div>
-                  {item.subtitle ? <div className="mt-0.5 truncate text-[12px] opacity-90">{item.subtitle}</div> : null}
-                </div>
-              </JumpCover>
-            );
-            return item.href ? (
-              <Link key={item.key} href={item.href} className="shrink-0" data-testid="jump-card">
-                {card}
-              </Link>
-            ) : (
-              <button key={item.key} type="button" onClick={item.onClick} className="shrink-0 text-left" data-testid="jump-card">
-                {card}
-              </button>
-            );
-          })}
-        </div>
-      </section>
+      <JumpBackIn compact={compact} />
 
       {picksFirst ? null : picksBlock}
 

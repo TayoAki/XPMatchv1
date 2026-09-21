@@ -6,8 +6,8 @@ Routes are listed at the end.
 ## 1. Account
 
 **Sign up** — `/signup`: name, email, password (8+ characters). The server hashes the password (bcrypt),
-creates the user, a profile row and a session, sets the `xp_session` HttpOnly cookie and lands on the chat.
-A handle (`@tayo-akigbogun`) is derived from the name and shown in the sidebar footer.
+creates the user, a profile row and a session, sets the `xp_session` HttpOnly cookie and lands on Discover.
+A handle (`@tayo-akigbogun`) is derived from the name and shown in the account menu.
 
 **Onboarding** — on the first visit the "Let's personalize your assistant" wizard opens: six short steps
 with a progress bar, Back / Next and "Skip for now" on every step.
@@ -27,11 +27,12 @@ with a progress bar, Back / Next and "Skip for now" on every step.
 6. *Dealbreakers & notes* — **"What ruins a trip for you?"** chips (street noise, no workspace, stairs,
    crowds, early starts, long transfers, spicy food…) that become dealbreakers, and anything else.
 
-On a phone (under 640 px) the wizard does not open at all: the chat asks three questions as bubbles
-(where you start from and where you dream of going, what you love doing as chips that fold behind
-**Show all**, how you like to spend as four budget cards), each answer echoes back as your bubble,
-**Done** saves the profile and the nine home picks arrive as the assistant's first message ("Here's
-what I'd pick for you in Rome…"); **Skip for now** saves what was filled. The full six sections stay
+On a phone (under 640 px) the wizard does not open at all: the Discover hero asks three questions as
+chat bubbles (where you start from and where you dream of going, what you love doing as chips that fold
+behind **Show all**, how you like to spend as four budget cards), each answer echoes back as your bubble,
+**Done** saves the profile and Discover shows the hero with "For you in Rome"; the Concierge tab's empty
+state then opens with the nine home picks as the assistant's first message ("Here's what I'd pick for
+you in Rome…"); **Skip for now** saves what was filled. The full six sections stay
 one tap away under More › Update my assistant, where they come as three screens (about you + style,
 where you stay + how you eat, logistics + dealbreakers) while the quiz is unfinished.
 
@@ -47,11 +48,11 @@ likes/avoids/dealbreaker, domain, where it came from, and "only for <trip>" when
 button, plus a **Learn from our chats** switch that stops the assistant from offering to remember things.
 
 **Log in / log out** — `/login` accepts email + password and returns to the page the visitor wanted
-(`?next=`). Sessions last 30 days and slide on use. Log out is in the account menu at the bottom of the
-sidebar. Signed-out visitors are redirected to `/login` by `src/proxy.ts`; API routes return 401.
+(`?next=`). Sessions last 30 days and slide on use. Log out is in the account menu in the header (the
+More sheet on phones). Signed-out visitors are redirected to `/login` by `src/proxy.ts`; API routes return 401.
 Sign-in is throttled (ten tries per email and a hundred per network address every 15 minutes, answered
 with 429 "Too many sign-in attempts"); sign-up allows a hundred accounts per address per hour. The
-sign-up form and the sidebar footer link to the Terms of Service and Privacy Policy on
+sign-up form and the account menu link to the Terms of Service and Privacy Policy on
 `www.xpmatchme.com`.
 
 **Forgot your password** — **Forgot password?** on the sign-in page (`/forgot`) asks for your email and
@@ -64,14 +65,36 @@ that browser in; every other device is signed out at the same time. Links work o
 An admin can also issue the same link by hand: `/admin` › Members › **Reset link** on your row, sent
 however you talk. Without `RESEND_API_KEY` the form still answers normally but nothing is sent.
 
-## 2. Chat (home)
+## 2. Discover (home) and the concierge (`/chat`)
 
-`/` is the chat: the **active chat** with the **right panel** beside it (discovery feed until the
-conversation is about a place, then the live map). Conversation history lives in the main sidebar:
-**Chats** expands in place to list every conversation (grouped newest first, trip labels, hover to
-delete, "Show all", "+ New chat") so no horizontal space is spent on a separate rail.
+**Discover** — `/` is the home page, under the header (wordmark · Discover, My trips, Saved · the
+Updates bell · the account menu with Update my assistant, Inspiration, Explore near you, Create a guide,
+Admin, Report a bug, Terms, Privacy, Log out · the teal **Create a trip** pill). Its hero carries the
+eyebrow, "Go somewhere that stays with you.", a serif prompt composer ("Describe your ideal escape",
+Ctrl/⌘ + Enter or the round send button hands the text to the concierge), three suggestion chips (Find
+hotels / Top things to do / Neighborhood guide for the destination in focus, or Weekend ideas / Plan a
+trip / Find cheap flights), the **Where / When / Guests / Budget** fields (each opens a small editor:
+a popover on desktop, a sheet on phones, with Cancel and Apply; Where suggests the resolved place, When
+rejects an end date before the start, Guests is a 1–16 stepper, Budget the four tiers or no preference),
+**Create a trip** (opens the dialog prefilled from the fields) and **or chat with your AI concierge**
+(sends the planning prompt when a destination is set, otherwise opens the chat). Beside the copy sits
+the Google Places photograph of the destination the traveler is headed to (next trip, then the dream
+destination, the planner's Where, the home city, then Paros) with the motto, a caption naming the place
+and the photo's author attribution, as the Places policies require. Below the hero: **Find your kind of
+extraordinary** (By the water, Close to nature, Immersed in culture: each a real destination's Places
+photo with a heart that saves the collection and a link to the matching Inspiration rows; "View all
+destinations" opens Explore), **For you in {city}** (the nine picks with match scores and thumbs),
+**Jump back in** (trips, recent chats, saved destinations) and **From the community** (the newest
+published guides). A floating **Your AI concierge** pill (lower right, not on phones) opens the chat
+from Discover and every content page, scoped to the trip whose page is open.
 
-On a phone the chat is the whole screen and everything else opens over it in sheets: the welcome hero,
+**The concierge** — `/chat` is the conversation: a slim strip (the chat title opens the **Recent**
+menu listing every conversation newest first with trip labels and a remove button, plus "Start a new
+chat"; the Where / When / Who / Budget chips; **New chat**) above the **active chat** with the **right
+panel** beside it (discovery feed until the conversation is about a place, then the live map). The
+empty state greets by name ("Where to today, Tayo?") with the suggestion chips and the composer.
+
+On a phone the concierge page is the chat and everything else opens over it in sheets: the greeting,
 suggestion chips and the composer sit at the top of one scrolling page with the picks (as the
 assistant's first message), Jump back in and Get inspired below them. Recommendation cards come as a
 row that swipes card by card; tapping a card's photo opens the place detail as a sheet. Once the
@@ -82,11 +105,12 @@ in the conversation. "Saved to Trips · open the board" on a proposal and "Open 
 scheduling chip open the itinerary board as a full-height sheet (short map, then the days) with
 **Open trip** for the full page.
 
-1. **Start** — the welcome hero ("Where to today, Tayo?") shows suggestion chips built from the profile,
-   the planner bar values and upcoming trips. Type anything travel-related or pick a chip.
+1. **Start** — the empty state ("Where to today, Tayo?") shows suggestion chips built from the profile,
+   the planner values and upcoming trips. Type anything travel-related, pick a chip, or arrive from the
+   Discover composer (`/chat?prompt=…` sends the text once the chat is ready).
 2. **Destination** — as soon as a place is clear the assistant calls `focus_map`: the map centers on
    it, a "Looks like you're headed to Rome" callout appears with a **Create trip** button, the chat is
-   titled "Exploring Rome" and the planner bar's *Where* fills in.
+   titled "Exploring Rome" and the planner's *Where* fills in.
 2a. **The package** — with the destination clear, the assistant's first card is one personalized
    package (`show_package`): the app, not the model, picks the best stay, things to do (two, three or
    four by pace) and three places to eat from its own place catalog, scored by the match model with a
@@ -184,17 +208,20 @@ scheduling chip open the itinerary board as a full-height sheet (short map, then
 13. **Follow-ups** — after each answer the assistant proposes 2–3 next steps as chips. While a proposal or
     "Remember this?" card is waiting for a click the chips pause (a suggestions run would otherwise send the
     model an unanswered tool call).
-14. **History** — expand **Chats** in the sidebar and click a conversation to reopen it (`/?thread=…`),
-    including its cards and map pins, which are rebuilt from the stored transcript; transcripts live in
-    Postgres, so chats survive deploys and restarts. Chats started from a trip show the trip name and keep
-    the trip in context when reopened. The top-bar chat menu ("New chat ⌄") is the quick switcher; "All
-    chats" expands the sidebar list.
+14. **History** — open the chat title menu ("New chat ⌄") on the concierge strip and click a
+    conversation to reopen it (`/chat?thread=…`), including its cards and map pins, which are rebuilt from
+    the stored transcript; transcripts live in Postgres, so chats survive deploys and restarts. Chats
+    started from a trip show the trip name and keep the trip in context when reopened. Jump back in on
+    Discover lists the three most recent chats too. Links from before the redesign (`/?thread=…`,
+    `/chats`) redirect.
 
-## 3. Planner bar and "Create a trip"
+## 3. Planner fields and "Create a trip"
 
-The top bar shows *Where / When / Who / Budget*. Clicking any segment (or **Create a trip**) opens the
-planner dialog. **Start planning** keeps the values in the bar and sends a planning prompt to the chat;
-**Create trip** creates the trip on the server right away and opens its page.
+The Discover hero's *Where / When / Guests / Budget* fields and the concierge strip's chips edit the
+same planner values (kept in the browser). **Create a trip** (the header pill, the hero button, the
+Trips page) opens the planner dialog prefilled from them. **Start planning** keeps the values and sends
+a planning prompt to the chat; **Create trip** creates the trip on the server right away and opens its
+page.
 
 ## 4. Trips
 
@@ -343,19 +370,19 @@ the link from history, or lists the screenshot's places), the source link and re
 
 ## 10. Updates
 
-`/updates` is the notification feed (unread count badge in the sidebar; opening the page marks all as
+`/updates` is the notification feed (unread count on the header bell and the More tab; opening the page marks all as
 read): you were added to a trip, a member added an idea/booking/media or edited the plan, someone saved
 your guide. Each item links to the trip or guide. Trips that ended recently show a "How was Rome?" card
 on top with **Rate places** (opens the post-trip rating on the trip page) and **Not now**.
 
 ## 10a. Bug reports and Admin
 
-The bug icon next to the traveler's name in the sidebar (and in the top bar on small screens) opens
-**Report a bug**: what kind of thing it is (something's broken / looks wrong / idea or request), what
+**Report a bug** in the account menu (the More sheet on phones) opens the report: what kind of thing
+it is (something's broken / looks wrong / idea or request), what
 happened, what was expected, and an optional screenshot that the browser downscales to 1280 px JPEG before
 sending. The page, the current chat id, the browser and the deployed build are attached automatically.
 Reports land in `bug_reports`; every admin gets an Update ("Bug report from @tayo: …"). Accounts listed in
-`ADMIN_EMAILS` see **Admin** in the sidebar: `/admin` opens with the **Beta numbers** (users in total and
+`ADMIN_EMAILS` see **Admin** in the account menu: `/admin` opens with the **Beta numbers** (users in total and
 in the last 7 days, sign-ups by UTC day over two weeks, last sign-up, trips, chats, saved places, guides,
 open bugs; `GET /api/admin/stats`), then a **Members** roster (`GET /api/admin/users`): every account
 newest first with name, handle, email, sign-up date, quiz status (completed / skipped / not started — from
@@ -378,11 +405,12 @@ users=… trips=… chats=…`), so the Railway deploy log shows them without a 
 | --- | --- |
 | `/login`, `/signup`, `/forgot`, `/reset` (`?token=`) | Account, the "Forgot password?" form, and the page a reset link opens |
 | `/admin` | Bug reports and recommendation quality (admins) |
-| `/` (`?thread=`, `?trip=`, `?prompt=`) | Chat and map; history expands under Chats in the sidebar; `/chats` redirects here |
+| `/` | Discover: hero with the composer and planner fields, collections, picks, Jump back in, community guides |
+| `/chat` (`?thread=`, `?trip=`, `?prompt=`) | The concierge: chat and map, the Recent menu; `/?thread=`, `/?prompt=` and `/chats` redirect here |
 | `/trips`, `/trips/[id]` (`?view=board`, `?rate=1`) | Trips list and trip page (board view, post-trip rating) |
 | `/explore` | Things near you |
 | `/create` (`?guide=`) | Guide editor / trip form |
-| `/inspiration`, `/guides/[id]` | Community guides |
+| `/inspiration` (`?collection=`), `/guides/[id]` | Community guides and the curated rows (narrowed to a Discover collection) |
 | `/saved`, `/updates` | Saved items, notifications |
 
 ## 12. What is stored per user
@@ -398,10 +426,9 @@ imports (source, verified places, unverified mentions), the chat list (titles, t
 transcripts (every message, tool call and card, written by the runtime after each run and restored when a
 chat is reopened) and notifications — all in Postgres. A shared 30-day cache of Place Details (reviews,
 summaries, attributes) backs "Ask about a place". Live runs stream from the runtime's memory; the planner
-bar values, the compare selection, constraint chips of the current session, the
-board's travel mode, which post-trip prompts were dismissed and small UI preferences (e.g. whether Chats
-is expanded in the sidebar) stay in the browser. Routes API legs are cached in the server process for a
-day per mode and coordinates, not per user.
+values, the compare selection, constraint chips of the current session, the board's travel mode and
+which post-trip prompts were dismissed stay in the browser. Routes API legs are cached in the server
+process for a day per mode and coordinates, not per user.
 
 ## 13. Your taste (Update my assistant)
 

@@ -14,7 +14,7 @@ Total: EUR 780.00, free cancellation until 3 October 2026
 Your flight: Delta DL 1234, Atlanta (ATL) 09 Oct 17:30 → Rome Fiumicino (FCO) 10 Oct 08:45, booking reference DLX9Q2, 2 passengers, USD 1,420.00`;
 
 async function createRomeTrip(page: Page): Promise<string> {
-  await page.getByRole("button", { name: "Create a trip" }).click();
+  await page.getByRole("banner").getByRole("button", { name: "Create a trip" }).click();
   await page.getByPlaceholder(/Dallas, Lisbon/).fill("Rome");
   await page.getByRole("textbox", { name: "From", exact: true }).fill("2026-10-10");
   await page.getByRole("textbox", { name: "To", exact: true }).fill("2026-10-13");

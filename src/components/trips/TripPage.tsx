@@ -382,7 +382,7 @@ function TripPageInner({ tripId }: { tripId: string }) {
               <ul className="mt-2 divide-y divide-border rounded-2xl border border-border">
                 {trip.chats.map((c) => (
                   <li key={c.id}>
-                    <Link href={`/?thread=${encodeURIComponent(c.id)}&trip=${encodeURIComponent(trip.id)}`} className="flex items-center gap-3 px-4 py-3 hover:bg-surface">
+                    <Link href={`/chat?thread=${encodeURIComponent(c.id)}&trip=${encodeURIComponent(trip.id)}`} className="flex items-center gap-3 px-4 py-3 hover:bg-surface">
                       <span className="flex h-9 w-9 items-center justify-center rounded-full bg-surface">
                         <MessageCircle className="h-4 w-4" />
                       </span>
@@ -555,7 +555,7 @@ function TripPageInner({ tripId }: { tripId: string }) {
               <span className="ml-auto flex min-w-0 flex-wrap items-center gap-1.5 text-[12px]" data-testid="trip-recent-chats">
                 <MessageCircle className="h-3.5 w-3.5 text-neutral-500" />
                 {trip.chats.slice(0, 3).map((c) => (
-                  <Link key={c.id} href={`/?thread=${encodeURIComponent(c.id)}&trip=${encodeURIComponent(trip.id)}`} className="max-w-[220px] truncate rounded-full bg-surface px-2.5 py-1 font-medium hover:bg-surface-2">
+                  <Link key={c.id} href={`/chat?thread=${encodeURIComponent(c.id)}&trip=${encodeURIComponent(trip.id)}`} className="max-w-[220px] truncate rounded-full bg-surface px-2.5 py-1 font-medium hover:bg-surface-2">
                     {c.title}
                   </Link>
                 ))}

@@ -9,7 +9,7 @@ test("trips: create, members, ideas, itinerary, trip chat, sharing", async ({ pa
   let tripUrl = "";
 
   await test.step("planner -> Create trip lands on the trip page", async () => {
-    await page.getByRole("button", { name: "Create a trip" }).click();
+    await page.getByRole("banner").getByRole("button", { name: "Create a trip" }).click();
     await page.getByPlaceholder(/Dallas, Lisbon/).fill("Rome");
     await page.getByRole("textbox", { name: "From", exact: true }).fill("2026-10-10");
     await page.getByRole("textbox", { name: "To", exact: true }).fill("2026-10-13");
@@ -64,7 +64,7 @@ test("trips: create, members, ideas, itinerary, trip chat, sharing", async ({ pa
   await test.step("asking from the trip page opens a trip-scoped chat with cards and the map", async () => {
     await page.getByLabel("Ask about this trip").fill("Find hotels in Rome");
     await page.getByLabel("Ask about this trip").press("Enter");
-    await page.waitForURL(/\/\?/, { timeout: 15_000 });
+    await page.waitForURL(/\/chat\?/, { timeout: 15_000 });
     await expect(page.getByText(/Planning Trip to Rome/)).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText("Where to stay in Rome")).toBeVisible({ timeout: 40_000 });
     await expect(page.getByTestId("map-panel")).toBeVisible();
@@ -87,7 +87,7 @@ test("trips: create, members, ideas, itinerary, trip chat, sharing", async ({ pa
   });
 
   await test.step("the trips list shows the card and the calendar", async () => {
-    await page.getByRole("navigation").getByRole("link", { name: "Trips", exact: true }).click();
+    await page.getByRole("navigation").getByRole("link", { name: "My trips", exact: true }).click();
     await expect(page.getByRole("link", { name: /Trip to Rome/ })).toBeVisible();
     await page.getByRole("button", { name: "calendar" }).click();
     await page.getByRole("button", { name: "Next month" }).click();
@@ -99,7 +99,7 @@ test("trips: create, members, ideas, itinerary, trip chat, sharing", async ({ pa
 
   await test.step("the friend sees the invite under Updates and opens the shared trip", async () => {
     await login(friendPage, friend, { finishOnboarding: true });
-    await friendPage.getByRole("navigation").getByRole("link", { name: /^Updates/ }).click();
+    await friendPage.getByRole("banner").getByRole("link", { name: /^Updates/ }).click();
     await expect(friendPage.getByText(/Tayo Akigbogun added you to the trip "Trip to Rome"/)).toBeVisible();
     await expect(friendPage.getByText(/added an idea to "Trip to Rome": Colosseum/)).toBeVisible();
     await friendPage.getByRole("link", { name: "Open trip" }).first().click();

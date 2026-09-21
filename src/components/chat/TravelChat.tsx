@@ -61,7 +61,7 @@ export function TravelChat({ threadId, initialPrompt, tripId }: { threadId?: str
     if (!initialPrompt || sentRef.current || !isReady) return;
     sentRef.current = true;
     // Drop the prompt from the URL but keep the trip so the chat stays attached to it.
-    router.replace(tripId ? `/?trip=${encodeURIComponent(tripId)}` : "/", { scroll: false });
+    router.replace(tripId ? `/chat?trip=${encodeURIComponent(tripId)}` : "/chat", { scroll: false });
     agent.addMessage({ id: newId(), role: "user", content: initialPrompt });
     copilotkit.runAgent({ agent }).catch((err) => console.error("XPMatch: runAgent failed", err));
   }, [initialPrompt, isReady, agent, copilotkit, router, tripId]);
@@ -91,7 +91,7 @@ export function TravelChat({ threadId, initialPrompt, tripId }: { threadId?: str
         className="min-h-0 flex-1"
         threadId={threadId}
         labels={{
-          chatInputPlaceholder: "Ask XPMatch",
+          chatInputPlaceholder: "Ask your concierge",
           chatDisclaimerText: `XPMatch can make mistakes. Double-check prices, hours and availability before booking.${
             config?.mode === "live" && config.model && config.model !== "unknown" ? ` · Model: ${config.model}` : ""
           }`,

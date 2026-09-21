@@ -2,14 +2,15 @@
 
 import type { ReactNode } from "react";
 
+/** Standard content page: title, optional serif description and actions, then the body; extra bottom room keeps the concierge launcher off the content. */
 export function PageFrame({ title, description, actions, children }: { title: string; description?: string; actions?: ReactNode; children: ReactNode }) {
   return (
     <div className="xp-scroll h-full overflow-y-auto">
-      <div className="mx-auto max-w-5xl px-6 py-8">
+      <div className="mx-auto max-w-5xl px-6 pb-28 pt-8 lg:px-9">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h1 className="text-[28px] font-semibold tracking-tight">{title}</h1>
-            {description ? <p className="mt-1 text-[15px] text-muted">{description}</p> : null}
+            <h1 className="text-[28px] font-semibold tracking-[-0.03em]">{title}</h1>
+            {description ? <p className="mt-1 font-serif text-[16px] text-muted">{description}</p> : null}
           </div>
           {actions}
         </div>

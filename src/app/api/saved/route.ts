@@ -5,7 +5,7 @@ import { insertSaved, loadSaved } from "@/server/models";
 const placeSchema = z.object({}).passthrough();
 
 const schema = z.object({
-  kind: z.enum(["destination", "hotel", "flight", "restaurant", "attraction", "guide"]),
+  kind: z.enum(["destination", "hotel", "flight", "restaurant", "attraction", "guide", "collection"]),
   title: z.string().trim().min(1).max(200),
   subtitle: z.string().max(300).optional(),
   destination: z.string().max(200).optional(),

@@ -410,3 +410,41 @@ fields 59–695 × 424–488; CTA row 507–560; section heading at y 632; cards
 split, hero bottom, card top, card widths), then type (headline weight and wrap, subtitle baseline,
 section heading, card captions), then focal points, radii, button heights and spacing. Fix parent
 geometry before compensating with child margins.
+
+---
+
+## 13. Delivery notes (September 21, 2026)
+
+Phases 1–4 shipped in two commits on the working branch (the design system and photo attributions,
+then the shell, the Discover page and the polish). What the build does differently from the plan
+above, and why:
+
+- **Fields four across from 1500 px, not 1280.** "Any destination" does not fit four fields in a
+  480–560 px hero panel; between 1024 and 1499 px the fields sit two across, which the 1024 and
+  1440 captures show reads better than truncated values. Each field puts the chevron on the label
+  row so the value gets the full width.
+- **Suggestion chips under the composer** (section 5.2) add one 46 px row to the hero, so at
+  1586 × 992 the hero ends at 640 (reference 599) and the collection cards start at 748 (reference
+  685). Header, eyebrow, heading, composer and left gutter land on the reference values (64, 112,
+  137, 326 and 60). The chips scroll sideways on phones.
+- **Header at 768–1099 px keeps the full navigation.** Three links fit beside the wordmark, the bell,
+  the avatar and a shorter pill, so the menu-button-and-sheet variant of section 5.1 was not needed;
+  phones still get the tab bar.
+- **The wordmark stays at the left** (the reference header has none) and the avatar is the initial in
+  a brand circle, as section 6 planned.
+- **The launcher is a link**, not a button: it navigates to `/chat` (scoped to the trip whose page is
+  open) and is hidden on the chat, on phones and while a dialog or sheet is open.
+- **Inspiration `?collection=`** narrows the curated destination rows to the collection's tags and
+  offers "All inspiration"; community guides are not tagged by collection, so the guide grid stays.
+- **Saved** lists collections in their own group with an internal Open link.
+- **The chat's phone empty state keeps the compact feed** (picks first after the quiz, Jump back in,
+  Get inspired) under the greeting; the quiz itself moved into the Discover hero.
+- **Composer keys** follow the guide: Ctrl or ⌘ + Enter sends, Enter is a newline (a screen-reader
+  hint says so); the send button is always teal and disabled while empty.
+- **Test stub**: `mock-places.mjs` gained Paros, Amalfi Coast, Banff National Park and Kyoto so the
+  hero and the collection cards carry photos with attributions in the suite; its photos are gradient
+  placeholders, production shows the real Places photographs.
+- **Verification**: `discover.spec.ts` (desktop flow plus a 390 px phone flow), the migrated suite
+  (helpers open `/chat` on demand, the header's Create a trip and Recent menu replace the sidebar
+  selectors), captures at 1586, 1440, 1280, 1024, 768, 390 and 320 compared against
+  `docs/design/discover-reference.webp`.

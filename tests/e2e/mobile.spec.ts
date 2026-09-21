@@ -33,7 +33,7 @@ async function expectFits(page: Page, what: string) {
   expect(width, `${what} should not be wider than the phone`).toBeLessThanOrEqual(PHONE_WIDTH);
 }
 
-test("phone: in-chat quiz, first picks, tab bar, card rows, proposal, sheets over the chat, trip tabs", async ({ page }) => {
+test("phone: quiz in the Discover hero, picks, tab bar, card rows, proposal, sheets over the chat, trip tabs", async ({ page }) => {
   const email = `mobile+${Date.now()}@example.com`;
 
   await test.step("sign up and answer the three questions in the chat", async () => {
@@ -43,7 +43,7 @@ test("phone: in-chat quiz, first picks, tab bar, card rows, proposal, sheets ove
     await page.locator('input[type="password"]').fill("travel-2026-secret");
     await page.getByRole("button", { name: "Create account" }).click();
 
-    // No wizard dialog on a phone: the questions are bubbles in the chat.
+    // No wizard dialog on a phone: the questions are bubbles in the Discover hero.
     const quiz = page.getByTestId("phone-quiz");
     await quiz.waitFor({ timeout: 60_000 });
     await expect(page.getByRole("dialog", { name: /personalize/i })).toHaveCount(0);
@@ -65,24 +65,21 @@ test("phone: in-chat quiz, first picks, tab bar, card rows, proposal, sheets ove
     await expect(quiz).toBeHidden();
   });
 
-  await test.step("the picks arrive as the assistant's first message", async () => {
-    await expect(page.getByTestId("mobile-home")).toBeVisible();
-    await expect(page.getByRole("heading", { name: /Where to today, Mia/ })).toBeVisible();
-    const first = page.getByTestId("first-picks");
-    await expect(first).toContainText("what I'd pick for you in Rome");
+  await test.step("Discover shows the hero and the picks for the dream destination", async () => {
+    await expect(page.getByRole("heading", { name: /Go somewhere that stays with you/ })).toBeVisible();
+    await expect(page.getByTestId("hero-image")).toBeVisible();
+    await expect(page.getByTestId("collection-card")).toHaveCount(3);
+    await expect(page.getByTestId("home-picks")).toContainText("Rome");
     const stays = page.getByTestId("home-row-stays");
     await stays.scrollIntoViewIfNeeded();
     await expect(stays.getByTestId("home-pick")).toHaveCount(3, { timeout: 60_000 });
     await expect(stays.getByTestId("match-badge").first()).toBeVisible();
-    await expectFits(page, "the home feed");
+    await expectFits(page, "the Discover page");
   });
 
   await test.step("the tab bar reaches every page and the More sheet holds the rest", async () => {
     const bar = page.getByTestId("mobile-tab-bar");
     await expect(bar).toBeVisible();
-    await bar.getByRole("link", { name: "Explore" }).click();
-    await page.waitForURL(/\/explore/);
-    await expectFits(page, "explore");
     await bar.getByRole("link", { name: "Saved" }).click();
     await page.waitForURL(/\/saved/);
     await bar.getByRole("link", { name: "Trips" }).click();
@@ -92,15 +89,27 @@ test("phone: in-chat quiz, first picks, tab bar, card rows, proposal, sheets ove
     await expect(sheet).toBeVisible();
     await expect(sheet.getByRole("link", { name: "Inspiration" })).toBeVisible();
     await expect(sheet.getByRole("button", { name: "Report a bug" })).toBeVisible();
+    await sheet.getByRole("link", { name: "Explore" }).click();
+    await page.waitForURL(/\/explore/);
+    await expect(sheet).toBeHidden();
+    await expectFits(page, "explore");
+    await bar.getByRole("button", { name: "More" }).click();
     await sheet.getByRole("link", { name: "Updates" }).click();
     await page.waitForURL(/\/updates/);
-    await expect(sheet).toBeHidden();
-    await bar.getByRole("link", { name: "Chat" }).click();
+    await bar.getByRole("link", { name: "Discover" }).click();
     await page.waitForURL((u) => u.pathname === "/");
+    await expect(page.getByRole("heading", { name: /Go somewhere that stays with you/ })).toBeVisible();
+    await bar.getByRole("link", { name: "Concierge" }).click();
+    await page.waitForURL((u) => u.pathname === "/chat");
+    // The chat's empty state greets by name and opens with the picks as the assistant's first message.
+    await expect(page.getByTestId("mobile-home")).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Where to today, Mia/ })).toBeVisible();
+    await expect(page.getByTestId("first-picks")).toContainText("what I'd pick for you in Rome");
+    await expectFits(page, "the chat home");
   });
 
   await test.step("recommendation cards swipe as a row and a tap opens the place over the chat", async () => {
-    const input = page.getByPlaceholder("Ask XPMatch");
+    const input = page.getByPlaceholder("Ask your concierge");
     await input.fill("Find hotels in Rome");
     await page.locator('[data-testid="copilot-send-button"]:not([disabled])').waitFor({ timeout: 30_000 });
     await input.press("Enter");
@@ -122,7 +131,7 @@ test("phone: in-chat quiz, first picks, tab bar, card rows, proposal, sheets ove
   });
 
   await test.step("a trip proposal fits the screen and the map opens over the chat", async () => {
-    const input = page.getByPlaceholder("Ask XPMatch");
+    const input = page.getByPlaceholder("Ask your concierge");
     await input.fill("Plan a trip to Rome for two of us in October");
     await page.locator('[data-testid="copilot-send-button"]:not([disabled])').waitFor({ timeout: 30_000 });
     await input.press("Enter");

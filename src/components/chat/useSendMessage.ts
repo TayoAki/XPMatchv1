@@ -22,10 +22,10 @@ export function useSendMessage() {
     async (text: string) => {
       const trimmed = text.trim();
       if (!trimmed) return;
-      if (pathname !== "/") {
+      if (pathname !== "/chat") {
         const params = new URLSearchParams({ prompt: trimmed });
         if (tripId) params.set("trip", tripId);
-        router.push(`/?${params.toString()}`);
+        router.push(`/chat?${params.toString()}`);
         return;
       }
       // Sent from a card or chip while the assistant is still answering: wait for the run to end

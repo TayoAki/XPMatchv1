@@ -18,9 +18,10 @@ const RATEABLE: SavedKind[] = ["destination", "hotel", "restaurant", "attraction
 
 type Tab = "places" | "guides" | "imports";
 
-const ORDER: SavedKind[] = ["destination", "hotel", "flight", "restaurant", "attraction"];
+const ORDER: SavedKind[] = ["collection", "destination", "hotel", "flight", "restaurant", "attraction"];
 const LABEL: Record<SavedKind, string> = {
   guide: "Guides",
+  collection: "Collections",
   destination: "Destinations",
   hotel: "Stays",
   flight: "Flights",
@@ -49,7 +50,7 @@ export default function SavedPage() {
   return (
     <PageFrame
       title="Saved"
-      description="Places you hearted in chat, on the map or in Explore, guides you saved from Inspiration, and links or screenshots you imported."
+      description="Places you hearted in chat, on the map or in Explore, collections and guides you saved, and links or screenshots you imported."
       actions={
         places.length ? (
           <Button variant="outline" onClick={() => send("Look at my saved items and suggest how to turn them into a trip.")}>
@@ -105,7 +106,11 @@ export default function SavedPage() {
                             <Plus className="h-3.5 w-3.5" /> Add to trip
                           </button>
                         ) : null}
-                        {s.url ? (
+                        {s.url && s.url.startsWith("/") ? (
+                          <Link href={s.url} className="inline-flex h-8 items-center gap-1 rounded-full border border-border px-3 text-[13px] font-medium hover:bg-surface">
+                            Open
+                          </Link>
+                        ) : s.url ? (
                           <a href={s.url} target="_blank" rel="noreferrer noopener" className="inline-flex h-8 items-center gap-1 rounded-full border border-border px-3 text-[13px] font-medium hover:bg-surface">
                             Open <ExternalLink className="h-3.5 w-3.5" />
                           </a>

@@ -7,7 +7,7 @@ interface TripJson {
 }
 
 async function createRomeTrip(page: Page): Promise<string> {
-  await page.getByRole("button", { name: "Create a trip" }).click();
+  await page.getByRole("banner").getByRole("button", { name: "Create a trip" }).click();
   await page.getByPlaceholder(/Dallas, Lisbon/).fill("Rome");
   await page.getByRole("textbox", { name: "From", exact: true }).fill("2026-10-10");
   await page.getByRole("textbox", { name: "To", exact: true }).fill("2026-10-13");
@@ -176,7 +176,7 @@ test("board: schedule ideas, keyboard reorder, day layers, chat scheduling", asy
   await test.step("the assistant schedules a stop through schedule_stops", async () => {
     await page.getByLabel("Ask about this trip").fill("Put Roscioli on day 2");
     await page.getByLabel("Ask about this trip").press("Enter");
-    await page.waitForURL(/\/\?/, { timeout: 15_000 });
+    await page.waitForURL(/\/chat\?/, { timeout: 15_000 });
     await expect(page.getByText(/Scheduled 1 stop/)).toBeVisible({ timeout: 40_000 });
     await page.getByRole("link", { name: "Open the board" }).click();
     await page.waitForURL(/\/trips\/.*view=board/, { timeout: 15_000 });

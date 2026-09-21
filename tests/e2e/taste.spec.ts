@@ -109,7 +109,7 @@ test("taste: reactions on cards and the sheet, Your taste, model context, chat f
 
   await test.step("a finished trip asks for ratings from Updates and ranks the places", async () => {
     await page.goto("/");
-    await page.getByRole("button", { name: "Create a trip" }).click();
+    await page.getByRole("banner").getByRole("button", { name: "Create a trip" }).click();
     await page.getByPlaceholder(/Dallas, Lisbon/).fill("Rome");
     await page.getByRole("textbox", { name: "From", exact: true }).fill("2026-09-01");
     await page.getByRole("textbox", { name: "To", exact: true }).fill("2026-09-05");

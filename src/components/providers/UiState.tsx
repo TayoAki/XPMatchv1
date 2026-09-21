@@ -74,7 +74,7 @@ export function UiStateProvider({ children }: { children: ReactNode }) {
   const closeBoardSheet = useCallback(() => setBoardSheetTripId(null), []);
   const startNewChat = useCallback(() => {
     setNewChatNonce((n) => n + 1);
-    router.push("/");
+    router.push("/chat");
   }, [router]);
 
   const value = useMemo(

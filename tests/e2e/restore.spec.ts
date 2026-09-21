@@ -76,20 +76,23 @@ test.describe("chat transcripts survive a server restart", () => {
     await page.getByRole("button", { name: "Create account" }).click();
     await page.getByRole("dialog", { name: /personalize/i }).waitFor({ timeout: 60_000 });
     await completeOnboarding(page);
+    await expect(page.getByRole("heading", { name: /Go somewhere that stays with you/ })).toBeVisible({ timeout: 30_000 });
+    await page.goto(`${BASE}/chat`);
     await expect(page.getByRole("heading", { name: /Where to today, Tayo\?/ })).toBeVisible({ timeout: 30_000 });
 
-    const input = page.getByPlaceholder("Ask XPMatch");
+    const input = page.getByPlaceholder("Ask your concierge");
     await input.fill("Find hotels in Rome");
     await page.locator('[data-testid="copilot-send-button"]:not([disabled])').waitFor({ timeout: 60_000 });
     await input.press("Enter");
     await expect(page.getByText("Where to stay in Rome")).toBeVisible({ timeout: 60_000 });
     await expect(page.getByText(/Done — those are on the cards above/)).toBeVisible({ timeout: 30_000 });
 
-    await page.getByRole("navigation").getByRole("button", { name: "Expand chats" }).click();
+    await page.getByTestId("chat-menu-button").click();
     const link = page.getByTestId("chat-nav-list").getByRole("link", { name: /Find hotels in Rome|Exploring Rome/ });
     await expect(link).toBeVisible();
     const threadId = new URL((await link.getAttribute("href")) ?? "", BASE).searchParams.get("thread");
     expect(threadId).toBeTruthy();
+    await page.keyboard.press("Escape");
 
     await expect
       .poll(async () => ((await (await page.request.get(`${BASE}/api/chats/${encodeURIComponent(threadId!)}/messages`)).json()) as { count: number }).count, { timeout: 20_000 })
@@ -98,7 +101,7 @@ test.describe("chat transcripts survive a server restart", () => {
     await stopApp();
     await startApp(true);
 
-    await page.goto(`${BASE}/?thread=${encodeURIComponent(threadId!)}`);
+    await page.goto(`${BASE}/chat?thread=${encodeURIComponent(threadId!)}`);
     await expect(page.getByText("Where to stay in Rome")).toBeVisible({ timeout: 120_000 });
     await expect(page.getByText("Hotel de Russie").first()).toBeVisible({ timeout: 30_000 });
     await expect(page.getByTestId("map-panel").getByText("2 pinned")).toBeVisible({ timeout: 60_000 });

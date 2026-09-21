@@ -75,7 +75,7 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   Each placed stop expands into the full card (photos, rating, category, price, today's hours, phone,
   links, match score and thumbs, Ask about it), the trip proposal in chat resolves and pins its stops
   while the traveler decides, and the Itinerary tile shows the same facts.
-- **Bug reports and an admin page** — a bug icon in the sidebar opens a report (what happened,
+- **Bug reports and an admin page** — **Report a bug** in the account menu opens a report (what happened,
   expected, severity, screenshot downscaled in the browser; page, chat and build attached). Accounts in
   `ADMIN_EMAILS` get an Update per report and an `/admin` page with the beta numbers (sign-ups in
   total, in the last 7 days and by day; trips, chats, saved places, guides, open bugs), a **Members**
@@ -122,8 +122,9 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   `add_trip_ideas`.
 - **Add to trip** — every card and place sheet has an "Add to trip" picker (existing trip or a new
   one); ideas show up on the trip page and its map.
-- **Save anything** — heart any card, place sheet or Explore result; the Saved page has **Places**
-  (grouped by type, with Add to trip) and **Guides** tabs, and saved items feed the agent's context.
+- **Save anything** — heart any card, place sheet, Explore result or Discover collection; the Saved
+  page has **Places** (grouped by type, collections first, with Add to trip) and **Guides** tabs, and
+  saved items feed the agent's context.
 - **Community guides** — **Create** has a guide editor (title, destination, description, tags, an
   ordered list of places resolved through Google Places with a note each, draft or publish).
   **Inspiration** lists published guides with search; a guide page shows the places, their map,
@@ -143,17 +144,26 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   Without Google keys the panel degrades to estimated pins from a small gazetteer.
 - **Live grounding tools (server-side)** — weather outlook (Open-Meteo) and destination facts
   (Wikipedia), both keyless.
-- **Mindtrip-style shell** — left navigation (Chats, Trips, Explore, Saved, Updates, Inspiration,
-  Create), a Where / When / Who / Budget planner bar, "Create a trip", a welcome hero
-  ("Where to today, Tayo?"), and a discovery panel with a proactive nudge, "Jump back in",
-  "For you in {city}" and "Get inspired". Chats is one experience: the sidebar's Chats item expands
-  in place to list conversations, and the active chat sits beside the map or discovery feed.
-- **A chat-first phone app** — below tablet width a bottom tab bar (Chat, Trips, Explore, Saved,
-  More) replaces the sidebar; the More sheet holds Updates (with the unread badge), Inspiration,
-  Create, Admin, Update my assistant, Report a bug and Log out. On a phone the chat is the base layer
-  and everything else opens over it in sheets: the first run is three questions asked as chat
-  bubbles (where you start from and dream of going, what you love doing, how you spend), then the
-  nine home picks arrive as the assistant's first message with thumbs; recommendation cards swipe
+- **Discover home and a top header** — the "Serene Resort" design language (`docs/UI_REDESIGN_PLAN.md`):
+  a 64 px header (wordmark, Discover · My trips · Saved, the Updates bell, the account menu, a teal
+  **Create a trip** pill) above a Discover page whose hero holds a serif prompt composer, three
+  suggestion chips, the Where / When / Guests / Budget planner fields (popover editors on desktop,
+  sheets on phones), "Create a trip" and "or chat with your AI concierge", beside a Google Places
+  photograph of the destination the traveler is headed to (next trip, dream destination, planner,
+  home city) with its author attribution. Below it: three themed collections (By the water, Close
+  to nature, Immersed in culture, each a real destination's photo, saveable, linking to Inspiration),
+  "For you in {city}", "Jump back in" and the newest community guides. The conversation lives at
+  `/chat` under a slim strip (chat title with the **Recent** menu, planner chips, New chat) with the
+  discovery feed or the live map beside it; a floating **Your AI concierge** pill opens it from
+  every other page (scoped to the trip whose page is open). Old `/?thread=` and `/?prompt=` links
+  redirect.
+- **A chat-first phone app** — below tablet width a bottom tab bar (Discover, Trips, Saved,
+  Concierge, More) carries navigation; the More sheet holds Explore, Inspiration, Updates (with the
+  unread badge), Create, Admin, Update my assistant, Report a bug and Log out. The first run is three
+  questions asked as chat bubbles inside the Discover hero (where you start from and dream of going,
+  what you love doing, how you spend); the Concierge tab's empty state then opens with the nine home
+  picks as the assistant's first message with thumbs. On the concierge page everything else opens
+  over the chat in sheets: recommendation cards swipe
   as a row and a tap on a photo opens the place as a sheet; "Map · N pinned" opens the map in a
   sheet with the pinned list, a pin stacks the place detail on top; "Saved to Trips" and "Open the
   board" open the itinerary board as a full-height sheet with "Open trip" for the full page. Trip
@@ -290,7 +300,11 @@ src/components/chat/cards/*                  Destination, hotel, flight, restaur
 src/lib/constraints-store.ts, compare-store.ts, hitl-store.ts   Per-thread chips, compare selection, pending HITL cards
 src/lib/search-parser.ts                     Deterministic Explore query → Places filters + chips
 src/components/panel/RightPanel.tsx          Discovery feed ⇄ map switch
-src/components/panel/DiscoveryPanel.tsx      Right-hand discovery panel
+src/components/panel/DiscoveryPanel.tsx      Discovery feed (proactive card, Jump back in, picks, Get inspired)
+src/components/discover/*                    Discover home: hero, prompt composer, planner fields and editors,
+                                             hero photo, collection cards, community guides row
+src/lib/travel/collections.ts                The three Discover collections and the hero's default destination
+src/lib/places/destination-photo.ts          Client-side destination resolution (cached) and photo width helper
 src/components/map/*                         Google Map panel, markers, place sheet, card ↔ pin hook
 src/lib/map-store.ts                         Per-thread map state (focus, pins, selection)
 src/server/places.ts + src/app/api/places/*  Places API (New) resolution, details, photo proxy
@@ -300,12 +314,12 @@ src/server/packages.ts + src/app/api/packages/*   Package builder (variants, alt
 src/server/package-learning.ts               Calibration from package events and the admin package numbers
 src/components/chat/cards/PackageCard.tsx    The package opener card: variants, swap, lock, narrowing, Turn into a trip
 src/components/map/PinStrip.tsx              Mini cards under the map, in step with the pins
-src/components/shell/*                       Sidebar, top bar, app shell
+src/components/shell/*                       Site header, chat strip, phone tab bar, concierge launcher, app shell
 ```
 
 Chat transcripts, the chat list, profile, learned preferences, trips, saved items and notifications
 persist in the database per user (transcripts are written by the runner after every run and restored
-into the runtime when a chat is reopened after a deploy). Only the planner bar values and small UI
+into the runtime when a chat is reopened after a deploy). Only the planner values and small UI
 preferences stay in the browser.
 
 ## Scripts
@@ -321,7 +335,7 @@ npm start          # serve the production build
 ```
 
 The end-to-end suite (`tests/e2e`) needs no API keys or network: `start-app.mjs` launches the app with
-`mock-openrouter.mjs` (scripted tool calls and JSON-mode answers), `mock-places.mjs` (Rome and Austell
-fixtures) and `mock-site.mjs` (the import fixture site). GitHub Actions runs lint, typecheck, unit tests,
+`mock-openrouter.mjs` (scripted tool calls and JSON-mode answers), `mock-places.mjs` (Rome, Austell and
+the Discover destinations as fixtures) and `mock-site.mjs` (the import fixture site). GitHub Actions runs lint, typecheck, unit tests,
 the build and the suite on every push (`.github/workflows/ci.yml`). Set `PW_CHROMIUM` to a Chromium
 binary when Playwright's own download is unavailable.
