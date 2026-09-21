@@ -1,0 +1,380 @@
+# UI redesign plan: Serene Resort Modernism for XPMatch
+
+Written September 21, 2026. Reference: `docs/design/discover-reference.webp` (the desktop mockup
+supplied in chat, about 1586 × 992) and the "Serene Resort Frontend Implementation Guide" supplied
+with it. The guide is a generic React handoff written without knowledge of this codebase; this plan
+maps it onto what XPMatch already has (Next.js 16 App Router, Tailwind 4, CopilotKit v2, the
+`--xp-*` token layer, the Modal and BottomSheet primitives, the planner state, the Playwright suite)
+and says exactly what changes, in what order, and what we deliberately do differently.
+
+---
+
+## 1. What the mockup shows, and what it means for XPMatch
+
+Observed on the reference: a compact white header (wordmark left, Discover · My trips · Saved
+centered, avatar with first name and chevron, a teal "Create a trip" pill); a two-column hero on a
+warm stone surface (eyebrow "TRAVEL, AT YOUR PACE", a 60 px two-line headline, a serif subtitle, a
+prompt composer with a sparkle mark and a circular teal send button, four planning controls Where /
+When / Guests / Budget, a teal "Create a trip →" pill and an underlined "or chat with your AI
+concierge" link) beside a Mediterranean terrace photograph with a small serif motto and a
+"PAROS, GREECE" caption; a section "Find your kind of extraordinary" with "View all destinations →"
+and three photographic cards (By the water, Close to nature, Immersed in culture) each with a heart;
+a floating teal "✦ Your AI concierge ⌃" pill in the lower right.
+
+What it means for us:
+
+1. **The home page becomes a Discover page, not a chat.** Today `/` is the conversation itself
+   (`HomeClient` → `TravelChat` with `WelcomeHero` as the empty state and the discovery feed in the
+   right panel). The mockup puts the conversation behind a prompt and a launcher. The conversation
+   moves to its own route, `/chat`, and keeps everything it has (cards, map panel, packages, board
+   sheet, trip scope).
+2. **The left sidebar goes; a top header comes.** Navigation shrinks to three destinations plus the
+   profile menu, the Updates bell and the Create a trip pill. Chat history, Inspiration, Explore,
+   Create, Admin and the bug report move into the concierge page and the profile menu (section 3).
+3. **The four planning controls already exist as state.** `TripPlanner` in the store (where,
+   startDate, endDate, travelers, budgetTier) drives the TopBar segments and the Create a trip
+   dialog today; the hero controls edit the same object. Budget stays a tier (Budget / Mid-range /
+   Premium / Luxury), which is what the match model consumes, not a currency amount as in the guide.
+4. **Our differentiators stay above the fold on Discover.** The mockup only shows three themed cards.
+   XPMatch's personalized sections (the matched package or picks "For you in <destination>", Jump
+   back in, community guides) follow the cards on the same page, restyled. That is what the
+   competitor research says nobody else has, so it is not demoted.
+5. **The concierge is a full page first, a slide-over second.** Our chat renders cards, packages,
+   comparisons and a map; a 420 px dialog would cripple it. Sending the hero prompt navigates to
+   `/chat`. The floating launcher opens the same conversation; on desktop it can later become a
+   slide-over panel that shares the thread (phase 4, optional).
+
+---
+
+## 2. Decisions taken in this plan (override any before phase 2 starts)
+
+| Decision | Default in this plan | Why |
+| --- | --- | --- |
+| Home route | `/` = Discover; `/chat` = the conversation; `/?thread=` and `/?prompt=` links redirect to `/chat` | The mockup's home is Discover; old links keep working |
+| Desktop navigation | Top header replaces the sidebar on every page | One shell, as in the mockup |
+| Chat history | "Recent" menu on the `/chat` page header (already built in `TopBar`) plus the Jump back in row on Discover | No sidebar to hold the list |
+| Guests | The existing travelers count, editable in a stepper | Children and ages are not in the trip model; add later if suppliers need them |
+| Budget | Tier chips | Matches `budgetTier` and the match model |
+| Where | Free text with destination suggestions from the existing resolve endpoint | Same as the planner dialog, plus suggestions |
+| Card hearts | Save the collection as a saved item of a new kind `collection` | The guide's model; shows under Saved |
+| Hero prompt send | Navigates to `/chat?prompt=` with the planner state already in the store | Reuses `useSendMessage` |
+| Create a trip (hero and header) | Opens the existing Create a trip dialog prefilled from the planner; creates the trip and opens its page, or "Start planning" sends the plan prompt to `/chat` | Same flow, two entry points, as the guide requires |
+| Concierge launcher | Fixed pill on Discover and content pages; hidden on `/chat`; navigates to `/chat` | Full-width conversation |
+| Phones | Also land on Discover; the first run shows the three-question quiz card in the hero slot until onboarded; the tab bar becomes Discover · Trips · Saved · Concierge · More | Consistency with desktop; keeps the phone first run |
+| Photography | Four licensed photographs in `public/images/travel/` with verified captions; Wikipedia thumbnails stay the fallback | The mockup's images are generated and cannot ship |
+| Fonts | Inter and Source Serif 4 through `next/font/google`; vendored files if the build sandbox blocks the download | Inter is named in the CSS today but never loaded |
+| Dialogs | Our Modal and BottomSheet primitives, not native `<dialog>` | Already accessible and tested |
+
+---
+
+## 3. Information architecture: today → new
+
+| Today | New | Where it lives |
+| --- | --- | --- |
+| Sidebar: Chats (with history), Trips, Explore, Saved, Updates, Inspiration, Create, Admin, New chat, promo card, account block, footer links | Header: Discover, My trips, Saved; bell (Updates with unread count); profile menu; Create a trip | `SiteHeader` |
+| TopBar: chat title menu, planner segments, Create a trip | Discover hero: planner controls; `/chat` header strip: chat title menu with Recent, compact planner chips, New chat | `DiscoverPage`, `ChatPage` |
+| `/` chat | `/chat` (same `HomeClient` content under the header) | route move |
+| Inspiration, Explore, Create (guide) | Profile menu items; "View all destinations" → `/explore`; collection cards → `/inspiration?collection=…`; "Create a guide" stays on `/inspiration` and `/create` | links |
+| Admin, Report a bug, Update my assistant, Terms, Privacy, Log out | Profile menu | `SiteHeader` |
+| Mobile tab bar: Chat, Trips, Explore, Saved, More | Discover, Trips, Saved, Concierge, More (Explore, Inspiration, Updates, Create, Admin, Update my assistant, Report a bug, Log out) | `MobileTabBar` |
+| WelcomeHero + DiscoveryFeed | DiscoverPage sections (section 5) | new components |
+
+Redirects: `/?thread=x` → `/chat?thread=x`; `/?prompt=…&trip=…` → `/chat?prompt=…&trip=…`;
+`/chats` already redirects and now points at `/chat`. `useSendMessage` pushes `/chat?prompt=` when
+away from `/chat`. `ChatNavList`, `TopBar`'s Recent menu, `DiscoveryFeed`'s chat cards and
+`TripChatScope` links change from `/?thread=` to `/chat?thread=`.
+
+---
+
+## 4. Design system changes (app-wide, phase 1)
+
+### 4.1 Tokens
+
+`src/app/globals.css` keeps the `--xp-*` prefix (it exists to avoid CopilotKit's `--background`
+and `--border`). New and changed values:
+
+| Token | Value | Tailwind name | Used for |
+| --- | --- | --- | --- |
+| `--xp-bg` | `#FFFFFF` | `background` | header, discovery, content |
+| `--xp-surface-warm` (new) | `#F7F6F3` | `surface-warm` | hero panel, quiet sections |
+| `--xp-fg` | `#081316` (was `#111111`) | `foreground` | headings, primary text |
+| `--xp-muted` | `#496261` (was `#6B7280`) | `muted` | supporting copy, eyebrow |
+| `--xp-secondary` (new) | `#626966` | `secondary` | field values, captions |
+| `--xp-brand` (new) | `#073E45` | `brand` | buttons, links, selected states, pins |
+| `--xp-brand-hover` (new) | `#052F35` | `brand-hover` | hover and pressed |
+| `--xp-border` | `#DEDFDA` (was `#E5E7EB`) | `border` | controls, separators |
+| `--xp-focus` (new) | `#126773` | `focus` | keyboard focus rings |
+| `--xp-error` (new) | `#9F2E29` | `error` | inline validation |
+| `--xp-surface`, `--xp-surface-2` | `#F3F4F6`, `#E9EAEC` → warmed to `#F1F1EE`, `#E6E6E1` | `surface`, `surface-2` | chips, hover fills |
+| `--xp-radius-sm/lg/pill` (new) | 10 px, 18 px, 999 px | via utilities | cards and fields, composer, pills |
+| `--xp-shadow-composer`, `--xp-shadow-floating` (new) | `0 1px 4px rgb(8 19 22 / 5%)`, `0 3px 12px rgb(8 19 22 / 18%)` | utilities | composer, launcher |
+
+Also: `--cpk-*` overrides so the CopilotKit composer's send button, links and focus use the brand
+teal; map markers in `globals.css` (`.xp-marker-pin` selected and focus states from `#111111` to the
+brand teal, the default pin from `#7fd8c8` to a lighter teal `#9ED6CF`).
+
+### 4.2 Fonts and type
+
+`src/app/layout.tsx` loads Inter (400, 500, 600) and Source Serif 4 (400, italic 400) with
+`next/font/google` and exposes `--font-app` and `--font-serif`; `globals.css` maps `--font-serif`
+into Tailwind as `font-serif`. If the build environment blocks Google Fonts, vendor the two variable
+woff2 files under `src/fonts/` and switch to `next/font/local`; the first production build decides.
+
+Type scale from the guide, in rem at a 16 px root:
+
+| Element | Size | Weight and leading | Face |
+| --- | --- | --- | --- |
+| Navigation | 0.875 | 500 / 1.4 | sans |
+| Eyebrow | 0.75 | 600 / 1.5, uppercase, tracking .3em | sans |
+| Hero heading | clamp(2.5rem, 3.8vw, 3.875rem) | 600 / 1.04, tracking −.045em | sans |
+| Hero supporting copy | clamp(1.125rem, 1.5vw, 1.5rem) | 400 / 1.4 | serif, muted |
+| Prompt text | 1.0625 | 400 / 1.5 | serif |
+| Field label / value | 0.8125 / 0.75 | 500 / 400 | sans, value in secondary |
+| Buttons | 0.9375 | 500 | sans |
+| Section heading | 2.125 | 600 / 1.15, tracking −.035em | sans |
+| Card title / description | 1.75 / 1 | 400 | serif, white over gradient |
+
+### 4.3 Component restyle (no layout change yet)
+
+- `Button`: primary → `bg-brand text-white hover:bg-brand-hover`; focus ring uses `focus`; pill
+  radius stays. Outline and secondary pick up the new border and surface tokens.
+- `Chip`, `TextInput`, `TextArea`, `Field`: border and focus tokens, radius 10 px.
+- 49 occurrences of `bg-neutral-900`, 9 of `bg-foreground` and the 6 blue avatar circles
+  (`bg-blue-600`) across 37 files move to `bg-brand` or the avatar token. Done with one sweep and a
+  visual pass over: TopBar, DiscoveryPanel (Show map), HomePicks, PackageCard, MatchBadge, cards
+  under `src/components/chat/cards`, the map PinStrip and PlaceDetailSheet, trip board, guides,
+  explore, saved, updates, admin.
+- `PageFrame`: title 1.75rem, description in muted serif, page gutter 36 px on desktop.
+- The `xp-skeleton` and hover fills use the warmed surfaces.
+
+Phase 1 ships alone: every page looks calmer and teal, nothing moves, every existing test passes.
+
+---
+
+## 5. New and changed components
+
+### 5.1 `SiteHeader` (replaces `Sidebar` and `TopBar` on desktop)
+
+64 px, three-track grid (`1fr auto 1fr`), 36 px side padding, static in document flow inside the
+existing fixed-height shell (the page body scrolls, not the window; the header sits above the
+scrolling `main`).
+
+- Brand: sparkle plus "xpmatch." wordmark as today, accessible name "XPMatch home"; swaps to the
+  approved SVG when supplied.
+- Nav: Discover (`/`), My trips (`/trips`), Saved (`/saved`); `aria-current="page"` and a 1 px brand
+  underline on the active link; `/guides` counts as Discover.
+- Right group: Updates bell with the unread count badge; profile button (avatar circle with the
+  initial, first name, chevron) opening a menu with Update my assistant, Inspiration, Explore near
+  you, Create a guide, Admin (admins only), Report a bug, Terms, Privacy, Log out; "Create a trip"
+  teal pill (44 px, plus icon) that opens the Create a trip dialog.
+- Below 1100 px: brand, a compact Create a trip pill, and a menu button that opens a sheet with the
+  three destinations and the profile items; on phones the tab bar carries navigation and the header
+  keeps only the brand and the pill.
+
+### 5.2 `DiscoverPage` (`/`)
+
+Sections in order, all inside one scroll container:
+
+1. **Hero**: grid `minmax(0,.473fr) minmax(0,.527fr)` above 1100 px; left panel on `surface-warm`
+   with eyebrow, headline "Go somewhere that stays with you." (desktop line break only), serif
+   subtitle "Thoughtful journeys, shaped around you.", `PromptComposer`, `PlannerFields`, the CTA
+   row; right panel `HeroImage` with the motto layer and the caption.
+2. **Find your kind of extraordinary**: heading, "View all destinations →" to `/explore`, three
+   `CollectionCard`s.
+3. **For you in <destination>**: the existing `HomePicks` (three things to do, three stays, three
+   places to eat with match badges), restyled to the card language; when the package opener is
+   available for the destination in focus, the package card renders here instead.
+4. **Jump back in**: the existing row (trips, chats, saved destinations), restyled.
+5. **From the community**: the newest published guides (three), linking to `/inspiration`.
+
+The proactive card's suggestion chips move under the composer as three quiet chips ("Find hotels",
+"Top things to do", "Neighborhood guide" when a destination is in focus; "Weekend ideas", "Plan a
+trip", "Find cheap flights" otherwise). The illustration and "Where to today" copy are retired.
+
+Phones: the same sections stacked; the hero photo follows the copy at 4:3; fields in two columns;
+the CTA row stacks. A not-yet-onboarded phone user sees the `PhoneQuiz` card in place of the hero
+copy until the three questions are answered (the desktop first run keeps opening the assistant
+dialog as today).
+
+### 5.3 `PromptComposer`
+
+A form with a visually hidden label "Describe your ideal escape", a sparkle mark
+(`aria-hidden`), a serif textarea (rows 2, max height 160 px, Ctrl or Cmd+Enter sends, Enter is a
+newline) and a circular teal submit button "Send to your AI concierge" disabled while empty. Submit
+calls `useSendMessage` with the text; because the page is not `/chat`, the hook pushes
+`/chat?prompt=…` and the conversation sends it once. Failure keeps the text.
+
+### 5.4 `PlannerFields` and editors
+
+Four `PlannerField` buttons (icon, label, value, chevron; `aria-haspopup="dialog"`,
+`aria-expanded`, `aria-controls`), 64 px tall, in a four-column grid (two columns between 1100 and
+1279 px and on phones, one column under 380 px). Values derive from the store:
+
+| Field | Value when empty | Editor | Commit |
+| --- | --- | --- | --- |
+| Where | Any destination | Text input with suggestions from `/api/places/resolve` (kind destination) and an "I'm open to anywhere" clear | `updatePlanner({ where })` |
+| When | Any dates | Two labeled date inputs (From, To) with "Flexible dates" clear; end must follow start | `updatePlanner({ startDate, endDate })` |
+| Guests | 2 guests | Stepper 1–16 travelers | `updatePlanner({ travelers })` |
+| Budget | Any budget | Four tier chips with "No preference" | `updatePlanner({ budgetTier })` |
+
+Editors are a small `Popover` on desktop (anchored to the field, flips left when near the right
+edge) and a `BottomSheet` on phones; both have a title, Cancel, Apply, initial focus, Escape and
+focus return; edits stay local until Apply. Only one editor opens at a time. The Create a trip
+dialog keeps its own copy of the same fields for the structured flow.
+
+### 5.5 CTA row
+
+"Create a trip →" (`Button` primary, 52 px) opens the Create a trip dialog prefilled from the
+planner; with a destination set and no dates, it still opens the dialog so the person can confirm
+before a trip is created. "or chat with your AI concierge" (text action) sends `buildPlanPrompt`
+when a destination is set, otherwise navigates to `/chat`.
+
+### 5.6 `HeroImage`
+
+A `<picture>` with AVIF and JPEG sources at 960 and 1920 widths, `object-fit: cover`, an
+`alt` that describes the scene, `fetchPriority="high"`, the serif motto "More than a trip / A
+brighter you" as HTML, and a caption that names the real location of the licensed photograph. 535 px
+tall on desktop, 16:9 between 768 and 1099 px, 4:3 on phones, 12 px radius on desktop only.
+
+### 5.7 `CollectionCard`
+
+An `<article>` with a link (image, gradient, serif title and description) and a sibling heart
+button (`aria-pressed`, "Save By the water"), 1.95:1 image ratio, 10 px radius, subtle scale on
+hover only when hover is available. Data in `src/lib/travel/collections.ts`:
+
+| Collection | Inspiration tags | Link |
+| --- | --- | --- |
+| By the water | beach, romance | `/inspiration?collection=water` |
+| Close to nature | outdoors, road trip, photography | `/inspiration?collection=nature` |
+| Immersed in culture | culture, art, food | `/inspiration?collection=culture` |
+
+The Inspiration page reads the `collection` query and filters its curated rows by those tags; the
+heart saves a `collection` item (new `SavedKind`), and the Saved page shows collections in their
+own group.
+
+### 5.8 `ConciergeLauncher`
+
+Fixed, lower right (18 px offsets and safe-area insets), teal pill with sparkle, "Your AI
+concierge", chevron; hidden on `/chat` and while any dialog or sheet is open; navigates to `/chat`
+(with the current trip scope when on a trip page). Content pages get 96 px of bottom padding so
+nothing hides behind it.
+
+### 5.9 `/chat` page
+
+`HomeClient` unchanged in content, mounted under the header at `src/app/(app)/chat/page.tsx` with
+the search params it reads today. A slim strip under the header carries the chat title menu with
+Recent chats and New chat (moved from `TopBar`) and the compact planner chips. The right panel (map
+or discovery feed) stays. The `Ask XPMatch` placeholder becomes "Ask your concierge".
+
+### 5.10 Mobile
+
+`MobileTabBar`: Discover (`/`), Trips, Saved, Concierge (`/chat`), More. The More sheet gains Explore
+and keeps Inspiration, Create, Updates, Admin, Update my assistant, Report a bug, Log out. The
+launcher is not rendered on phones (the tab carries it).
+
+---
+
+## 6. Assets
+
+| Asset | Requirement | Fallback until supplied |
+| --- | --- | --- |
+| Hero | A licensed Mediterranean terrace or coast photograph, 2000–2400 px wide, exported at 960 and 1920 in AVIF and JPEG, caption naming its real location | Wikipedia thumbnail of the destination in focus through `PlaceImage`, caption from the same lookup |
+| By the water, Close to nature, Immersed in culture | Licensed landscape photographs, 1200 px, focal points recorded in the data file | `PlaceImage` for a representative destination per collection (Amalfi Coast, Banff National Park, Kyoto) |
+| Wordmark | Approved SVG | Text wordmark as today |
+| Avatar | User-uploaded photo later | Initial in a brand-colored circle |
+
+Sourcing: Unsplash (commercial use permitted) or Wikimedia Commons (attribution kept in
+`public/images/travel/CREDITS.md`). Never the mockup itself, never generated resort imagery
+presented as a bookable property. Transfer budgets: hero ≤ 400 KB, cards ≤ 180 KB each.
+
+---
+
+## 7. Responsive rules
+
+| Viewport | Header | Hero | Fields | Cards |
+| --- | --- | --- | --- | --- |
+| ≥ 1280 | Full | 47.3 / 52.7 split | 4 columns | 3 columns |
+| 1100–1279 | Full, tighter gaps | Same split | 2 columns | 3 columns |
+| 768–1099 | Brand, pill, menu | Copy first, photo below at 16:9 | 4 columns if it fits, else 2 | 2 columns |
+| < 768 | Brand and pill; tab bar | Single column, photo at 4:3 | 2 columns | 1 column |
+| < 380 | Same | Same | 1 column | 1 column |
+
+The shell stays fixed-height with an internal scroll container as today, so the tab bar and the
+chat composer keep their current behavior. No `overflow-x: hidden` on the page; the page shell is
+centered above 1720 px. Reduced motion disables the card scale and button transitions.
+
+---
+
+## 8. Accessibility and states
+
+- Skip link to `#main-content`; landmarks: header, nav ("Main"), main, the launcher as a button.
+- Every control keyboard-reachable; focus ring in `focus` color with 4 px offset; hearts and the
+  launcher have visible focus over photographs.
+- 44 px targets for icon buttons; contrast checked on the rendered photographs, not the tokens.
+- Real labels on the composer and every editor field; errors joined with `aria-describedby`.
+- States implemented before the page counts as done: composer empty, focused, filled, sending,
+  failed; field default, selected, expanded, invalid; destination search idle, loading, results,
+  empty, failed; Create a trip ready, validating, processing, failed; heart unsaved, saved, saving,
+  failed with rollback; photo loading, loaded, unavailable (flat brand background keeps the text
+  readable).
+
+---
+
+## 9. Test migration
+
+| Spec | Today | Change |
+| --- | --- | --- |
+| `helpers.ts` | `goto("/")` then `getByPlaceholder("Ask XPMatch")` | A `goToChat(page)` helper that opens `/chat`; placeholder "Ask your concierge" |
+| `full.spec.ts`, `onboarding.spec.ts`, `restore.spec.ts`, `reservations.spec.ts`, `taste.spec.ts`, `mobile.spec.ts` | Chat interactions on `/` | Use the helper; assertions on the empty state ("Where to today", `mobile-home`) move to the Discover hero and the `/chat` empty state |
+| `mobile.spec.ts` | Tab labels Chat, Explore; More sheet links | Discover, Concierge; Explore in the More sheet |
+| `trips.spec.ts` | nav link "Trips" | "My trips" |
+| `guides.spec.ts` | nav link "Saved" inside `navigation`, heading "Create" | Unchanged for Saved; "Create" heading stays on `/create` |
+| New `discover.spec.ts` | — | Hero renders; composer sends to `/chat` and the message appears; each planner field applies and cancels; date order validation; Create a trip from the hero opens the dialog prefilled; collection card link and heart; launcher navigates; phone layout at 390 px |
+| Visual check | — | A Playwright script captures `/` at 1586 × 992 after fonts and images load and saves it next to the reference for the overlay comparison |
+
+Unit tests are unaffected. The full e2e suite runs before every phase push.
+
+---
+
+## 10. Build sequence
+
+| Phase | Work | Effort | Verification and deploy |
+| --- | --- | --- | --- |
+| 0 | Confirm the decisions in section 2; gather the four photographs, the wordmark, the fonts | half a day, mostly the founder | — |
+| 1 | Tokens, fonts, Button and field restyle, the neutral-to-brand sweep, CopilotKit and marker colors | 1 day | tsc, lint, unit, full e2e, build; deploy (visual only) |
+| 2 | `SiteHeader`, `/chat` route with redirects, `MobileTabBar` relabel, chat page strip with Recent and planner chips, remove Sidebar and TopBar, test helper migration | 1.5–2 days | full e2e updated; deploy |
+| 3 | Discover page: hero, composer, planner fields and editors (Popover on desktop, BottomSheet on phones), CTA row, hero image, collection cards with save, restyled picks and Jump back in, community row, launcher, phone first run, `discover.spec.ts` | 2–3 days | full e2e; screenshot overlay at 1586 × 992; deploy |
+| 4 | Polish: type calibration against the reference, responsive checks at 1440, 1280, 1024, 768, 390, 320, contrast on final photographs, reduced motion, docs (`USER_FLOWS.md`, README screenshots); optional desktop slide-over concierge sharing the thread | 1 day (+1 for the slide-over) | full e2e; deploy |
+
+Each phase is one or more commits on the working branch, main synced after its verification, Railway
+deploy checked. Total about six working days of build time.
+
+---
+
+## 11. Deviations from the guide, on purpose
+
+- No `features/discover` folder or CSS Modules: components go under `src/components/discover/` and
+  `src/components/shell/`, styled with Tailwind utilities on the `--xp-*` tokens like the rest of
+  the app.
+- No native `<dialog>`: the existing Modal and BottomSheet primitives already handle focus, Escape
+  and return.
+- Budget is a tier, Guests is a travelers count; currency amounts and child ages are out of scope
+  until a supplier needs them.
+- The concierge opens as the full `/chat` page, not a 420 px dialog; a desktop slide-over is the
+  optional last step.
+- The header is inside the fixed-height app shell rather than the window flow, so phones keep the
+  tab bar and composer behavior built in the mobile plan.
+- The API contracts in the guide are illustrative; XPMatch keeps its existing routes
+  (`/api/places/resolve`, `/api/trips`, `/api/saved`, the CopilotKit runtime).
+
+---
+
+## 12. Reference geometry for the visual comparison
+
+At 1586 × 992: header 0–64; hero 64–599 with the left panel 0–750 and the photo 750–1586; left
+content 60–695 wide; eyebrow at y 112, heading at 137, subtitle at 275; composer 59–695 × 324–407;
+fields 59–695 × 424–488; CTA row 507–560; section heading at y 632; cards 37–1549 × 685–939 with
+15 px gaps; launcher about 204 × 46 with 18 px offsets. Compare boundaries first (header bottom, hero
+split, hero bottom, card top, card widths), then type (headline weight and wrap, subtitle baseline,
+section heading, card captions), then focal points, radii, button heights and spacing. Fix parent
+geometry before compensating with child margins.
