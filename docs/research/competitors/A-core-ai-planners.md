@@ -1,0 +1,226 @@
+# Group A: Core AI trip-planner competitors
+
+Research date: 2026-09-21. Prepared for XPMatch (taste profile -> matched packages of a stay, things to do and places to eat on a map, itinerary board, shared trips).
+Live pages (pricing, App Store, Google Play, Trustpilot, home pages) were scraped on 2026-09-21; raw copies are in `raw/`. Revenue figures marked ESTIMATE are not reported numbers; the method and a confidence label are given each time. Reddit quotes are verbatim search-index snippets of the linked threads (Reddit itself blocks fetching). Quotes are trimmed to 25 words or fewer.
+
+Method notes: WebSearch for facts; Firecrawl for live pages (Tracxn rate-limited the Trip Planner AI profile; Product Hunt has no Trip Planner AI page). No web-traffic figures were found for any of the five (Similarweb not accessible in this pass).
+
+## Mindtrip
+- Category: AI planner (chat-first, free to travelers; booking-commission plus B2B model)
+- What it is: Conversational AI travel planner (web, iOS, Android) that turns chat, pasted links, screenshots or Google Maps lists into collections, trips and hour-by-hour itineraries on a map, with in-chat booking of hotels, flights and activities through partners.
+- Founded / HQ / team size: Founded 2023, Palo Alto, CA; founder and CEO Andy Moss (Tracxn profile also lists Trey Matteson and nine others on the founding team). Headcount: 51 as of Jun 2026 (Tracxn), 40 (PitchBook), 33 (Getlatka) - sources disagree; treat as 35-50.
+- Funding and investors: $22.5M total (company statement in Dec 8 2025 BusinessWire release; PhocusWire). Seed $7M, Sep 2023, led by Costanoa (Skift). Series A $12M, Sep 17 2024, Forerunner Ventures and Costanoa (Skift; Tracxn). Strategic investments from Amex Ventures, Capital One Ventures and United Airlines Ventures announced Dec 8 2025, amounts undisclosed (BusinessWire; PhocusWire). Tracxn records $19M over 2 rounds because it excludes the strategic checks.
+- Ownership and M&A: Independent, venture-backed. Acquired Thatch (creator travel-guide marketplace) on Mar 12 2025, terms undisclosed; several Thatch staff joined (PhocusWire; PitchBook).
+- Business model and pricing: Free for travelers. Live checks 2026-09-21: mindtrip.ai home says "Download the free Mindtrip app"; mindtrip.ai/pricing redirects to a sign-in page (no plans); the US App Store listing (apps.apple.com/us/app/mindtrip-ai-travel-companion/id6503107567) shows no In-App Purchases section; the Google Play listing (play.google.com/store/apps/details?id=com.travel.mindtrip) is flagged "Contains ads, In-app purchases" but lists no prices. Monetization: commissions on bookings via partners (Priceline, Viator; hotel deep links to Expedia, Hotels.com, Agoda seen in aitravel.tools test), a Creator Program, and B2B subscriptions for DMOs/hotels ("Mindtrip for Hotels", Dec 2025 release). Reviewers note "Mindtrip has no premium tier, no message limits" (monkeytravel.app); one directory claims a $6.99/month plan but nothing on Mindtrip's own properties shows it.
+- Scale signals: App Store 4.7 stars, 790 ratings (seen 2026-09-21). Google Play 4.3 stars, 12 reviews, "100+" downloads (seen 2026-09-21; Android app is new and tiny). Knowledge base "over 10,000,000 points of interest" with "over 30,000 local experts" (PR Newswire, Jun 25 2025); "11 million points of interest" and "40,000 local travel guides" plus customer audience "grown by more than 10X" (BusinessWire, Dec 2025, as reported in search results). No user-count or web-traffic figure published.
+- Revenue: Not reported. Third-party model: Getlatka estimates $3.6M ARR (2025). ESTIMATE (own): $3-6M gross revenue run-rate in 2026. Method: consumer commission math is small (e.g., 100K booked room-nights x $150 x ~5% commission = ~$0.75M), so most revenue is likely B2B DMO/hotel subscriptions; headcount of 35-50 and $22.5M raised imply spend of roughly $8-12M/yr, i.e., revenue well below cost. Confidence: Low.
+- Key features:
+  - Chat-first planning with maps, photo cards and "Trips" hub (details, chats, media, ideas, itineraries, bookings in one place) and "Collections" by theme/destination.
+  - "Start Anywhere": paste a TikTok, Instagram, YouTube, article, screenshot or Google Maps list and it extracts places into a chat, collection or trip.
+  - Hour-by-hour itineraries with walking/metro/driving times between stops and whole-day route on a map.
+  - In-chat booking of hotels, flights, cars and activities with live prices via partners; "receipts" and booking tracking.
+  - Group planning: invite friends to group chats, co-edit collections and itineraries.
+  - On-trip companion app (iOS Jun 2025; Android later): nearby recommendations, "magic camera" photo recognition and menu/sign translation; guest mode without an account; EN/DE/FR/IT.
+  - Budget breakdowns (hotels, fuel, tolls, food, activities) and context awareness (e.g., skips museums on closing days).
+  - Creator/guide content from Thatch and 40K local guides; B2B white-label widgets for DMOs and hotels.
+- What users like:
+  - Polished UX: "UX/UI is absolutely brilliant, simple and sleek, perfectly balanced to accommodate local getaways, weekend retreats, daily planning, or an extensive vacation." - https://apps.apple.com/us/app/mindtrip-ai-travel-companion/id6503107567
+  - Free with no paywall: "mindtrip - free, no paywall i hit, some pretty looking maps. mindtrip's solid." - https://www.reddit.com/r/AI_travel_tips/comments/1u7aqd7/tested_a_few_ai_trip_planners_the_hard_way_which/
+  - Real bookable inventory: "This isn't "go Google it" like Wanderlog - these are actual booking links with live prices." - https://aitravel.tools/mindtrip-review/
+  - Timed, routed days: "The map and route feature is really helpful when planning a busy day." - https://play.google.com/store/apps/details?id=com.travel.mindtrip
+  - Local discovery: "It runs smoothly and the recommendations are on point." - https://apps.apple.com/us/app/mindtrip-ai-travel-companion/id6503107567
+- What users dislike:
+  - Bugs, slow generation and rigid trip setup: "From the start when it initiated a chat it took forever to generate anything and then said it failed." - https://apps.apple.com/us/app/mindtrip-ai-travel-companion/id6503107567 (review titled "No Cruise option, Buggy and delays")
+  - Price estimates not live: "That's 20-30% higher than reality. Mindtrip honestly labels these as "estimates," but if you're planning a budget - verify actual prices" - https://aitravel.tools/mindtrip-review/
+  - Better at collecting than deciding: "Can feel stronger at organizing options than adjudicating hard trade-offs" - https://www.searchspot.ai/blog/mindtrip-ai-review-2026
+  - Pre-trip tool, commercial feel: "Mainly useful before the trip." - https://www.reddit.com/r/travelbloggers/comments/1p63631/tested_a_few_ai_travel_planning_mobile_app_heres/ ; "a pretty cool AI trip planning tool for itineraries. DEFINITELY a bit commercial" - https://www.reddit.com/r/backpacking/comments/1kcl29i/thoughts_on_using_ai_for_trip_research/
+  - Shallow for complex trips: "MindTrip is more suitable for simpler travel planning, where the focus is discovering attractions and building a quick itinerary" - https://www.reddit.com/r/FlightDiary/comments/1kru3cd/imean_vs_mind_trip_i_compared_two_ai_travel/
+- Relevance to XPMatch: Closest analogue in polish and map-centric planning; borrow "Start Anywhere" ingestion of links/screenshots, timed routes with transit times, and the Trips hub. XPMatch differs by leading with a taste profile and pre-matched stay + do + eat packages (deciding, not just collecting - the gap reviewers name), rather than open-ended chat.
+- Sources:
+  - https://mindtrip.ai/ (home; "free Mindtrip app"; seen 2026-09-21)
+  - https://apps.apple.com/us/app/mindtrip-ai-travel-companion/id6503107567 (4.7, 790 ratings, no IAP, reviews)
+  - https://play.google.com/store/apps/details?id=com.travel.mindtrip&hl=en (4.3, 12 reviews, 100+ downloads, reviews)
+  - https://tracxn.com/d/companies/mindtrip/__skw5OkImmDPmw5TMTJ-v7b9JPwaF_6odD0k2DfnEZws (founded 2023, Palo Alto, 51 employees, $19M/2 rounds)
+  - https://pitchbook.com/profiles/company/535220-74 (40 employees; Thatch M&A Mar 12 2025)
+  - https://www.businesswire.com/news/home/20251208469469/en/ (Dec 2025 strategic investors, $22.5M total, 10X growth)
+  - https://www.phocuswire.com/mindtrip-ai-travel-planning-capital-one-ventures-united-airlines-ventures (investors, $22.5M)
+  - https://skift.com/2023/09/08/mindtrip-raises-7-million-for-ai-trip-planner-startup-funding-roundup/ (seed $7M)
+  - https://skift.com/2024/09/17/mindtrip-raises-12-million-in-tough-funding-environment-for-ai-trip-planners/ (Series A $12M)
+  - https://www.phocuswire.com/mindtrip-thatch-merge-ai-travel-planning-creators (Thatch acquisition)
+  - https://www.prnewswire.com/news-releases/mindtrip-becomes-travelers-ultimate-companion-with-launch-of-new-ai-powered-app-that-pinpoints-must-see-attractions-restaurants-and-hidden-gems-nearby-302490836.html (app launch, 10M POIs, 30K experts)
+  - https://getlatka.com/companies/mindtrip.ai ($3.6M est. ARR 2025; 33 employees)
+  - https://monkeytravel.app/blog/mindtrip-review-2026 and https://www.browse-ai.tools/tool/mindtrip (no premium tier; $6.99 claim unverified)
+  - https://aitravel.tools/mindtrip-review/ and https://www.searchspot.ai/blog/mindtrip-ai-review-2026 (review-blog quotes)
+  - Reddit threads listed inline above (search-index snippets)
+
+## Layla
+- Category: AI planner (chat-first with booking; owned by Expedia Group since Jul 31 2026)
+- What it is: AI "travel agent" (web, iOS, Android) that plans day-by-day trips in conversation, illustrates suggestions with short videos, and books flights, hotels and activities via Booking.com, Skyscanner and GetYourGuide, with optional hand-off to human travel experts.
+- Founded / HQ / team size: Founded 2023, Berlin (Layla AI GmbH); founders Saad Saeed (CEO, ex-Flink co-founder), Jeremy Jauncey and Sardar Bali (Crunchbase via search; TechCrunch). About 25 employees (Skift, Jul 31 2026; Getlatka).
+- Funding and investors: EUR 3M seed, Nov 2023, led by Firstminute Capital and M13 with Paris Hilton, Booking.com co-founder Andy Phillips and Skyscanner co-founder Barry Smith (TechCrunch; EU-Startups). Strategic "seven-figure" round, Mar 17 2026, from United Airlines Ventures, Baidu Capital, INCE Capital, M13, Firstminute Capital and SparkLabs (Yahoo Finance press release; invest-in.berlin). Total about EUR 5M (~$5.7M) per Crunchbase as cited by Skift.
+- Ownership and M&A: Acquired by Expedia Group, announced Jul 31 2026; price and terms undisclosed; "Layla will continue operating, and its team will work alongside Expedia Group's brands" (Skift; Expedia IR). Layla's own acquisitions: Roam Around (AI itinerary bot, Oct 2023, undisclosed; founder Shie Gabbai became COO - PhocusWire) and Trip Planner AI (Crunchbase lists Aug 17 2024; Tracxn lists Jan 1 2024; undisclosed).
+- Business model and pricing: Free to plan plus "Layla Premium" subscription and booking commissions. Live checks 2026-09-21: layla.ai home: "Planned by AI. Booked by experts. For free."; US App Store listing (id6758730467) In-App Purchases: "Yearly $49.99", "Monthly subscription $9.99", "Yearly Subscription $49.99", and "Subscribing to Layla Premium gives your account unlimited access to the app ... There may be various subscription options and prices available." Premium buys live pricing and "PriceLock" fare tracking (monkeytravel.app review: "~$49/year on Layla's site ($49.99/year or $9.99/month on iOS)"). Where the free tier ends has shifted during 2026 (early-2026 reviews found the day-by-day gated behind a trial or Premium; Layla's June 2026 copy says generation is free).
+- Scale signals: "2,386,299+ trips shaped around what travelers really wanted" (layla.ai home, 2026-09-21). "$1 billion in planned trip value", "30 million travel messages", "over 5 million users", "over 2 million trip itineraries" (press release, Mar 17 2026). App Store 4.6 stars, 183 ratings (new listing id6758730467; seen 2026-09-21). Google Play 4.7 stars, 456 reviews, "10K+" downloads (package ai.layla.android.app, seen 2026-09-21; an earlier package com.bd.adeo had ~42K downloads before removal in Aug 2025 per AppBrain). Trustpilot 4.2 "Great", 92 reviews (seen 2026-09-21). ~25 employees.
+- Revenue: Not reported (now consolidated inside Expedia Group). Third-party model: Getlatka estimates $2.8M ARR (2025). ESTIMATE (own): $2-5M ARR at the time of acquisition. Method: 5M users x 1-2% Premium conversion x ~$49/yr = $2.5-5M, plus a modest affiliate take on bookings (if ~2-3% of the $1B "planned" value was actually booked through Layla at ~5% commission, that is ~$1-1.5M). Confidence: Low.
+- Key features:
+  - Conversational planning that starts without a destination ("40% of users skipping traditional destination searches").
+  - Day-by-day itineraries covering flights, hotels, activities, dining and transport; multi-city and road-trip routing.
+  - Short video clips (Reels-style) per suggestion for destination inspiration.
+  - Booking inside the flow via Booking.com, Skyscanner and GetYourGuide; live prices and PriceLock 24/7 fare alerts (Premium).
+  - Human travel experts who review, book and change the AI plan ("Booked by experts").
+  - Image and PDF upload ("send me images ... a screenshot of an itinerary") to enrich a trip.
+  - Web-to-app account sync, PDF export, priority support (Premium).
+  - Family/couple/solo trip templates and public "handmade trips" pages for SEO.
+- What users like:
+  - Fun, visual planning: "Layla is genuinely fun to use, the maps and photos make it feel less like homework." - https://www.reddit.com/r/AI_travel_tips/comments/1vtb7u1/tried_layla_mindtrip_odessia_and_fortrip_for/
+  - Actually books: "so for me layla was the most useful overall, mainly because it actually did the booking part instead of dumping me back to google." - https://www.reddit.com/r/AI_travel_tips/comments/1u7aqd7/tested_a_few_ai_trip_planners_the_hard_way_which/
+  - Less mental load than ChatGPT: "I usually use chatGPT for planning trips but I decided to try this and it was simply way easier hands down." - https://play.google.com/store/apps/details?id=ai.layla.android.app&hl=en_US
+  - Full plans fast: "It created a full itinerary and travel plan for me and saved me from a lot of stress and work" - https://apps.apple.com/us/app/layla-ai-trip-planner/id6758730467
+  - Human hand-off and cheap subscription: "Have subscribed to Layla for the past year to assist in multiple trip planning's. Has worked really well and impressed by its low subscription prices." - https://www.trustpilot.com/review/layla.ai
+- What users dislike:
+  - Errors on long/complex trips: "By far the most error prone AI on the market! Paid for a year subscription which I severely regret after a week of usage." - https://play.google.com/store/apps/details?id=ai.layla.android.app&hl=en_US
+  - Not enough to fully plan: "To completely plan a trip, I am not convinced Layla is the best option right now but maybe in the Future." - https://www.trustpilot.com/review/layla.ai
+  - Paywall placement and auto-renew: "The paywall has sat on the part you actually want." and "It auto-renews." - https://monkeytravel.app/blog/layla-ai-review-2026
+  - Subscription regret/cancellation friction: "I did unfortunately subscribe for a year and when i realized it was rubbish i canceled my subscription for the coming year." - https://www.trustpilot.com/review/layla.ai
+  - Account sync across web and app: "I'm having a hard time connecting my web browser account with my app." - https://apps.apple.com/us/app/layla-ai-trip-planner/id6758730467
+- Relevance to XPMatch: Proof that "start from who you are, not where" resonates (40% destination-less starts) and that bookability is the top-cited strength; borrow video/photo-rich cards and the expert hand-off idea. XPMatch differs by matching a persistent taste profile to curated packages instead of long chats, and can position against Layla's paywall confusion and error-prone long trips; Expedia ownership will tie Layla to Expedia inventory.
+- Sources:
+  - https://layla.ai/ (home; trips counter, free claim, Trustpilot badge; seen 2026-09-21)
+  - https://apps.apple.com/us/app/layla-ai-trip-planner/id6758730467 (4.6, 183 ratings, IAP prices, reviews)
+  - https://play.google.com/store/apps/details?id=ai.layla.android.app&hl=en_US (4.7, 456 reviews, 10K+ downloads, reviews)
+  - https://www.appbrain.com/app/layla-ai-trip-planner/com.bd.adeo (earlier Android package, ~42K downloads, removed Aug 2025)
+  - https://www.trustpilot.com/review/layla.ai (4.2, 92 reviews, quotes)
+  - https://ir.expediagroup.com/news-and-events/news/news-details/2026/Expedia-Group-acquires-Layla-accelerating-its-AI-powered-trip-planning-and-booking-strategy/default.aspx (acquisition, Jul 31 2026)
+  - https://skift.com/2026/07/31/expedia-acquired-ai-trip-planner-layla-exclusive/ (terms undisclosed, ~EUR 5M raised, ~25 staff, team stays)
+  - https://techcrunch.com/2023/11/29/layla-taps-into-ai-and-creator-content-to-build-a-travel-recommendation-app/ and https://www.eu-startups.com/2023/11/paris-hilton-and-an-esteemed-group-of-travel-leaders-invest-e3m-in-the-berlin-based-ai-travel-planner-layla/ (EUR 3M seed)
+  - https://uk.finance.yahoo.com/news/layla-surpasses-1-billion-trips-165400122.html and https://invest-in.berlin/n/berlins-layla-hits-1b-in-ai-planned-trip-value/ (Mar 2026 round, $1B, 5M users)
+  - https://www.phocuswire.com/startup-travel-planner-layla-acquires-ai-itinerary-builder-roam-around (Roam Around)
+  - https://www.crunchbase.com/acquisition/layla-7376-acquires-trip-planner-ai--22e14f9f (Trip Planner AI acquisition, Aug 17 2024)
+  - https://getlatka.com/companies/layla.ai ($2.8M est. ARR 2025, 25 employees)
+  - https://monkeytravel.app/blog/layla-ai-review-2026 (pricing tiers, paywall commentary)
+  - Reddit threads listed inline above (search-index snippets)
+
+## Wanderlog
+- Category: organizer / collaborative itinerary and map app with AI add-ons (freemium)
+- What it is: "Google Docs plus Maps" trip organizer (web, iOS, Android): a shared itinerary, map, budget and reservation inbox in one view, with community guides and light AI recommendations layered on top.
+- Founded / HQ / team size: Founded 2019 (Y Combinator 2019 batch), San Francisco Bay Area; founders and twin brothers Harry Yu (CEO) and Peter Xu (TechCrunch; Tracxn - note Tracxn shows a 2008 founding date that conflicts with TechCrunch/YC). 16 employees as of Jun 2026 (Tracxn); Getlatka lists 5, LeadIQ ~15.
+- Funding and investors: $1.5M seed, Sep 2021, General Catalyst and Abstract Ventures, plus Y Combinator (TechCrunch; Wanderlog blog; PhocusWire). No later rounds found.
+- Ownership and M&A: Independent; no acquisitions found.
+- Business model and pricing: Freemium. Live wanderlog.com/pro (seen 2026-09-21): "Freemium ... $0" with "Add unlimited places, Live collaboration with friends, Import flights/hotels/cars, Smart recommendations, Itinerary and map in 1 view"; "Pro Annual - Starting at $39.99/year - Start free trial" adding "Offline access, Flight and car rental deals, Unlimited attachments, Export to Google Maps, Optimize route, Auto Gmail scanning, Dark mode in app, Unlimited AI assistance, Add places from anywhere on the web". App Store in-app purchases list "Wanderlog Pro: Annual Plan" at $39.99, $49.99 and $31.99 (regional/promo variants) and "Wanderlog Pro: 20% discount $39.99" (seen 2026-09-21). Third-party reviews cite $4.99/month. Also affiliate revenue on flight/hotel/car deals.
+- Scale signals: App Store 4.9 stars, 35K ratings, "Editors' Choice" (seen 2026-09-21). Google Play 4.7 stars, 36.5K reviews, "1M+" downloads (seen 2026-09-21); AppBrain estimates ~3.6M Android downloads and ~120K in the last 30 days (Jul 2026). Trustpilot 1.9 "Poor", 51 reviews (seen 2026-09-21). "Thousands of trips per week" (founders, 2021). 16 employees.
+- Revenue: Not reported. Third-party model: Getlatka estimates $1M ARR (2024). ESTIMATE (own): $2-4M ARR in 2026. Method: ~5M+ lifetime installs across both stores (Play 1M+ bucket, AppBrain 3.6M Android estimate, iOS rating volume on par with Android) x 1-1.5% paying x ~$39.99 = $2-3M, plus affiliate deals; a 16-person team is consistent with $2-4M. Confidence: Low-Medium.
+- Key features:
+  - Itinerary and map in one view; drag-and-drop day planning with start/end times; commute times between stops.
+  - Real-time collaboration (invite by link/email, everyone edits), shared expense tracking and cost splitting.
+  - Import reservations by forwarding emails or auto Gmail scanning (Pro); live flight updates.
+  - "Import from anywhere": paste a link to auto-create an itinerary; add places from any web page (Pro).
+  - Route optimization, offline access, export to Google Maps (Pro).
+  - Community guides and Google Travel lists; place cards with hours, ratings, links; nearby restaurant/attraction suggestions.
+  - AI assistant for recommendations ("Unlimited AI assistance" in Pro) - reviewers call it basic.
+  - Road-trip planner, hotel/flight deal search (affiliate).
+- What users like:
+  - Keeps complex trips organized: "Love Wanderlog! Used it for my 24 day trip to France . I wouldn't have been able to track 12 different hotels, several activities, trains" - https://www.reddit.com/r/travel/comments/1f0a84r/thoughts_on_wanderlog/
+  - Collaboration: "it made it very easy to share and brainstorm plans with my partner. Showing the commute times is very convenient for road trips" - https://play.google.com/store/apps/details?id=com.wanderlog.android&hl=en_US
+  - Desktop drag-and-drop with map: "It's very user friendly on the computer because you can just drag and drop, see the map and itinerary." - https://www.reddit.com/r/JapanTravelTips/comments/1iqm77h/wanderlog_may_have_saved_my_trip/
+  - Polish: "It's a polished and capable trip-planning app: the maps, itinerary tools, and overall presentation are impressive." - https://www.trustpilot.com/review/wanderlog.com
+  - Generous free tier: "It's genuinely like Google Docs for travel planning. No lag, no sync issues" - https://tripstone.app/blog/wanderlog-review
+- What users dislike:
+  - Upsell pop-ups and forced trial: "Yes the pop ups about the paid version are annoying, but it's a minor inconvenience for a very well rounded app in my opinion." - https://www.reddit.com/r/TravelPlanners/comments/1poq3cn/does_anyone_actually_enjoy_using_wanderlog_i_feel/ ; "Terrible. The app forces a free trial which I'm not interested in." - https://www.trustpilot.com/review/wanderlog.com
+  - Performance and reliability: "the app used to be a bit slow with large trip plans" - https://www.reddit.com/r/wanderlog/comments/1ptzf4m/how_reliable_is_wanderlog/ ; "Paid app keeps coming up with 'unable to connect, restart the app'." - https://www.trustpilot.com/review/wanderlog.com ; "Performance is the #1 complaint." - https://tripstone.app/blog/wanderlog-review
+  - Weak AI, manual work: "If you just want "AI, plan my 5-day Japan trip," Wanderlog isn't that. You'll be doing most of the work manually." - https://tripstone.app/blog/wanderlog-review
+  - Stale place data: "The app lists 16 Free entry museums in Corfu town to visit, I stopped researching after number 5 because all were 10 Euros to enter." - https://www.trustpilot.com/review/wanderlog.com
+  - Mobile app lags the web app: "I find the app could be better" - https://www.reddit.com/r/JapanTravelTips/comments/1iqm77h/wanderlog_may_have_saved_my_trip/
+- Relevance to XPMatch: The benchmark for the itinerary board and shared trips (real-time co-editing, expense split, reservation import, map+list in one view) and proof that a $39.99/yr Pro tier works at scale. XPMatch differs by generating the plan from a taste profile up front (Wanderlog's named weakness) and should avoid Wanderlog's pop-up-heavy upsell.
+- Sources:
+  - https://wanderlog.com/pro (live pricing; seen 2026-09-21)
+  - https://apps.apple.com/us/app/wanderlog-travel-planner/id1476732439 (4.9, 35K ratings, IAP prices, reviews)
+  - https://play.google.com/store/apps/details?id=com.wanderlog.android&hl=en_US (4.7, 36.5K reviews, 1M+ downloads, reviews)
+  - https://www.appbrain.com/app/wanderlog-trip-planner-app/com.wanderlog.android (3.6M Android downloads est., 120K/30 days)
+  - https://www.trustpilot.com/review/wanderlog.com (1.9, 51 reviews, quotes)
+  - https://techcrunch.com/2021/09/01/general-catalyst-abstract-back-wanderlogs-1-5m-round-for-collaborative-travel/ (founding, YC, seed round)
+  - https://wanderlog.com/blog/2021/09/01/announcing-our-seed-fundraise/ and https://www.phocuswire.com/Wanderlog-1-5M-seed-funding (seed)
+  - https://tracxn.com/d/companies/wanderlog/__lelvNWkEOVXLC2fYXKoX0fazml8sWLb7U2Epc5HPuJA (16 employees, HQ)
+  - https://getlatka.com/companies/wanderlog.com ($1M est. ARR 2024)
+  - https://tripstone.app/blog/wanderlog-review and https://monkeyeatingmango.com/blog/wanderlog-pricing-2026/ (Pro pricing commentary, Reddit summary)
+  - Reddit threads listed inline above (search-index snippets)
+
+## Wonderplan
+- Category: AI planner (free, bootstrapped, form-based web app)
+- What it is: Form-driven AI itinerary generator: enter destination, dates, budget, companions and interests and get a day-by-day plan with place cards, a map, hotel cards and a PDF export; no chat, no booking.
+- Founded / HQ / team size: Founded 2022, Kuala Lumpur, Malaysia; founder Jar Kuznecov (CB Insights; Tracxn). Product Hunt launches May 4 2023, Nov 6 2023 (2.0) and Apr 27 2024. Team size not found (no headcount on Tracxn; likely a solo/very small team).
+- Funding and investors: None - "Wonderplan has not raised any funding rounds yet" (Tracxn).
+- Ownership and M&A: Independent; no acquisitions.
+- Business model and pricing: Free. Live wonderplan.ai FAQ (seen 2026-09-21): "Yes, Wonderplan is a free planning tool (at least for now). Our AI trip planner is designed to provide high-quality service without any cost." No pricing page exists (wonderplan.ai/pricing returns 404; no plan names or prices anywhere on the site). Only visible monetization is a "Find a place to stay" button that "opens Booking.com with no dates, no city, no guest count ... it's an affiliate link" (aitravel.tools). One review site mentions per-trip premium pricing ($8-15) but nothing on Wonderplan's own properties shows it.
+- Scale signals: "Join our community wth 20k passionate travelers" (Product Hunt listing); "trusted by travelers from over 50 countries" (Trustpilot company blurb). Product Hunt 5.0 from 1 review, 154 followers (seen 2026-09-21). Trustpilot 3.7 "Average", 1 review (seen 2026-09-21). No app-store listings found (web only). No traffic figure found.
+- Revenue: Not reported. ESTIMATE (own): under $100K/yr, likely far less. Method: no paid plan, no funding, ~20K-traveler community, generic Booking.com affiliate button as the only monetization. Confidence: Low.
+- Key features:
+  - Form input: destination, dates/number of days, budget (Low/Medium/High), companions (solo/couple/family/friends), activities and food preferences.
+  - Day-by-day itinerary generated in ~30 seconds with place cards (description, duration) and a map.
+  - Reorder, add or remove locations on a single page; bookmarked plans in one place.
+  - Hotel cards with prices and ratings; generic budget-range block.
+  - PDF download for offline access.
+  - Start from blogs or videos and refine (per Product Hunt description; "interactive chat, calendar-based planning, and map itinerary previews").
+  - Free, no account paywall; support by email.
+- What users like:
+  - Simple, free desktop experience: "It offers a better user experience on desktops, especially when you need to reorder the locations. And did I mention, it's completely free." - https://www.reddit.com/r/SideProject/comments/1837w28/a_site_that_for_you_to_plan_your_trip_journey/
+  - Fast discovery: "The AI suggested some places I'd never even heard of, which was cool. it saved me a ton of time" - https://www.reddit.com/r/Entrepreneur/comments/1g01fre/my_experience_with_ai_travel_planning_curious/
+  - Decent first output: "At first glance - decent. Day-by-day breakdown, cards with place descriptions and duration, map on the right, hotel block with prices." - https://aitravel.tools/wonderplan-review/
+  - No charges: "Wonderplan offers a user-friendly AI trip planner that crafts bespoke itineraries without any charges." - https://www.reddit.com/r/AI_travel_tips/comments/1kajws4/what_is_the_best_free_ai_trip_planner/
+- What users dislike:
+  - Destination must be chosen up front: "Wonderplan.ai had a significant limitation - it required selecting a specific destination upfront." - https://www.reddit.com/r/travelwithAI/comments/1l8hbs7/comparing_top_5_ai_travel_planning_tools/
+  - Template, not personalization: "Wonderplan is not a conversational AI assistant. It's a template-based itinerary generator." - https://aitravel.tools/wonderplan-review/ (same city, four profiles produced near-identical days; verdict 2/5)
+  - Decorative budget: "There's a price breakdown block, but it's just generic Budapest ranges" - https://aitravel.tools/wonderplan-review/
+  - No real booking: "The "Find a place to stay" button opens Booking.com with no dates, no city, no guest count." - https://aitravel.tools/wonderplan-review/
+- Relevance to XPMatch: A cautionary example: a form-to-itinerary generator whose output barely changes with the traveler profile. XPMatch's taste profile must visibly change the matched stay/do/eat packages (show why each pick fits) to avoid the "template generator" verdict; Wonderplan's speed and PDF/offline export are worth matching.
+- Sources:
+  - https://wonderplan.ai/ (home + FAQ; free claim; seen 2026-09-21); https://wonderplan.ai/pricing (404, WebFetch 2026-09-21)
+  - https://tracxn.com/d/companies/wonderplan/__scBfC1fLRA-0UA3Db5YhdU6oM0jtBGrzRXR4SQsE5a8 (unfunded, Kuala Lumpur)
+  - https://www.cbinsights.com/company/wonderplan/people (founder Jar Kuznecov, founded 2022; via search)
+  - https://www.producthunt.com/products/wonderplan (5.0/1 review, 154 followers, 20k travelers, launch dates)
+  - https://www.trustpilot.com/review/wonderplan.ai (3.7, 1 review, "over 50 countries")
+  - https://aitravel.tools/wonderplan-review/ (hands-on test, affiliate button, verdict)
+  - https://monkeytravel.app/blog/wonderplan-review-2026 and https://www.iweaver.ai/guide/wonderplan-ai-review-best-ai-travel-planner-alternative/ (free pricing, pros/cons)
+  - Reddit threads listed inline above (search-index snippets)
+
+## Trip Planner AI
+- Category: AI planner (small team; now a Layla/Expedia Group property used as an SEO funnel)
+- What it is: Web-based AI itinerary generator (tripplanner.ai) with public "Community Trips", destination pages and road-trip/multi-city planners; since its acquisition by Layla, the site's "Create a New Trip" buttons open layla.ai/chat and the pages carry Layla branding.
+- Founded / HQ / team size: Founded 2023, Bogota, Colombia; founders Juan Pisco (CEO) and Joan Cabezas (CTO); 3 employees pre-acquisition (Tracxn/CB Insights/Crunchbase via search; LinkedIn).
+- Funding and investors: $100K from Platanus (accelerator), the only round recorded (Crunchbase; Tracxn).
+- Ownership and M&A: Acquired by Layla AI - Crunchbase dates it Aug 17 2024, Tracxn Jan 1 2024; terms undisclosed. Evidence on the live site (2026-09-21): logo files named "new-layla-logo.svg", CTA "Create a New Trip" -> https://layla.ai/chat?...utm_medium=tripplanner, copy such as "With Layla.ai, every itinerary is designed to keep your trip organized". Through Layla, part of Expedia Group since Jul 31 2026.
+- Business model and pricing: No standalone pricing. tripplanner.ai/pricing returns 404 and the home page shows no plan names or prices (seen 2026-09-21); planning is handed to Layla, so Layla's free tier and "Layla Premium" ($49.99/year or $9.99/month on iOS, seen 2026-09-21) apply. Third-party directories still describe the old product as free ("Pricing Model: Free" - Futurepedia) or freemium ("The free subscription allows creating itineraries with limited customizations" - TechShark). A sister site, thebellboy.ai (hotels), is cross-promoted.
+- Scale signals: Site claims "8M+ trips planned" and "4.9 average" rating (tripplanner.ai home, 2026-09-21; unaudited, likely including Layla volume). No App Store or Google Play listing found (web only). No Trustpilot page. Futurepedia: 2 user reviews. 3 employees pre-acquisition. No traffic figure found.
+- Revenue: Not reported. ESTIMATE (own): roughly $0-100K/yr as a standalone (free product, $100K raised, 3 staff, affiliate-only); today it generates no separate revenue - its value is SEO traffic funnelled into Layla Premium and bookings. Confidence: Low.
+- Key features:
+  - AI itinerary generation from destination, dates and preferences; "Ready Trips" and public Community Trips to copy.
+  - Route optimization ("best paths, travel times, and distances for city tours or cross-country road trips").
+  - Multi-city planning with "optimized connections, transfers, and overnight stays".
+  - Family, couples and road-trip planner landing pages (Pacific Coast Highway example).
+  - Live flight and hotel pricing and budget suggestions (per TechShark; now delivered by Layla).
+  - Collaborative editing of itineraries (per Futurepedia).
+  - Destination SEO pages (e.g., /destinations/Bogota) and FAQ content.
+- What users like:
+  - Fast and free: "Tripplaner AI is an amazing tool to help you make itineraries for places around the globe for your budget." - https://www.futurepedia.io/tool/tripplanner-ai
+  - Among the better free tools: "I tried every free AI trip planner on Futurepedia and this is one of the best." - https://www.futurepedia.io/tool/tripplanner-ai
+  - Live prices: "Provides real-time air travel and accommodations with budget suggestions." - https://techshark.io/tools/tripplanner/
+- What users dislike:
+  - Option overload: "For some users, the sheer number of features and customization options might be overwhelming initially." - https://www.futurepedia.io/tool/tripplanner-ai
+  - Limited free customization: "The free subscription allows creating itineraries with limited customizations." - https://techshark.io/tools/tripplanner/
+  - Crowded category: "currently tripplanning with AI is highly saturated" - https://www.reddit.com/r/AI_travel_tips/comments/1vync52/dont_waste_time_creating_a_tripplanner/
+  - Note: independent review base is thin (2 Futurepedia reviews, no store or Trustpilot listings); since the product now runs on Layla, Layla's complaints (paywall placement, errors on long trips) apply.
+- Relevance to XPMatch: Shows what a small AI planner becomes: an SEO destination/"community trips" funnel for a bigger booking engine. Borrow the public, copyable trip pages for acquisition; XPMatch differs by keeping the planning experience (taste-matched packages, board, shared trips) inside its own product rather than handing off to a partner chat.
+- Sources:
+  - https://tripplanner.ai/ (home; 8M+ trips claim; Layla CTAs and branding; seen 2026-09-21); https://tripplanner.ai/pricing (404, WebFetch 2026-09-21)
+  - https://www.crunchbase.com/organization/trip-planner-ai and https://www.crunchbase.com/acquisition/layla-7376-acquires-trip-planner-ai--22e14f9f (Bogota, $100K Platanus, acquired Aug 17 2024; via search)
+  - https://tracxn.com/d/companies/trip-planner-ai/__JixxelS10x0SOXvOm8XqxlTG0ENwc44L591DTW0H3DA (founded 2023, 3 employees, acquired Jan 1 2024; via search - page rate-limited on scrape)
+  - https://www.linkedin.com/in/juan-pisco/ (founder/CEO; via search)
+  - https://www.futurepedia.io/tool/tripplanner-ai (free pricing model, 2 reviews, pros/cons)
+  - https://techshark.io/tools/tripplanner/ (freemium description, features)
+  - https://apps.apple.com/us/app/layla-ai-trip-planner/id6758730467 (Layla Premium prices that now apply)
+  - Reddit thread listed inline above (search-index snippet)
+
+## Cross-group summary
+- Pricing: Mindtrip free (commission + B2B); Layla free + Premium $49.99/yr or $9.99/mo; Wanderlog free + Pro $39.99/yr; Wonderplan free (affiliate only); Trip Planner AI free landing pages feeding Layla.
+- Ownership: Mindtrip and Wanderlog independent and VC-backed; Wonderplan independent and bootstrapped; Layla and (through Layla) Trip Planner AI owned by Expedia Group since Jul 31 2026.
+- Biggest like themes: fast, visual, map-based plans that remove "mental load"; real bookability (Layla, Mindtrip); collaboration and organization (Wanderlog); free tiers.
+- Biggest dislike themes: paywalls/upsell pop-ups and auto-renew (Layla, Wanderlog); errors, slowness and bugs on long or complex trips (Layla, Mindtrip, Wanderlog); generic, template-like personalization and estimate-only prices (Wonderplan, Mindtrip); AI that collects options but does not decide.
