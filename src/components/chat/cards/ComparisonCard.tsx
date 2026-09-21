@@ -123,7 +123,7 @@ export function ComparisonCard({ args, status, toolCallId }: { args: Streaming<C
                   <button
                     type="button"
                     onClick={() => o.name && pick(o.name)}
-                    className="inline-flex h-8 items-center gap-1.5 rounded-full bg-neutral-900 px-3 text-[13px] font-semibold text-white hover:bg-neutral-800"
+                    className="inline-flex h-8 items-center gap-1.5 rounded-full bg-brand px-3 text-[13px] font-semibold text-white hover:bg-brand-hover"
                   >
                     <Check className="h-3.5 w-3.5" /> Pick this one
                   </button>

@@ -15,6 +15,7 @@ import { EmptyState } from "@/components/PageFrame";
 import { Button } from "@/components/ui/Button";
 import { TextInput } from "@/components/ui/Field";
 import { PlaceImage } from "@/components/ui/PlaceImage";
+import { PhotoCredit } from "@/components/ui/PhotoCredit";
 import { PlacesMap } from "@/components/map/PlacesMap";
 import type { MapPin as Pin } from "@/components/map/GoogleMap";
 import { GuideCard } from "@/components/guides/GuideCard";
@@ -69,13 +70,14 @@ function NearbyCard({
   const isSaved = !!findSaved(saved, { kind: place.kind, title: place.name, refId: place.id });
   return (
     <article
-      className={clsx("group overflow-hidden rounded-3xl border bg-white transition-shadow", selected ? "border-neutral-900 shadow-md" : "border-border")}
+      className={clsx("group overflow-hidden rounded-3xl border bg-white transition-shadow", selected ? "border-brand shadow-md" : "border-border")}
       onMouseEnter={() => onHover(true)}
       onMouseLeave={() => onHover(false)}
       data-testid="nearby-card"
     >
       <button type="button" onClick={onSelect} className="relative block aspect-[4/3] w-full overflow-hidden bg-neutral-200 text-left" aria-label={`Show ${place.name} on the map`}>
         <Photo src={place.photos?.[0]} alt={place.name} queries={[place.name, areaName]} className="absolute inset-0 h-full w-full transition-transform duration-300 group-hover:scale-[1.02]" />
+        {place.photos?.[0] ? <PhotoCredit credit={place.photoCredits?.[0]} asLink={false} /> : null}
       </button>
       <div className="absolute right-3 top-3 flex gap-1.5">
         <button
@@ -314,7 +316,7 @@ export function ExploreClient() {
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={areaName ? `Search near ${areaName}` : "Search"}
                 aria-label="Search nearby"
-                className="h-12 w-full rounded-full border border-border bg-surface pl-11 pr-11 text-[15px] outline-none placeholder:text-neutral-400 focus:border-neutral-900 focus:bg-white"
+                className="h-12 w-full rounded-full border border-border bg-surface pl-11 pr-11 text-[15px] outline-none placeholder:text-neutral-400 focus:border-brand focus:bg-white"
               />
               {q ? (
                 <button
@@ -342,7 +344,7 @@ export function ExploreClient() {
                 <span
                   key={c.label}
                   title={c.applied ? "Applied as a Google Places filter" : "Searched in the text"}
-                  className={clsx("rounded-full px-2.5 py-0.5 font-medium", c.applied ? "bg-neutral-900 text-white" : "bg-surface text-neutral-700")}
+                  className={clsx("rounded-full px-2.5 py-0.5 font-medium", c.applied ? "bg-brand text-white" : "bg-surface text-neutral-700")}
                 >
                   {c.label}
                 </span>
@@ -359,7 +361,7 @@ export function ExploreClient() {
                 onClick={() => setTab(t.key)}
                 className={clsx(
                   "h-9 rounded-full px-4 text-[14px] font-medium transition-colors",
-                  tab === t.key ? "bg-neutral-900 text-white" : "text-neutral-700 hover:bg-surface",
+                  tab === t.key ? "bg-brand text-white" : "text-neutral-700 hover:bg-surface",
                   t.key === "guides" && "ml-2 border-l border-border pl-6",
                 )}
               >
@@ -404,7 +406,7 @@ export function ExploreClient() {
                   title={`No community guides near ${areaName} yet`}
                   body="Know the area? Write the first guide and it will show up here for everyone nearby."
                   action={
-                    <Link href="/create" className="inline-flex h-10 items-center gap-2 rounded-full bg-foreground px-4 text-sm font-medium text-white hover:bg-neutral-800">
+                    <Link href="/create" className="inline-flex h-10 items-center gap-2 rounded-full bg-brand px-4 text-sm font-medium text-white hover:bg-brand-hover">
                       <SquarePlus className="h-4 w-4" /> Create a guide
                     </Link>
                   }

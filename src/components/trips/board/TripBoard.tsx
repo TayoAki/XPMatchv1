@@ -200,7 +200,7 @@ export function TripBoard({ trip, canEdit, onTrip, onSelectPlace, hoveredKey, on
                 aria-pressed={mode === m}
                 onClick={() => changeMode(m)}
                 title={`Travel legs and directions by ${MODE_LABEL[m].label.toLowerCase()}`}
-                className={clsx("inline-flex h-7 items-center gap-1 rounded-full px-2.5 text-[12px] font-semibold", mode === m ? "bg-neutral-900 text-white" : "text-neutral-700 hover:bg-surface")}
+                className={clsx("inline-flex h-7 items-center gap-1 rounded-full px-2.5 text-[12px] font-semibold", mode === m ? "bg-brand text-white" : "text-neutral-700 hover:bg-surface")}
               >
                 <Icon className="h-3.5 w-3.5" /> {MODE_LABEL[m].label}
               </button>

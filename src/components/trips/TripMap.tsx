@@ -117,7 +117,7 @@ function DayChip({ active, color, onClick, children }: { active: boolean; color?
       onClick={onClick}
       className={clsx(
         "flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold shadow-md",
-        active ? "bg-neutral-900 text-white" : "bg-white text-foreground hover:bg-neutral-50",
+        active ? "bg-brand text-white" : "bg-white text-foreground hover:bg-neutral-50",
       )}
     >
       {color ? <span className="h-2.5 w-2.5 rounded-full" style={{ background: color }} /> : null}

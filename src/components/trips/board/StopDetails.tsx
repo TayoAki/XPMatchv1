@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { ExternalLink, Globe, MapPin, MessageCircle, Phone, Star } from "lucide-react";
 import type { ItineraryStop } from "@/lib/types";
-import type { PlaceDetails, ResolvedPlace } from "@/lib/places/types";
+import type { PhotoCredit as PhotoCreditInfo, PlaceDetails, ResolvedPlace } from "@/lib/places/types";
+import { PhotoCredit } from "@/components/ui/PhotoCredit";
 import { fetchPlaceDetails } from "@/lib/places/client";
 import { todaysHours } from "@/lib/places/hours";
 import { googleMapsSearchUrl } from "@/lib/travel/links";
@@ -15,11 +16,16 @@ function compact(n?: number): string {
   return new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 0 }).format(n);
 }
 
-function Photo({ src, alt }: { src: string; alt: string }) {
+function Photo({ src, alt, credit }: { src: string; alt: string; credit?: PhotoCreditInfo }) {
   const [failed, setFailed] = useState(false);
   if (failed) return null;
-  // eslint-disable-next-line @next/next/no-img-element -- proxied Places photo
-  return <img src={src} alt={alt} onError={() => setFailed(true)} className="h-20 w-28 shrink-0 rounded-xl object-cover" loading="lazy" />;
+  return (
+    <div className="relative h-20 w-28 shrink-0 overflow-hidden rounded-xl">
+      {/* eslint-disable-next-line @next/next/no-img-element -- proxied Places photo */}
+      <img src={src} alt={alt} onError={() => setFailed(true)} className="h-full w-full object-cover" loading="lazy" />
+      <PhotoCredit credit={credit} className="bottom-1 left-1" />
+    </div>
+  );
 }
 
 /**
@@ -54,8 +60,8 @@ export function StopDetails({ stop, place, destination }: { stop: ItineraryStop;
     <div className="mt-2 grid gap-2 rounded-xl bg-surface/70 p-3" data-testid="stop-details">
       {photos.length ? (
         <div className="xp-no-scrollbar flex gap-2 overflow-x-auto">
-          {photos.map((src) => (
-            <Photo key={src} src={src} alt={place.name} />
+          {photos.map((src, i) => (
+            <Photo key={src} src={src} alt={place.name} credit={(data ?? place).photoCredits?.[i]} />
           ))}
         </div>
       ) : null}

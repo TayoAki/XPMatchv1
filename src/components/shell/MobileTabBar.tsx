@@ -100,7 +100,7 @@ export function MobileTabBar() {
           <div className="w-full rounded-t-3xl bg-white pb-[max(env(safe-area-inset-bottom),12px)] shadow-2xl" data-testid="more-sheet">
             <div className="mx-auto mt-2 h-1.5 w-10 rounded-full bg-surface-2" aria-hidden="true" />
             <div className="flex items-center gap-3 px-5 pb-3 pt-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-[15px] font-semibold text-white">{initial}</div>
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand text-[15px] font-semibold text-white">{initial}</div>
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[15px] font-semibold">{name}</div>
                 {handle ? <div className="truncate text-[12px] text-muted">{handle}</div> : null}

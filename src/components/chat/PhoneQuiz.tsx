@@ -23,7 +23,7 @@ const FOLD_AT = 8;
 function AssistantBubble({ children }: { children: ReactNode }) {
   return (
     <div className="flex items-start gap-2.5">
-      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-neutral-900 text-white">
+      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand text-white">
         <Sparkles className="h-3.5 w-3.5" />
       </span>
       <div className="min-w-0 flex-1 rounded-2xl rounded-tl-md bg-surface px-4 py-3 text-[15px] leading-snug">{children}</div>
@@ -34,7 +34,7 @@ function AssistantBubble({ children }: { children: ReactNode }) {
 function UserBubble({ children }: { children: ReactNode }) {
   return (
     <div className="flex justify-end pl-10">
-      <div className="max-w-full rounded-2xl rounded-tr-md bg-neutral-900 px-4 py-2.5 text-[14px] text-white">{children}</div>
+      <div className="max-w-full rounded-2xl rounded-tr-md bg-brand px-4 py-2.5 text-[14px] text-white">{children}</div>
     </div>
   );
 }
@@ -139,7 +139,7 @@ export function PhoneQuiz() {
                 type="button"
                 aria-pressed={budget === b.value}
                 onClick={() => setBudget(b.value)}
-                className={clsx("rounded-2xl border px-3 py-2.5 text-left transition-colors", budget === b.value ? "border-neutral-900 bg-neutral-900 text-white" : "border-border bg-white hover:bg-surface")}
+                className={clsx("rounded-2xl border px-3 py-2.5 text-left transition-colors", budget === b.value ? "border-brand bg-brand text-white" : "border-border bg-white hover:bg-surface")}
               >
                 <span className="block text-[13px] font-semibold">{b.label}</span>
                 <span className={clsx("block text-[12px]", budget === b.value ? "text-white/80" : "text-muted")}>{b.hint}</span>

@@ -90,7 +90,7 @@ export function MapPanel() {
                 placeholder={focus ? `Search near ${focus.name}` : "Search a place"}
                 className="w-56 bg-transparent text-[14px] outline-none placeholder:text-neutral-400"
               />
-              <button type="submit" disabled={searching || !searchText.trim()} className="h-9 rounded-full bg-neutral-900 px-3 text-[13px] font-semibold text-white disabled:opacity-40">
+              <button type="submit" disabled={searching || !searchText.trim()} className="h-9 rounded-full bg-brand px-3 text-[13px] font-semibold text-white disabled:opacity-40">
                 {searching ? "…" : "Pin it"}
               </button>
             </form>

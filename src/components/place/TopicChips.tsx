@@ -20,7 +20,7 @@ export function TopicChips({ reviews, active, onSelect }: { reviews: PlaceReview
           onClick={() => onSelect(active === t ? null : t)}
           className={clsx(
             "inline-flex h-8 items-center gap-1 rounded-full border px-3 text-[13px] font-medium transition-colors",
-            active === t ? "border-neutral-900 bg-neutral-900 text-white" : "border-border bg-white hover:bg-surface",
+            active === t ? "border-brand bg-brand text-white" : "border-border bg-white hover:bg-surface",
           )}
         >
           {TOPIC_LABEL[t]}

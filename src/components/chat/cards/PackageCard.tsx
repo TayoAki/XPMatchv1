@@ -1,5 +1,6 @@
 "use client";
 
+import { photoCreditTitle } from "@/components/ui/PhotoCredit";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { ToolCallStatus } from "@copilotkit/core";
@@ -40,7 +41,7 @@ function Chip({ on, onClick, children, label }: { on: boolean; onClick: () => vo
       onClick={onClick}
       className={clsx(
         "inline-flex h-8 items-center gap-1 rounded-full border px-3 text-[12px] font-medium transition-colors pointer-coarse:h-9",
-        on ? "border-neutral-900 bg-neutral-900 text-white" : "border-border bg-white text-neutral-700 hover:bg-surface",
+        on ? "border-brand bg-brand text-white" : "border-border bg-white text-neutral-700 hover:bg-surface",
       )}
     >
       {children}
@@ -58,7 +59,7 @@ function Small({ onClick, label, pressed, children }: { onClick: () => void; lab
       aria-pressed={pressed}
       className={clsx(
         "inline-flex h-7 items-center gap-1 rounded-full border px-2 text-[12px] font-medium transition-colors pointer-coarse:h-9 pointer-coarse:px-3",
-        pressed ? "border-neutral-900 bg-neutral-900 text-white" : "border-border bg-white text-neutral-700 hover:bg-surface",
+        pressed ? "border-brand bg-brand text-white" : "border-border bg-white text-neutral-700 hover:bg-surface",
       )}
     >
       {children}
@@ -287,7 +288,7 @@ export function PackageCard({ args, status, toolCallId }: { args: Streaming<Show
                 onClick={() => pickVariant(v.key)}
                 className={clsx(
                   "flex shrink-0 flex-col items-start rounded-2xl border px-3 py-2 text-left transition-colors",
-                  selected ? "border-neutral-900 bg-neutral-900 text-white" : "border-border bg-white hover:bg-surface",
+                  selected ? "border-brand bg-brand text-white" : "border-border bg-white hover:bg-surface",
                 )}
               >
                 <span className="text-[13px] font-semibold">
@@ -390,7 +391,7 @@ export function PackageCard({ args, status, toolCallId }: { args: Streaming<Show
                                 type="button"
                                 onClick={() => swapTo(item, alt)}
                                 aria-label={`Pick ${alt.place.name}`}
-                                className="h-7 shrink-0 rounded-full bg-neutral-900 px-2.5 text-[12px] font-semibold text-white hover:bg-neutral-800 pointer-coarse:h-9"
+                                className="h-7 shrink-0 rounded-full bg-brand px-2.5 text-[12px] font-semibold text-white hover:bg-brand-hover pointer-coarse:h-9"
                               >
                                 Pick
                               </button>
@@ -438,7 +439,7 @@ export function PackageCard({ args, status, toolCallId }: { args: Streaming<Show
           <button
             type="button"
             onClick={toTrip}
-            className="inline-flex h-9 items-center gap-1.5 rounded-full bg-neutral-900 px-4 text-[13px] font-semibold text-white hover:bg-neutral-800 pointer-coarse:h-11"
+            className="inline-flex h-9 items-center gap-1.5 rounded-full bg-brand px-4 text-[13px] font-semibold text-white hover:bg-brand-hover pointer-coarse:h-11"
           >
             <Route className="h-4 w-4" /> Turn into a trip
           </button>
@@ -456,7 +457,7 @@ function Thumb({ place }: { place: ResolvedPlace }) {
   const [failed, setFailed] = useState(false);
   if (src && !failed) {
     // eslint-disable-next-line @next/next/no-img-element -- proxied Places photo
-    return <img src={src} alt="" loading="lazy" onError={() => setFailed(true)} className="h-10 w-10 shrink-0 rounded-lg object-cover" />;
+    return <img src={src} alt="" title={photoCreditTitle(place.photoCredits?.[0])} loading="lazy" onError={() => setFailed(true)} className="h-10 w-10 shrink-0 rounded-lg object-cover" />;
   }
   return <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface text-neutral-500"><MapPin className="h-4 w-4" /></span>;
 }

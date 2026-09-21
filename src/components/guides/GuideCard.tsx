@@ -7,6 +7,7 @@ import { Heart } from "lucide-react";
 import type { Guide } from "@/lib/types";
 import { useTravelStore } from "@/lib/store";
 import { PlaceImage } from "@/components/ui/PlaceImage";
+import { PhotoCredit } from "@/components/ui/PhotoCredit";
 
 function Cover({ guide }: { guide: Guide }) {
   const [failed, setFailed] = useState(false);
@@ -30,6 +31,7 @@ export function GuideCard({ guide, large = false }: { guide: Guide; large?: bool
       <Link href={`/guides/${guide.id}`} className="absolute inset-0 block">
         <Cover guide={guide} />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent" />
+        {!guide.coverUrl && guide.place?.photos?.[0] ? <PhotoCredit credit={guide.place.photoCredits?.[0]} className="left-3 top-3" asLink={false} /> : null}
         <div className="absolute inset-x-5 bottom-5 text-white drop-shadow">
           <div className={clsx("font-semibold leading-tight", large ? "text-[22px]" : "text-[18px]")}>{guide.title}</div>
           <div className="mt-1 truncate text-[13px] opacity-90">

@@ -31,7 +31,7 @@ export function CompareToggle({ pinKey, name, kind, facts, place }: { pinKey: st
       onClick={() => threadId && compareActions.toggle(threadId, option)}
       className={clsx(
         "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40",
-        selected ? "bg-neutral-900 text-white hover:bg-neutral-800" : "bg-surface hover:bg-surface-2",
+        selected ? "bg-brand text-white hover:bg-brand-hover" : "bg-surface hover:bg-surface-2",
       )}
     >
       <Columns3 className="h-3.5 w-3.5" /> {selected ? "Comparing" : "Compare"}
@@ -47,7 +47,7 @@ export function CompareBar({ threadId }: { threadId?: string | null }) {
   const ready = selection.length >= 2;
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-[132px] z-20 flex justify-center px-4">
-      <div className="pointer-events-auto flex max-w-full items-center gap-2 rounded-full bg-neutral-900 py-1.5 pl-4 pr-1.5 text-[13px] text-white shadow-xl" data-testid="compare-bar">
+      <div className="pointer-events-auto flex max-w-full items-center gap-2 rounded-full bg-brand py-1.5 pl-4 pr-1.5 text-[13px] text-white shadow-xl" data-testid="compare-bar">
         <span className="truncate">
           <span className="font-semibold">{selection.length} selected</span>
           <span className="text-neutral-300"> · {selection.map((o) => o.name).join(" · ")}</span>

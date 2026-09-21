@@ -1,5 +1,6 @@
 "use client";
 
+import { photoCreditTitle } from "@/components/ui/PhotoCredit";
 import { useState } from "react";
 import clsx from "clsx";
 import { useDroppable } from "@dnd-kit/core";
@@ -16,7 +17,7 @@ function IdeaThumb({ item, destination }: { item: TripItem; destination: string 
   const photo = item.place?.photos?.[0];
   if (photo && !failed) {
     // eslint-disable-next-line @next/next/no-img-element -- proxied Places photo
-    return <img src={photo} alt="" onError={() => setFailed(true)} className="h-12 w-12 shrink-0 rounded-xl object-cover" loading="lazy" />;
+    return <img src={photo} alt="" title={photoCreditTitle(item.place?.photoCredits?.[0])} onError={() => setFailed(true)} className="h-12 w-12 shrink-0 rounded-xl object-cover" loading="lazy" />;
   }
   return <PlaceImage queries={[item.title, destination]} alt="" className="h-12 w-12 shrink-0 rounded-xl" />;
 }
@@ -51,7 +52,7 @@ function IdeaCard({
       data-testid="idea-card"
       onMouseEnter={() => place && onHover?.(key)}
       onMouseLeave={() => onHover?.(null)}
-      className={clsx("flex items-center gap-2 rounded-2xl border bg-white p-2.5", hovered ? "border-neutral-900" : "border-border", isDragging && "z-10 opacity-70 shadow-lg")}
+      className={clsx("flex items-center gap-2 rounded-2xl border bg-white p-2.5", hovered ? "border-brand" : "border-border", isDragging && "z-10 opacity-70 shadow-lg")}
     >
       {canEdit ? (
         <button
@@ -60,7 +61,7 @@ function IdeaCard({
           {...attributes}
           {...listeners}
           aria-label={`Drag ${item.title}`}
-          className="-ml-1 h-6 shrink-0 cursor-grab touch-none rounded-md text-neutral-400 hover:bg-surface hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900"
+          className="-ml-1 h-6 shrink-0 cursor-grab touch-none rounded-md text-neutral-400 hover:bg-surface hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         >
           <GripVertical className="h-4 w-4" />
         </button>

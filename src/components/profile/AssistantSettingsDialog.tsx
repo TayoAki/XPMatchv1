@@ -121,7 +121,7 @@ function AssistantSettingsForm() {
                 onClick={() => setStep(i)}
                 aria-current={i === index ? "step" : undefined}
                 aria-label={`Step ${i + 1}: ${stepTitle(keys)}`}
-                className={clsx("block h-1.5 w-full rounded-full", i <= index ? "bg-neutral-900" : "bg-surface-2")}
+                className={clsx("block h-1.5 w-full rounded-full", i <= index ? "bg-brand" : "bg-surface-2")}
               />
             </li>
           ))}

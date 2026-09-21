@@ -46,7 +46,7 @@ export default function UpdatesPage() {
                 <div className="text-[14px] font-semibold">How was {t.destination}?</div>
                 <div className="text-[12px] text-neutral-700">Rate the places from {t.title} so XPMatch learns your taste.</div>
               </div>
-              <Link href={`/trips/${t.id}?rate=1`} className="inline-flex h-8 items-center rounded-full bg-neutral-900 px-3 text-[13px] font-semibold text-white hover:bg-neutral-800">
+              <Link href={`/trips/${t.id}?rate=1`} className="inline-flex h-8 items-center rounded-full bg-brand px-3 text-[13px] font-semibold text-white hover:bg-brand-hover">
                 Rate places
               </Link>
               <button

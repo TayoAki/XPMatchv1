@@ -1,5 +1,6 @@
 "use client";
 
+import { PhotoCredit } from "@/components/ui/PhotoCredit";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -37,8 +38,11 @@ function PlaceRow({ item, index, destination, onShow }: { item: GuideItem; index
   const meta = [place.category, place.locality].filter(Boolean).join(" · ");
   return (
     <li className="flex gap-4 rounded-3xl border border-border bg-white p-4">
-      <span className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-neutral-900 text-[13px] font-semibold text-white">{index + 1}</span>
-      <Photo src={place.photos?.[0]} alt={place.name} queries={[place.name, destination]} className="h-[96px] w-[128px] shrink-0 rounded-2xl" />
+      <span className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand text-[13px] font-semibold text-white">{index + 1}</span>
+      <div className="relative shrink-0">
+        <Photo src={place.photos?.[0]} alt={place.name} queries={[place.name, destination]} className="h-[96px] w-[128px] rounded-2xl" />
+        {place.photos?.[0] ? <PhotoCredit credit={place.photoCredits?.[0]} className="bottom-1 left-1" /> : null}
+      </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
@@ -111,7 +115,7 @@ export function GuidePage({ guideId }: { guideId: string }) {
           title="Guide not found"
           body={current.error}
           action={
-            <Link href="/inspiration" className="inline-flex h-10 items-center gap-2 rounded-full bg-foreground px-4 text-sm font-medium text-white hover:bg-neutral-800">
+            <Link href="/inspiration" className="inline-flex h-10 items-center gap-2 rounded-full bg-brand px-4 text-sm font-medium text-white hover:bg-brand-hover">
               <ArrowLeft className="h-4 w-4" /> Browse guides
             </Link>
           }
@@ -163,6 +167,7 @@ export function GuidePage({ guideId }: { guideId: string }) {
           <div className="relative mt-4 h-[300px] overflow-hidden rounded-3xl bg-neutral-200">
             <Photo src={cover} alt={guide.title} queries={[guide.destination]} className="absolute inset-0 h-full w-full" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent" />
+            {!guide.coverUrl && guide.place?.photos?.[0] ? <PhotoCredit credit={guide.place.photoCredits?.[0]} className="right-5 top-5" /> : null}
             {!guide.published ? <span className="absolute left-5 top-5 rounded-full bg-amber-100 px-2.5 py-1 text-[12px] font-semibold text-amber-900">Draft · only you can see this</span> : null}
             <div className="absolute inset-x-6 bottom-6 text-white drop-shadow">
               <div className="text-[36px] font-semibold leading-tight tracking-tight">{guide.title}</div>
@@ -173,7 +178,7 @@ export function GuidePage({ guideId }: { guideId: string }) {
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-3 text-[14px] text-neutral-700">
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-[13px] font-semibold text-white">{guide.authorName.charAt(0).toUpperCase()}</span>
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-[13px] font-semibold text-white">{guide.authorName.charAt(0).toUpperCase()}</span>
             <span>
               by <span className="font-semibold text-foreground">{guide.authorName}</span> <span className="text-muted">@{guide.authorHandle}</span>
             </span>

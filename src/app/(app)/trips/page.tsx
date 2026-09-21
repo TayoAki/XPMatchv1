@@ -42,7 +42,7 @@ export default function TripsPage() {
               key={t}
               type="button"
               onClick={() => setTab(t)}
-              className={clsx("-mb-px border-b-2 pb-3 font-medium capitalize", tab === t ? "border-neutral-900 text-foreground" : "border-transparent text-neutral-500 hover:text-foreground")}
+              className={clsx("-mb-px border-b-2 pb-3 font-medium capitalize", tab === t ? "border-brand text-foreground" : "border-transparent text-neutral-500 hover:text-foreground")}
             >
               {t}
             </button>

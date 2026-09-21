@@ -98,7 +98,7 @@ function AddToTripForm({ request }: { request: AddToTripRequest }) {
             <Button variant="outline" onClick={closeAddToTrip}>
               Done
             </Button>
-            <Link href={`/trips/${done.tripId}`} onClick={closeAddToTrip} className="inline-flex h-10 items-center rounded-full bg-foreground px-4 text-sm font-medium text-white hover:bg-neutral-800">
+            <Link href={`/trips/${done.tripId}`} onClick={closeAddToTrip} className="inline-flex h-10 items-center rounded-full bg-brand px-4 text-sm font-medium text-white hover:bg-brand-hover">
               Open trip
             </Link>
           </div>
@@ -146,10 +146,10 @@ function AddToTripForm({ request }: { request: AddToTripRequest }) {
             onClick={() => setChoice(t.id)}
             className={clsx(
               "flex items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-colors",
-              choice === t.id ? "border-neutral-900 bg-surface" : "border-border hover:bg-surface",
+              choice === t.id ? "border-brand bg-surface" : "border-border hover:bg-surface",
             )}
           >
-            <span className={clsx("flex h-5 w-5 items-center justify-center rounded-full border", choice === t.id ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-400")}>
+            <span className={clsx("flex h-5 w-5 items-center justify-center rounded-full border", choice === t.id ? "border-brand bg-brand text-white" : "border-neutral-400")}>
               {choice === t.id ? <Check className="h-3 w-3" /> : null}
             </span>
             <span className="min-w-0 flex-1">
@@ -165,10 +165,10 @@ function AddToTripForm({ request }: { request: AddToTripRequest }) {
           onClick={() => setChoice(NEW)}
           className={clsx(
             "flex items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-colors",
-            choice === NEW ? "border-neutral-900 bg-surface" : "border-dashed border-border hover:bg-surface",
+            choice === NEW ? "border-brand bg-surface" : "border-dashed border-border hover:bg-surface",
           )}
         >
-          <span className={clsx("flex h-5 w-5 items-center justify-center rounded-full border", choice === NEW ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-400")}>
+          <span className={clsx("flex h-5 w-5 items-center justify-center rounded-full border", choice === NEW ? "border-brand bg-brand text-white" : "border-neutral-400")}>
             {choice === NEW ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
           </span>
           <span className="text-[15px] font-medium">New trip</span>

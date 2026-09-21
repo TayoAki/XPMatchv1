@@ -4,7 +4,7 @@ import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTML
 import clsx from "clsx";
 
 const control =
-  "w-full rounded-xl border border-border bg-white px-3 py-2 text-sm text-foreground placeholder:text-neutral-400 focus:border-neutral-900 focus:outline-none";
+  "w-full rounded-[10px] border border-border bg-white px-3 py-2 text-sm text-foreground placeholder:text-neutral-400 focus:border-brand focus:outline-none";
 
 export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
@@ -48,7 +48,7 @@ export function Chip({
         // Touch screens get a 40px target.
         "inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-medium transition-colors pointer-coarse:h-10 pointer-coarse:px-4",
         active
-          ? "border-neutral-900 bg-neutral-900 text-white"
+          ? "border-brand bg-brand text-white"
           : "border-border bg-white text-foreground hover:bg-surface",
         className,
       )}

@@ -86,7 +86,7 @@ function RightToggle({ view, pinCount, onChange }: { view: RightView; pinCount: 
             type="button"
             aria-pressed={view === o.key}
             onClick={() => onChange(o.key)}
-            className={clsx("inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold", view === o.key ? "bg-neutral-900 text-white" : "text-neutral-700 hover:bg-surface")}
+            className={clsx("inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold", view === o.key ? "bg-brand text-white" : "text-neutral-700 hover:bg-surface")}
           >
             <Icon className="h-4 w-4" /> {o.label}
           </button>
@@ -116,7 +116,7 @@ function MobileTabs({ tab, onChange }: { tab: MobileTab; onChange: (tab: MobileT
             onClick={() => onChange(o.key)}
             className={clsx(
               "inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 border-b-2 text-[14px] font-semibold",
-              active ? "border-neutral-900 text-foreground" : "border-transparent text-neutral-500",
+              active ? "border-brand text-foreground" : "border-transparent text-neutral-500",
             )}
           >
             <Icon className="h-4 w-4" /> {o.label}
@@ -184,7 +184,7 @@ function TripPageInner({ tripId }: { tripId: string }) {
           title="Trip not found"
           body={error}
           action={
-            <Link href="/trips" className="inline-flex h-10 items-center gap-2 rounded-full bg-foreground px-4 text-sm font-medium text-white hover:bg-neutral-800">
+            <Link href="/trips" className="inline-flex h-10 items-center gap-2 rounded-full bg-brand px-4 text-sm font-medium text-white hover:bg-brand-hover">
               <ArrowLeft className="h-4 w-4" /> Back to your trips
             </Link>
           }
@@ -302,7 +302,7 @@ function TripPageInner({ tripId }: { tripId: string }) {
             <button type="button" onClick={() => setSection("members")} className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border px-3 hover:bg-surface">
               <span className="flex -space-x-1.5">
                 {trip.members.slice(0, 3).map((m) => (
-                  <span key={m.userId} className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[10px] font-semibold text-white ring-2 ring-white" title={m.name}>
+                  <span key={m.userId} className="flex h-5 w-5 items-center justify-center rounded-full bg-brand text-[10px] font-semibold text-white ring-2 ring-white" title={m.name}>
                     {m.name.charAt(0).toUpperCase()}
                   </span>
                 ))}
@@ -328,7 +328,7 @@ function TripPageInner({ tripId }: { tripId: string }) {
           ) : null}
 
           <div className="mt-6 rounded-3xl bg-surface p-5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-900 text-white">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-white">
               <Sparkles className="h-4 w-4" />
             </div>
             <p className="mt-4 text-[17px] font-semibold tracking-tight">
@@ -351,7 +351,7 @@ function TripPageInner({ tripId }: { tripId: string }) {
             </div>
           </div>
 
-          <form onSubmit={ask} className="mt-4 flex items-center gap-2 rounded-full border border-border bg-white py-1.5 pl-5 pr-1.5 shadow-sm focus-within:border-neutral-900">
+          <form onSubmit={ask} className="mt-4 flex items-center gap-2 rounded-full border border-border bg-white py-1.5 pl-5 pr-1.5 shadow-sm focus-within:border-brand">
             <input
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
@@ -363,7 +363,7 @@ function TripPageInner({ tripId }: { tripId: string }) {
               type="submit"
               disabled={!question.trim()}
               aria-label="Send"
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-900 text-white disabled:opacity-30"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-white disabled:opacity-30"
             >
               <ArrowUp className="h-4 w-4" />
             </button>
@@ -493,7 +493,7 @@ function TripPageInner({ tripId }: { tripId: string }) {
           <button type="button" onClick={() => openSection("members")} className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border px-3 hover:bg-surface">
             <span className="flex -space-x-1.5">
               {trip.members.slice(0, 3).map((m) => (
-                <span key={m.userId} className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[10px] font-semibold text-white ring-2 ring-white" title={m.name}>
+                <span key={m.userId} className="flex h-5 w-5 items-center justify-center rounded-full bg-brand text-[10px] font-semibold text-white ring-2 ring-white" title={m.name}>
                   {m.name.charAt(0).toUpperCase()}
                 </span>
               ))}
@@ -543,7 +543,7 @@ function TripPageInner({ tripId }: { tripId: string }) {
       <footer className="shrink-0 border-t border-border/60 bg-white px-6 py-3" data-testid="trip-chat-box">
         <div className="mx-auto max-w-[960px]">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-900 text-white">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand text-white">
               <Sparkles className="h-3.5 w-3.5" />
             </span>
             {starters.map((chip) => (
@@ -563,7 +563,7 @@ function TripPageInner({ tripId }: { tripId: string }) {
               </span>
             ) : null}
           </div>
-          <form onSubmit={ask} className="mt-2 flex items-center gap-2 rounded-full border border-border bg-white py-1 pl-5 pr-1 shadow-sm focus-within:border-neutral-900">
+          <form onSubmit={ask} className="mt-2 flex items-center gap-2 rounded-full border border-border bg-white py-1 pl-5 pr-1 shadow-sm focus-within:border-brand">
             <input
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
@@ -571,7 +571,7 @@ function TripPageInner({ tripId }: { tripId: string }) {
               aria-label="Ask about this trip"
               className="h-9 flex-1 bg-transparent text-[15px] outline-none placeholder:text-neutral-400"
             />
-            <button type="submit" disabled={!question.trim()} aria-label="Send" className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-900 text-white disabled:opacity-30">
+            <button type="submit" disabled={!question.trim()} aria-label="Send" className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-white disabled:opacity-30">
               <ArrowUp className="h-4 w-4" />
             </button>
           </form>

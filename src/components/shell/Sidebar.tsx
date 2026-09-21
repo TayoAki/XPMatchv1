@@ -138,7 +138,7 @@ export function Sidebar() {
       ) : null}
 
       <div className="relative flex items-center gap-3 px-1">
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white">
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-sm font-semibold text-white">
           {initial}
         </div>
         <div className="min-w-0 flex-1">

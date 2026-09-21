@@ -135,7 +135,7 @@ export function CreateClient({ guideId }: { guideId?: string }) {
               key={t}
               type="button"
               onClick={() => setTab(t)}
-              className={clsx("-mb-px border-b-2 pb-3 font-medium", tab === t ? "border-neutral-900 text-foreground" : "border-transparent text-neutral-500 hover:text-foreground")}
+              className={clsx("-mb-px border-b-2 pb-3 font-medium", tab === t ? "border-brand text-foreground" : "border-transparent text-neutral-500 hover:text-foreground")}
             >
               {TAB_LABEL[t]}
             </button>
@@ -161,7 +161,7 @@ export function CreateClient({ guideId }: { guideId?: string }) {
           <div className="rounded-3xl border border-dashed border-border px-6 py-14 text-center">
             <div className="text-[17px] font-semibold">{notAuthor ? "Only the author can edit this guide" : "Guide not found"}</div>
             <p className="mt-1 text-[14px] text-muted">{editing?.error ?? "You can save it or plan a trip from it instead."}</p>
-            <Link href={guideId ? `/guides/${guideId}` : "/inspiration"} className="mt-4 inline-flex h-10 items-center rounded-full bg-foreground px-4 text-sm font-medium text-white hover:bg-neutral-800">
+            <Link href={guideId ? `/guides/${guideId}` : "/inspiration"} className="mt-4 inline-flex h-10 items-center rounded-full bg-brand px-4 text-sm font-medium text-white hover:bg-brand-hover">
               {notAuthor ? "View the guide" : "Browse guides"}
             </Link>
           </div>

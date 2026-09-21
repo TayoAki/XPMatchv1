@@ -11,6 +11,7 @@ import { useMediaQuery } from "@/lib/use-media-query";
 import { Button } from "@/components/ui/Button";
 import { TextArea, TextInput } from "@/components/ui/Field";
 import { ReactionControl } from "@/components/feedback/ReactionControl";
+import { photoCreditTitle } from "@/components/ui/PhotoCredit";
 import { StopDetails } from "./StopDetails";
 
 export type StopMove = `day:${number}` | "ideas" | "remove";
@@ -49,7 +50,7 @@ function StopThumb({ stop }: { stop: ItineraryStop }) {
   const photo = stop.place?.photos?.[0];
   if (photo && !failed) {
     // eslint-disable-next-line @next/next/no-img-element -- proxied Places photo
-    return <img src={photo} alt="" onError={() => setFailed(true)} className="h-14 w-14 shrink-0 rounded-xl object-cover" loading="lazy" />;
+    return <img src={photo} alt="" title={photoCreditTitle(stop.place?.photoCredits?.[0])} onError={() => setFailed(true)} className="h-14 w-14 shrink-0 rounded-xl object-cover" loading="lazy" />;
   }
   return (
     <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-surface text-neutral-500">
@@ -111,7 +112,7 @@ export function StopCard({ stop, index, color, dayIndex, dayCount, canEdit, hove
       }}
       className={clsx(
         "relative flex gap-2 rounded-2xl border bg-white p-3 transition-colors",
-        hovered ? "border-neutral-900" : "border-border",
+        hovered ? "border-brand" : "border-border",
         isDragging && "z-10 opacity-70 shadow-lg",
         place && !editing && "cursor-pointer",
       )}
@@ -123,7 +124,7 @@ export function StopCard({ stop, index, color, dayIndex, dayCount, canEdit, hove
           {...attributes}
           {...listeners}
           aria-label={`Drag ${stop.title}`}
-          className="-ml-1 mt-4 h-6 shrink-0 cursor-grab touch-none rounded-md text-neutral-400 hover:bg-surface hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900"
+          className="-ml-1 mt-4 h-6 shrink-0 cursor-grab touch-none rounded-md text-neutral-400 hover:bg-surface hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         >
           <GripVertical className="h-4 w-4" />
         </button>

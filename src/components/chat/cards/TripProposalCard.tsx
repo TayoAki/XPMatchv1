@@ -1,5 +1,6 @@
 "use client";
 
+import { photoCreditTitle } from "@/components/ui/PhotoCredit";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Bed, Calendar, Check, Clock, Landmark, MapPin, Star, StickyNote, Users, Utensils, Wallet } from "lucide-react";
@@ -67,7 +68,7 @@ function ProposalStop({ stop, index, toolCallId, destination }: { stop: StreamSt
     <li className="flex min-w-0 gap-2.5 rounded-xl bg-white p-2" data-testid="proposal-stop" onMouseEnter={() => pin.hover(true)} onMouseLeave={() => pin.hover(false)}>
       {photo && !failed ? (
         // eslint-disable-next-line @next/next/no-img-element -- proxied Places photo
-        <img src={photo} alt="" onError={() => setFailed(true)} className="h-12 w-12 shrink-0 rounded-lg object-cover" loading="lazy" />
+        <img src={photo} alt="" title={photoCreditTitle(place?.photoCredits?.[0])} onError={() => setFailed(true)} className="h-12 w-12 shrink-0 rounded-lg object-cover" loading="lazy" />
       ) : (
         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-surface text-neutral-500">
           <Icon className="h-4 w-4" />

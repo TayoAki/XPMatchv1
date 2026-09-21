@@ -85,7 +85,7 @@ function OptionCards<T extends string>({ label, options, value, onChange }: { la
             type="button"
             aria-pressed={value === o.value}
             onClick={() => onChange(o.value)}
-            className={clsx("rounded-2xl border px-3 py-2.5 text-left transition-colors", value === o.value ? "border-neutral-900 bg-neutral-900 text-white" : "border-border bg-white hover:bg-surface")}
+            className={clsx("rounded-2xl border px-3 py-2.5 text-left transition-colors", value === o.value ? "border-brand bg-brand text-white" : "border-border bg-white hover:bg-surface")}
           >
             <span className="block text-[13px] font-semibold">{o.label}</span>
             <span className={clsx("block text-[12px]", value === o.value ? "text-white/80" : "text-muted")}>{o.hint}</span>

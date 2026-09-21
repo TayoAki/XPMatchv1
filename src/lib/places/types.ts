@@ -12,6 +12,12 @@ export interface Viewport {
   west: number;
 }
 
+/** The author attribution Google attaches to a Places photo. */
+export interface PhotoCredit {
+  name: string;
+  uri?: string;
+}
+
 /** A place pinned on the map. `source` says whether the location is real or estimated. */
 export interface ResolvedPlace {
   /** Google place id, or a synthetic `est:` id for estimated locations. */
@@ -31,6 +37,8 @@ export interface ResolvedPlace {
   summary?: string;
   /** Same-origin photo URLs (proxied so no API key reaches the browser). */
   photos: string[];
+  /** Who took each photo, aligned with `photos`; Google requires it to be shown with the photo. */
+  photoCredits?: PhotoCredit[];
   googleMapsUri?: string;
   websiteUri?: string;
   viewport?: Viewport;

@@ -76,7 +76,7 @@ export function AskAboutPlace({ place }: { place: ResolvedPlace }) {
 
   return (
     <section className="grid gap-3" data-testid="ask-about-place">
-      <form onSubmit={submit} className="flex items-center gap-2 rounded-full border border-border bg-white py-1 pl-4 pr-1 focus-within:border-neutral-900">
+      <form onSubmit={submit} className="flex items-center gap-2 rounded-full border border-border bg-white py-1 pl-4 pr-1 focus-within:border-brand">
         <MessageCircleQuestion className="h-4 w-4 shrink-0 text-neutral-500" />
         <input
           value={question}
@@ -86,7 +86,7 @@ export function AskAboutPlace({ place }: { place: ResolvedPlace }) {
           className="h-9 min-w-0 flex-1 bg-transparent text-[14px] outline-none placeholder:text-neutral-400"
           maxLength={240}
         />
-        <button type="submit" disabled={busy || !question.trim()} aria-label="Ask" className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-900 text-white disabled:opacity-30">
+        <button type="submit" disabled={busy || !question.trim()} aria-label="Ask" className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-white disabled:opacity-30">
           <Send className="h-4 w-4" />
         </button>
       </form>

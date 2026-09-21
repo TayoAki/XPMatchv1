@@ -1,5 +1,6 @@
 "use client";
 
+import { photoCreditTitle } from "@/components/ui/PhotoCredit";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BookMarked, ExternalLink, Layers, MapPin, Sparkles, Star } from "lucide-react";
@@ -17,11 +18,11 @@ import { ReactionControl } from "@/components/feedback/ReactionControl";
 
 export const importPinKey = (importId: string, index: number) => `import:${importId}:${index}`;
 
-function Photo({ src, alt, fallback }: { src?: string; alt: string; fallback: string[] }) {
+function Photo({ src, alt, fallback, credit }: { src?: string; alt: string; fallback: string[]; credit?: string }) {
   const [failed, setFailed] = useState(false);
   if (src && !failed) {
     // eslint-disable-next-line @next/next/no-img-element -- proxied Places photo
-    return <img src={src} alt={alt} onError={() => setFailed(true)} className="h-24 w-24 shrink-0 rounded-xl object-cover" loading="lazy" />;
+    return <img src={src} alt={alt} title={credit} onError={() => setFailed(true)} className="h-24 w-24 shrink-0 rounded-xl object-cover" loading="lazy" />;
   }
   return <PlaceImage queries={fallback} alt={alt} className="h-24 w-24 shrink-0 rounded-xl" />;
 }
@@ -117,7 +118,7 @@ export function ImportedPlacesCards({ record, pinOnMap = true }: { record: Impor
           return (
             <CardShell key={key} data-testid="imported-place" onMouseEnter={() => mapActions.setHovered(key)} onMouseLeave={() => mapActions.setHovered(null)}>
               <div className="flex gap-3 p-3">
-                <Photo src={p.place.photos[0]} alt={p.place.name} fallback={[p.place.name, record.destination ?? ""]} />
+                <Photo src={p.place.photos[0]} alt={p.place.name} fallback={[p.place.name, record.destination ?? ""]} credit={photoCreditTitle(p.place.photoCredits?.[0])} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
                     <div className="text-[15px] font-semibold">{p.place.name}</div>

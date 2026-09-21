@@ -5,6 +5,7 @@ import { Users } from "lucide-react";
 import { formatDateRange } from "@/lib/store";
 import type { Trip } from "@/lib/types";
 import { PlaceImage } from "@/components/ui/PlaceImage";
+import { PhotoCredit } from "@/components/ui/PhotoCredit";
 import { useState } from "react";
 
 function Cover({ trip }: { trip: Trip }) {
@@ -26,6 +27,7 @@ export function TripCard({ trip, large = false }: { trip: Trip; large?: boolean 
     >
       <Cover trip={trip} />
       <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent transition-opacity group-hover:opacity-90" />
+      {trip.place?.photos?.[0] ? <PhotoCredit credit={trip.place.photoCredits?.[0]} className="left-3 top-3" asLink={false} /> : null}
       {trip.memberCount > 1 ? (
         <span className="absolute right-4 top-4 inline-flex items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 text-[12px] font-semibold text-neutral-800">
           <Users className="h-3.5 w-3.5" /> {trip.memberCount}

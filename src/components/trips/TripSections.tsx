@@ -32,6 +32,7 @@ import { Button } from "@/components/ui/Button";
 import { Field, Select, TextArea, TextInput, Chip } from "@/components/ui/Field";
 import { EmptyState } from "@/components/PageFrame";
 import { PlaceImage } from "@/components/ui/PlaceImage";
+import { photoCreditTitle } from "@/components/ui/PhotoCredit";
 import { useSendMessage } from "@/components/chat/useSendMessage";
 import { TripCalendar } from "./TripCalendar";
 import { tripItemKey } from "./TripMap";
@@ -171,7 +172,7 @@ function Thumb({ item, destination }: { item: TripItem; destination: string }) {
   const photo = item.place?.photos?.[0];
   if (photo && !failed) {
     // eslint-disable-next-line @next/next/no-img-element -- proxied Places photo
-    return <img src={photo} alt={item.title} onError={() => setFailed(true)} className="h-[72px] w-[72px] shrink-0 rounded-xl object-cover" loading="lazy" />;
+    return <img src={photo} alt={item.title} title={photoCreditTitle(item.place?.photoCredits?.[0])} onError={() => setFailed(true)} className="h-[72px] w-[72px] shrink-0 rounded-xl object-cover" loading="lazy" />;
   }
   return <PlaceImage queries={[item.title, destination]} alt={item.title} className="h-[72px] w-[72px] shrink-0 rounded-xl" />;
 }
@@ -377,7 +378,7 @@ function StopSummaryRow({ stop, onSelectPlace }: { stop: ItineraryStop; onSelect
     <li className="flex gap-2.5 rounded-xl bg-white p-2" data-testid="itinerary-stop">
       {photo && !failed ? (
         // eslint-disable-next-line @next/next/no-img-element -- proxied Places photo
-        <img src={photo} alt="" onError={() => setFailed(true)} className="h-12 w-12 shrink-0 rounded-lg object-cover" loading="lazy" />
+        <img src={photo} alt="" title={photoCreditTitle(place?.photoCredits?.[0])} onError={() => setFailed(true)} className="h-12 w-12 shrink-0 rounded-lg object-cover" loading="lazy" />
       ) : (
         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-surface text-neutral-500">
           <MapPin className="h-4 w-4" />
@@ -811,7 +812,7 @@ function MemberRow({ member, trip, isOwner, onTrip }: { member: TripMember; trip
 
   return (
     <li className="flex items-center gap-3 px-4 py-3">
-      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white">{member.name.charAt(0).toUpperCase()}</span>
+      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-sm font-semibold text-white">{member.name.charAt(0).toUpperCase()}</span>
       <div className="min-w-0 flex-1">
         <div className="truncate text-[15px] font-medium">
           {member.name}

@@ -8,6 +8,7 @@ import { fetchPlaceDetails } from "@/lib/places/client";
 import { googleMapsSearchUrl, wikipediaSummaryUrl } from "@/lib/travel/links";
 import type { PlaceDetails, PlaceKind, ResolvedPlace } from "@/lib/places/types";
 import { PlaceImage } from "@/components/ui/PlaceImage";
+import { PhotoCredit } from "@/components/ui/PhotoCredit";
 import { useSendMessage } from "@/components/chat/useSendMessage";
 import { useUiState } from "@/components/providers/UiState";
 import { useTripScope } from "@/components/trips/TripScope";
@@ -174,6 +175,7 @@ export function PlaceDetailSheet({
               <PlaceImage queries={[place.name, `${place.name}, ${place.locality ?? ""}`]} alt={place.name} className="absolute inset-0" />
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+            {photos[0] ? <PhotoCredit credit={data.photoCredits?.[0]} className={compact ? "bottom-4 right-4" : "bottom-6 right-6"} /> : null}
             <div className={clsx("absolute text-white drop-shadow", compact ? "bottom-4 left-4" : "bottom-6 left-6")}>
               <div className={clsx("font-semibold leading-none tracking-tight", compact ? "text-[30px]" : "text-[44px]")}>{place.name}</div>
               {data.locality ? <div className="mt-2 flex items-center gap-1 text-[16px]">📍 {data.locality}</div> : null}
@@ -199,17 +201,20 @@ export function PlaceDetailSheet({
             </div>
 
             {photos.length === 1 ? (
-              <div className={clsx("mt-5 overflow-hidden rounded-2xl", compact ? "h-[200px]" : "h-[300px]")}>
+              <div className={clsx("relative mt-5 overflow-hidden rounded-2xl", compact ? "h-[200px]" : "h-[300px]")}>
                 <Photo src={photos[0]} alt={place.name} />
+                <PhotoCredit credit={data.photoCredits?.[0]} />
               </div>
             ) : photos.length ? (
               <div className={clsx("mt-5 grid grid-cols-4 grid-rows-2 gap-2 overflow-hidden rounded-2xl", compact ? "h-[200px]" : "h-[300px]")}>
-                <div className="col-span-2 row-span-2">
+                <div className="relative col-span-2 row-span-2">
                   <Photo src={photos[0]} alt={place.name} />
+                  <PhotoCredit credit={data.photoCredits?.[0]} />
                 </div>
                 {photos.slice(1, 5).map((src, i) => (
-                  <div key={src} className="col-span-1 row-span-1">
+                  <div key={src} className="relative col-span-1 row-span-1">
                     <Photo src={src} alt={`${place.name} photo ${i + 2}`} />
+                    <PhotoCredit credit={data.photoCredits?.[i + 1]} className="bottom-1 left-1" />
                   </div>
                 ))}
               </div>
@@ -306,7 +311,7 @@ export function PlaceDetailSheet({
                 {place.lat.toFixed(4)}, {place.lng.toFixed(4)}
               </p>
               <div className="flex flex-wrap gap-2">
-                <a href={mapsUrl} target="_blank" rel="noreferrer noopener" className="inline-flex h-9 items-center gap-1.5 rounded-full bg-neutral-900 px-3 text-[14px] font-medium text-white">
+                <a href={mapsUrl} target="_blank" rel="noreferrer noopener" className="inline-flex h-9 items-center gap-1.5 rounded-full bg-brand px-3 text-[14px] font-medium text-white">
                   Open in Google Maps <ExternalLink className="h-3.5 w-3.5" />
                 </a>
                 <a
@@ -326,7 +331,7 @@ export function PlaceDetailSheet({
       <button
         type="button"
         onClick={() => send(suggestion.prompt)}
-        className={clsx("absolute flex h-12 items-center gap-2 rounded-full bg-neutral-900 px-5 text-[15px] font-semibold text-white shadow-xl hover:bg-neutral-800", compact ? "bottom-4 right-4" : "bottom-6 right-6")}
+        className={clsx("absolute flex h-12 items-center gap-2 rounded-full bg-brand px-5 text-[15px] font-semibold text-white shadow-xl hover:bg-brand-hover", compact ? "bottom-4 right-4" : "bottom-6 right-6")}
       >
         <Sparkles className="h-4 w-4" /> {suggestion.label}
       </button>
@@ -341,7 +346,7 @@ function TabButton({ active, onClick, children }: { active?: boolean; onClick: (
       onClick={onClick}
       className={clsx(
         "-mb-px border-b-2 pb-3 font-medium transition-colors",
-        active ? "border-neutral-900 text-foreground" : "border-transparent text-neutral-500 hover:text-foreground",
+        active ? "border-brand text-foreground" : "border-transparent text-neutral-500 hover:text-foreground",
       )}
     >
       {children}

@@ -7,6 +7,8 @@ import { Luggage, Map, Sparkles, X } from "lucide-react";
 import { useTravelStore, formatDateRange, type Trip } from "@/lib/store";
 import { INSPIRATION } from "@/lib/travel/inspiration";
 import { PlaceImage } from "@/components/ui/PlaceImage";
+import { PhotoCredit } from "@/components/ui/PhotoCredit";
+import type { PhotoCredit as PhotoCreditInfo } from "@/lib/places/types";
 import { useSendMessage } from "@/components/chat/useSendMessage";
 import { HomePicks, focusOptions } from "./HomePicks";
 
@@ -32,8 +34,9 @@ interface JumpItem {
   kind: string;
   title: string;
   subtitle?: string;
-  /** Google photo of the trip's or chat's destination, when resolved. */
+  /** Google photo of the trip's or chat's destination, when resolved, and who took it. */
   photo?: string;
+  credit?: PhotoCreditInfo;
   queries: string[];
   onClick: () => void;
   href?: string;
@@ -48,6 +51,7 @@ function JumpCover({ item, compact, children }: { item: JumpItem; compact: boole
       <div className={clsx("relative shrink-0 overflow-hidden rounded-2xl bg-neutral-200", size)}>
         {/* eslint-disable-next-line @next/next/no-img-element -- proxied Places photo */}
         <img src={item.photo} alt={item.title} onError={() => setFailed(true)} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
+        <PhotoCredit credit={item.credit} className="left-3 top-3" asLink={false} />
         {children}
       </div>
     );
@@ -89,6 +93,7 @@ export function DiscoveryFeed({ compact = false, picksFirst = false }: { compact
   const jumpBackIn = useMemo(() => {
     const items: JumpItem[] = [];
     const tripPhoto = (t: Trip | undefined): string | undefined => t?.place?.photos?.[0];
+    const tripCredit = (t: Trip | undefined): PhotoCreditInfo | undefined => t?.place?.photoCredits?.[0];
     for (const t of trips.slice(0, 3)) {
       items.push({
         key: `trip-${t.id}`,
@@ -96,6 +101,7 @@ export function DiscoveryFeed({ compact = false, picksFirst = false }: { compact
         title: t.title,
         subtitle: [t.destination, formatDateRange(t.startDate, t.endDate)].filter(Boolean).join(" · "),
         photo: tripPhoto(t),
+        credit: tripCredit(t),
         queries: [t.destination],
         onClick: () => send(`Let's keep working on my trip "${t.title}" to ${t.destination}. What should we sort out next?`),
       });
@@ -109,6 +115,7 @@ export function DiscoveryFeed({ compact = false, picksFirst = false }: { compact
         title: c.title,
         subtitle: destination,
         photo: c.place?.photos?.[0] ?? tripPhoto(trip),
+        credit: c.place?.photos?.[0] ? c.place.photoCredits?.[0] : tripCredit(trip),
         queries: destination ? [destination] : [],
         onClick: () => undefined,
         href: `/?thread=${encodeURIComponent(c.id)}`,
@@ -121,6 +128,7 @@ export function DiscoveryFeed({ compact = false, picksFirst = false }: { compact
         title: s.title,
         subtitle: s.subtitle,
         photo: s.place?.photos?.[0],
+        credit: s.place?.photoCredits?.[0],
         queries: [s.title],
         onClick: () => send(`Tell me more about ${s.title} and when I should go.`),
       });
@@ -142,7 +150,7 @@ export function DiscoveryFeed({ compact = false, picksFirst = false }: { compact
       {picksFirst ? (
         <section className="mt-5" data-testid="first-picks">
           <div className="flex items-start gap-2.5">
-            <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-neutral-900 text-white">
+            <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand text-white">
               <Sparkles className="h-3.5 w-3.5" />
             </span>
             <p className="min-w-0 flex-1 rounded-2xl rounded-tl-md bg-surface px-4 py-3 text-[15px] leading-snug">
@@ -158,7 +166,7 @@ export function DiscoveryFeed({ compact = false, picksFirst = false }: { compact
           <button type="button" onClick={dismissProactive} aria-label="Dismiss" className="absolute right-4 top-4 rounded-full p-1 text-neutral-500 hover:bg-white">
             <X className="h-4 w-4" />
           </button>
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-900 text-white">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-white">
             <Sparkles className="h-4 w-4" />
           </div>
           <p className={clsx("max-w-[640px] font-semibold tracking-tight", compact ? "mt-3 pr-6 text-[15px]" : "mt-4 text-[17px]")}>
@@ -263,7 +271,7 @@ export function DiscoveryPanel({ showMapButton = false, onShowMap }: { showMapBu
           <button
             type="button"
             onClick={onShowMap}
-            className="inline-flex h-9 items-center gap-2 rounded-full bg-neutral-900 px-4 text-[13px] font-semibold text-white shadow hover:bg-neutral-800"
+            className="inline-flex h-9 items-center gap-2 rounded-full bg-brand px-4 text-[13px] font-semibold text-white shadow hover:bg-brand-hover"
           >
             <Map className="h-4 w-4" /> Show map
           </button>

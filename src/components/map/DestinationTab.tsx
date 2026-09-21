@@ -1,5 +1,6 @@
 "use client";
 
+import { photoCreditTitle } from "@/components/ui/PhotoCredit";
 import { useEffect, useState } from "react";
 import clsx from "clsx";
 import { ExternalLink, Heart, Plus, Sparkles, Star } from "lucide-react";
@@ -65,7 +66,7 @@ function Thumb({ place, fallback }: { place: ResolvedPlace; fallback: string }) 
   const src = place.photos?.[0];
   if (src && !failed) {
     // eslint-disable-next-line @next/next/no-img-element -- proxied Places photo
-    return <img src={src} alt={place.name} onError={() => setFailed(true)} className="h-[76px] w-[96px] shrink-0 rounded-xl object-cover" loading="lazy" />;
+    return <img src={src} alt={place.name} title={photoCreditTitle(place.photoCredits?.[0])} onError={() => setFailed(true)} className="h-[76px] w-[96px] shrink-0 rounded-xl object-cover" loading="lazy" />;
   }
   return <PlaceImage queries={[place.name, fallback]} alt={place.name} className="h-[76px] w-[96px] shrink-0 rounded-xl" />;
 }
@@ -227,7 +228,7 @@ export function DestinationTab({ kind, destination }: { kind: DestinationTabKind
       <button
         type="button"
         onClick={() => send(PROMPT[kind](destination.name))}
-        className="inline-flex h-10 w-fit items-center gap-2 rounded-full bg-neutral-900 px-4 text-[14px] font-semibold text-white hover:bg-neutral-800"
+        className="inline-flex h-10 w-fit items-center gap-2 rounded-full bg-brand px-4 text-[14px] font-semibold text-white hover:bg-brand-hover"
       >
         <Sparkles className="h-4 w-4" /> Ask XPMatch for personalized picks
       </button>

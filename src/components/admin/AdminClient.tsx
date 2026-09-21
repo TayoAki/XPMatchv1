@@ -480,7 +480,7 @@ export function AdminClient() {
           </h2>
           <div role="group" aria-label="Report status" className="inline-flex rounded-full border border-border bg-white p-0.5">
             {(["open", "resolved", "all"] as Filter[]).map((f) => (
-              <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)} className={clsx("h-8 rounded-full px-3 text-[13px] font-semibold capitalize", filter === f ? "bg-neutral-900 text-white" : "text-neutral-700 hover:bg-surface")}>
+              <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)} className={clsx("h-8 rounded-full px-3 text-[13px] font-semibold capitalize", filter === f ? "bg-brand text-white" : "text-neutral-700 hover:bg-surface")}>
                 {f}
               </button>
             ))}

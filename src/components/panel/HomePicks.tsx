@@ -12,6 +12,7 @@ import { googleMapsSearchUrl } from "@/lib/travel/links";
 import { useSendMessage } from "@/components/chat/useSendMessage";
 import { useUiState } from "@/components/providers/UiState";
 import { PlaceImage } from "@/components/ui/PlaceImage";
+import { PhotoCredit } from "@/components/ui/PhotoCredit";
 import { TextInput } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { MatchBadge } from "@/components/recs/MatchBadge";
@@ -61,6 +62,7 @@ function PickCard({ place, match, destination, context, className }: { place: Re
     <article className={clsx("flex flex-col overflow-hidden rounded-2xl border border-border bg-white", className)} data-testid="home-pick">
       <div className="relative">
         <Photo src={place.photos?.[0]} alt={place.name} queries={[place.name, destination]} className="h-[150px] w-full" />
+        {place.photos?.[0] ? <PhotoCredit credit={place.photoCredits?.[0]} /> : null}
         <div className="absolute right-2 top-2 flex gap-1.5">
           <button
             type="button"

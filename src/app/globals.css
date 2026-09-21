@@ -1,16 +1,29 @@
 @import "tailwindcss";
 @import "@copilotkit/react-core/v2/styles.css";
+/* Self-hosted variable fonts (no build-time download): Inter for UI, Source Serif 4 for editorial copy. */
+@import "@fontsource-variable/inter/index.css";
+@import "@fontsource-variable/source-serif-4/index.css";
 
 :root {
-  --font-app: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+  --font-app: "Inter Variable", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
-  /* Prefixed so they never collide with CopilotKit's own --background/--muted/--border tokens. */
+  --font-serif-app: "Source Serif 4 Variable", "Source Serif 4", Georgia, "Times New Roman", serif;
+  /* Serene Resort palette. Prefixed so they never collide with CopilotKit's own --background/--muted/--border tokens. */
   --xp-bg: #ffffff;
-  --xp-fg: #111111;
-  --xp-muted: #6b7280;
-  --xp-surface: #f3f4f6;
-  --xp-surface-2: #e9eaec;
-  --xp-border: #e5e7eb;
+  --xp-surface-warm: #f7f6f3;
+  --xp-fg: #081316;
+  --xp-muted: #496261;
+  --xp-secondary: #626966;
+  --xp-brand: #073e45;
+  --xp-brand-hover: #052f35;
+  --xp-brand-soft: #e6efee;
+  --xp-surface: #f1f1ee;
+  --xp-surface-2: #e6e6e1;
+  --xp-border: #dedfda;
+  --xp-focus: #126773;
+  --xp-error: #9f2e29;
+  --xp-shadow-composer: 0 1px 4px rgb(8 19 22 / 5%);
+  --xp-shadow-floating: 0 3px 12px rgb(8 19 22 / 18%);
   --cpk-default-font-family: var(--font-app);
 }
 
@@ -18,10 +31,20 @@
   --color-background: var(--xp-bg);
   --color-foreground: var(--xp-fg);
   --color-muted: var(--xp-muted);
+  --color-secondary: var(--xp-secondary);
   --color-surface: var(--xp-surface);
   --color-surface-2: var(--xp-surface-2);
+  --color-surface-warm: var(--xp-surface-warm);
   --color-border: var(--xp-border);
+  --color-brand: var(--xp-brand);
+  --color-brand-hover: var(--xp-brand-hover);
+  --color-brand-soft: var(--xp-brand-soft);
+  --color-focus: var(--xp-focus);
+  --color-error: var(--xp-error);
   --font-sans: var(--font-app);
+  --font-serif: var(--font-serif-app);
+  --shadow-composer: var(--xp-shadow-composer);
+  --shadow-floating: var(--xp-shadow-floating);
 }
 
 html,
@@ -57,9 +80,14 @@ body {
   display: none;
 }
 
-/* Chat surface tweaks so the CopilotKit chat blends with the shell */
+/* Chat surface tweaks so the CopilotKit chat blends with the shell: its dark accents take the brand teal. */
 .xp-chat [data-copilotkit] {
   --cpk-default-font-family: var(--font-app);
+  --cpk-color-zinc-900: var(--xp-brand);
+  --cpk-color-zinc-800: var(--xp-brand-hover);
+  --cpk-color-gray-800: var(--xp-brand);
+  --cpk-color-gray-700: var(--xp-brand-hover);
+  --cpk-color-black: var(--xp-fg);
 }
 .xp-chat textarea {
   font-size: 15px;
@@ -95,8 +123,8 @@ body {
   width: 34px;
   height: 34px;
   border-radius: 9999px;
-  background: #7fd8c8;
-  color: #0f172a;
+  background: #9ed6cf;
+  color: var(--xp-fg);
   border: 2px solid #ffffff;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
   transition:
@@ -108,44 +136,44 @@ body {
   transform: scale(1.12);
 }
 .xp-marker--poi.is-selected .xp-marker-pin {
-  background: #111111;
+  background: var(--xp-brand);
   color: #ffffff;
   transform: scale(1.18);
 }
 .xp-marker--focus .xp-marker-pin {
   width: 38px;
   height: 38px;
-  background: #111111;
+  background: var(--xp-brand);
   color: #ffffff;
 }
 .xp-marker-label {
   padding: 4px 10px;
   border-radius: 9999px;
   background: #ffffff;
-  color: #111111;
+  color: var(--xp-fg);
   font-size: 13px;
   font-weight: 600;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   white-space: nowrap;
 }
 .xp-marker--focus.is-selected .xp-marker-label {
-  background: #111111;
+  background: var(--xp-brand);
   color: #ffffff;
 }
 /* Itinerary stops: numbered pins colored per day. */
 .xp-marker--day .xp-marker-pin {
   width: 30px;
   height: 30px;
-  background: var(--xp-pin, #7fd8c8);
+  background: var(--xp-pin, #9ed6cf);
   color: #ffffff;
   font-size: 13px;
   font-weight: 700;
   line-height: 1;
 }
 .xp-marker--day.is-selected .xp-marker-pin {
-  background: var(--xp-pin, #7fd8c8);
+  background: var(--xp-pin, #9ed6cf);
   color: #ffffff;
   box-shadow:
-    0 0 0 3px #111111,
+    0 0 0 3px var(--xp-brand),
     0 2px 6px rgba(0, 0, 0, 0.25);
 }

@@ -54,7 +54,7 @@ export function EvidenceList({ answer, compact = false }: { answer: PlaceAnswer;
               className={clsx(
                 "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[12px] font-medium",
                 a.value === true ? "border-emerald-200 bg-emerald-50 text-emerald-800" : a.value === false ? "border-neutral-200 bg-neutral-50 text-neutral-600" : "border-border bg-surface",
-                used("attribute", i) && "ring-1 ring-neutral-900/30",
+                used("attribute", i) && "ring-1 ring-brand/30",
               )}
               data-testid="evidence-attribute"
             >
@@ -74,7 +74,7 @@ export function EvidenceList({ answer, compact = false }: { answer: PlaceAnswer;
       {evidence.snippets.length ? (
         <ul className="grid gap-2">
           {evidence.snippets.slice(0, compact ? 3 : 5).map((s, i) => (
-            <li key={`${s.reviewIndex}-${i}`} className={clsx("rounded-xl border px-3 py-2 text-[13px]", used("review", i) ? "border-neutral-900/30 bg-white" : "border-border bg-white/60")} data-testid="evidence-quote">
+            <li key={`${s.reviewIndex}-${i}`} className={clsx("rounded-xl border px-3 py-2 text-[13px]", used("review", i) ? "border-brand/30 bg-white" : "border-border bg-white/60")} data-testid="evidence-quote">
               <div className="flex items-start gap-2">
                 <Quote className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-400" />
                 <div className="min-w-0">

@@ -1,5 +1,6 @@
 "use client";
 
+import { photoCreditTitle } from "@/components/ui/PhotoCredit";
 import { useState, type FormEvent } from "react";
 import { ArrowDown, ArrowUp, Plus, Trash2, Upload } from "lucide-react";
 import type { PlaceKind, ResolvedPlace } from "@/lib/places/types";
@@ -25,11 +26,11 @@ interface EditorItem {
   note: string;
 }
 
-function Photo({ src, alt, className }: { src?: string; alt: string; className: string }) {
+function Photo({ src, alt, className, credit }: { src?: string; alt: string; className: string; credit?: string }) {
   const [failed, setFailed] = useState(false);
   if (src && !failed) {
     // eslint-disable-next-line @next/next/no-img-element -- proxied Places photo
-    return <img src={src} alt={alt} onError={() => setFailed(true)} className={`${className} object-cover`} loading="lazy" />;
+    return <img src={src} alt={alt} title={credit} onError={() => setFailed(true)} className={`${className} object-cover`} loading="lazy" />;
   }
   return <PlaceImage queries={[alt]} alt={alt} className={className} />;
 }
@@ -227,7 +228,7 @@ export function GuideEditor({ initial, onSaved }: { initial?: GuideDetail; onSav
                     <ArrowDown className="h-3.5 w-3.5" />
                   </button>
                 </div>
-                <Photo src={item.place.photos?.[0]} alt={item.place.name} className="h-[76px] w-[76px] shrink-0 rounded-xl" />
+                <Photo src={item.place.photos?.[0]} alt={item.place.name} className="h-[76px] w-[76px] shrink-0 rounded-xl" credit={photoCreditTitle(item.place.photoCredits?.[0])} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">

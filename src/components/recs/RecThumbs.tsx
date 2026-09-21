@@ -108,7 +108,7 @@ export function RecThumbs({ name, kind, place, destination, context, match, size
                 type="button"
                 aria-pressed={current?.reason === reason}
                 onClick={() => judge("down", reason)}
-                className={clsx("rounded-full border px-2.5 py-1 text-[12px] font-medium", current?.reason === reason ? "border-neutral-900 bg-neutral-900 text-white" : "border-border bg-white hover:bg-surface")}
+                className={clsx("rounded-full border px-2.5 py-1 text-[12px] font-medium", current?.reason === reason ? "border-brand bg-brand text-white" : "border-border bg-white hover:bg-surface")}
               >
                 {reason}
               </button>

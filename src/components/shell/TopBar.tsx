@@ -133,7 +133,7 @@ export function TopBar() {
         type="button"
         onClick={() => openPlanner("where")}
         aria-label="Create a trip"
-        className="flex h-9 shrink-0 items-center gap-2 rounded-full bg-neutral-900 px-3 text-[13px] font-semibold text-white transition-colors hover:bg-neutral-800 sm:px-4"
+        className="flex h-9 shrink-0 items-center gap-2 rounded-full bg-brand px-3 text-[13px] font-semibold text-white transition-colors hover:bg-brand-hover sm:px-4"
       >
         <Luggage className="h-4 w-4" />
         <span className="hidden sm:inline">Create a trip</span>

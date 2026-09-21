@@ -148,7 +148,7 @@ export function ReactionControl({ className, size = "md", ...target }: ReactionT
                       type="button"
                       aria-pressed={on}
                       onClick={() => toggleReason(chip.label)}
-                      className={clsx("rounded-full border px-2.5 py-1 text-[12px] font-medium", on ? "border-neutral-900 bg-neutral-900 text-white" : "border-border bg-white hover:bg-surface")}
+                      className={clsx("rounded-full border px-2.5 py-1 text-[12px] font-medium", on ? "border-brand bg-brand text-white" : "border-border bg-white hover:bg-surface")}
                     >
                       {chip.label}
                     </button>
@@ -161,13 +161,13 @@ export function ReactionControl({ className, size = "md", ...target }: ReactionT
                 placeholder="Anything to remember? (optional)"
                 aria-label={`Note about ${name}`}
                 rows={2}
-                className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-[13px] outline-none focus:border-neutral-900"
+                className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-[13px] outline-none focus:border-brand"
               />
               <div className="mt-2 flex items-center justify-between">
                 <button type="button" onClick={() => { remove(); setOpen(false); }} className="text-[12px] text-neutral-500 underline-offset-2 hover:underline">
                   Remove reaction
                 </button>
-                <button type="button" onClick={done} className="h-8 rounded-full bg-neutral-900 px-3 text-[13px] font-semibold text-white hover:bg-neutral-800">
+                <button type="button" onClick={done} className="h-8 rounded-full bg-brand px-3 text-[13px] font-semibold text-white hover:bg-brand-hover">
                   Done
                 </button>
               </div>

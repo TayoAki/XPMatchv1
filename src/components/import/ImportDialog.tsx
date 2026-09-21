@@ -156,7 +156,7 @@ export function ImportForm({ onImported, onOpenChat }: { onImported?: (record: I
                 setError(null);
                 setFile(null);
               }}
-              className={clsx("inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold", mode === m.key ? "bg-neutral-900 text-white" : "text-neutral-700 hover:bg-surface")}
+              className={clsx("inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold", mode === m.key ? "bg-brand text-white" : "text-neutral-700 hover:bg-surface")}
             >
               <Icon className="h-4 w-4" /> {m.label}
             </button>

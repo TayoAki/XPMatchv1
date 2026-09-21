@@ -1,5 +1,6 @@
 "use client";
 
+import { photoCreditTitle } from "@/components/ui/PhotoCredit";
 import { useState } from "react";
 import clsx from "clsx";
 import { Check, Meh, ThumbsDown, ThumbsUp, X } from "lucide-react";
@@ -35,7 +36,7 @@ function Thumb({ candidate }: { candidate: RatingCandidate }) {
   const photo = candidate.place.photos[0];
   if (!photo || failed) return <div className="h-20 w-20 shrink-0 rounded-2xl bg-gradient-to-br from-neutral-200 to-neutral-300" aria-hidden="true" />;
   // eslint-disable-next-line @next/next/no-img-element -- proxied Places photo
-  return <img src={photo} alt="" onError={() => setFailed(true)} className="h-20 w-20 shrink-0 rounded-2xl object-cover" />;
+  return <img src={photo} alt="" title={photoCreditTitle(candidate.place.photoCredits?.[0])} onError={() => setFailed(true)} className="h-20 w-20 shrink-0 rounded-2xl object-cover" />;
 }
 
 /**
@@ -163,7 +164,7 @@ export function PostTripRating({ trip, onClose }: { trip: TripDetail; onClose: (
                     type="button"
                     aria-pressed={active}
                     onClick={() => setDraft({ verdict: v, reasons: active ? draft.reasons : [] })}
-                    className={clsx("flex flex-col items-center gap-1 rounded-2xl border px-3 py-3 text-[13px] font-semibold", active ? "border-neutral-900 bg-neutral-900 text-white" : "border-border hover:bg-surface")}
+                    className={clsx("flex flex-col items-center gap-1 rounded-2xl border px-3 py-3 text-[13px] font-semibold", active ? "border-brand bg-brand text-white" : "border-border hover:bg-surface")}
                   >
                     <Icon className="h-5 w-5" /> {VERDICT_LABEL[v]}
                   </button>
@@ -180,7 +181,7 @@ export function PostTripRating({ trip, onClose }: { trip: TripDetail; onClose: (
                       type="button"
                       aria-pressed={on}
                       onClick={() => setDraft({ ...draft, reasons: on ? draft.reasons.filter((r) => r !== chip.label) : [...draft.reasons, chip.label] })}
-                      className={clsx("rounded-full border px-2.5 py-1 text-[12px] font-medium", on ? "border-neutral-900 bg-neutral-900 text-white" : "border-border bg-white hover:bg-surface")}
+                      className={clsx("rounded-full border px-2.5 py-1 text-[12px] font-medium", on ? "border-brand bg-brand text-white" : "border-border bg-white hover:bg-surface")}
                     >
                       {chip.label}
                     </button>
@@ -203,10 +204,10 @@ export function PostTripRating({ trip, onClose }: { trip: TripDetail; onClose: (
           <div className="mt-5" data-testid="pairwise">
             <div className="text-[15px] font-semibold">Which did you prefer?</div>
             <div className="mt-3 grid grid-cols-2 gap-2">
-              <button type="button" onClick={() => respond(true)} className="rounded-2xl border border-border px-3 py-4 text-[14px] font-semibold hover:border-neutral-900 hover:bg-surface">
+              <button type="button" onClick={() => respond(true)} className="rounded-2xl border border-border px-3 py-4 text-[14px] font-semibold hover:border-brand hover:bg-surface">
                 {phase.current.rated.candidate.name}
               </button>
-              <button type="button" onClick={() => respond(false)} className="rounded-2xl border border-border px-3 py-4 text-[14px] font-semibold hover:border-neutral-900 hover:bg-surface">
+              <button type="button" onClick={() => respond(false)} className="rounded-2xl border border-border px-3 py-4 text-[14px] font-semibold hover:border-brand hover:bg-surface">
                 {nextOpponent(phase.current.state)?.name}
               </button>
             </div>

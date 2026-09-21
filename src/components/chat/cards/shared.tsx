@@ -9,6 +9,7 @@ import type { ResolvedPlace } from "@/lib/places/types";
 import { useUiState } from "@/components/providers/UiState";
 import { useTripScope } from "@/components/trips/TripScope";
 import { PlaceImage } from "@/components/ui/PlaceImage";
+import { PhotoCredit } from "@/components/ui/PhotoCredit";
 
 /**
  * Cards of one recommendation set: a two-column grid from tablet width up; on phones a
@@ -39,7 +40,7 @@ export function CardShell({
     <div
       className={clsx(
         "flex flex-col overflow-hidden rounded-2xl border bg-white text-[14px] leading-snug shadow-sm transition-shadow",
-        highlighted ? "border-neutral-900 shadow-md" : "border-border",
+        highlighted ? "border-brand shadow-md" : "border-border",
         className,
       )}
       {...rest}
@@ -96,6 +97,7 @@ export function CardPhoto({
       <div {...openProps} className={clsx("relative overflow-hidden bg-neutral-200", onOpen && "cursor-pointer", className)}>
         {/* eslint-disable-next-line @next/next/no-img-element -- proxied Places photo */}
         <img src={src} alt={alt} onError={() => setFailed(src)} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
+        <PhotoCredit credit={place?.photoCredits?.[0]} />
         {children}
       </div>
     );
@@ -197,7 +199,7 @@ export function ExtLink({ href, children, primary }: { href: string; children: R
       rel="noreferrer noopener"
       className={clsx(
         "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium transition-colors",
-        primary ? "bg-neutral-900 text-white hover:bg-neutral-800" : "border border-border bg-white hover:bg-surface",
+        primary ? "bg-brand text-white hover:bg-brand-hover" : "border border-border bg-white hover:bg-surface",
       )}
     >
       {children}

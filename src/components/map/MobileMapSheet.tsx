@@ -1,5 +1,6 @@
 "use client";
 
+import { photoCreditTitle } from "@/components/ui/PhotoCredit";
 import { useCallback, useState } from "react";
 import clsx from "clsx";
 import { Map as MapIcon, Star } from "lucide-react";
@@ -52,7 +53,7 @@ export function MobileMapSheet() {
         type="button"
         onClick={show}
         data-testid="mobile-map-button"
-        className="absolute right-3 top-3 z-10 inline-flex h-9 items-center gap-2 rounded-full bg-neutral-900 px-3.5 text-[13px] font-semibold text-white shadow-lg hover:bg-neutral-800"
+        className="absolute right-3 top-3 z-10 inline-flex h-9 items-center gap-2 rounded-full bg-brand px-3.5 text-[13px] font-semibold text-white shadow-lg hover:bg-brand-hover"
       >
         <MapIcon className="h-4 w-4" /> {label}
       </button>
@@ -76,7 +77,7 @@ export function MobileMapSheet() {
                   >
                     {photo ? (
                       // eslint-disable-next-line @next/next/no-img-element -- proxied Places photo
-                      <img src={photo} alt="" loading="lazy" className="h-12 w-12 shrink-0 rounded-xl object-cover" />
+                      <img src={photo} alt="" title={photoCreditTitle(p.photoCredits?.[0])} loading="lazy" className="h-12 w-12 shrink-0 rounded-xl object-cover" />
                     ) : (
                       <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-surface text-neutral-500" dangerouslySetInnerHTML={{ __html: iconSvg(p.kind, 18) }} />
                     )}

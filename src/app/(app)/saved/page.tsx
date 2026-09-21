@@ -64,7 +64,7 @@ export default function SavedPage() {
             key={t}
             type="button"
             onClick={() => setTab(t)}
-            className={clsx("-mb-px border-b-2 pb-3 font-medium capitalize", tab === t ? "border-neutral-900 text-foreground" : "border-transparent text-neutral-500 hover:text-foreground")}
+            className={clsx("-mb-px border-b-2 pb-3 font-medium capitalize", tab === t ? "border-brand text-foreground" : "border-transparent text-neutral-500 hover:text-foreground")}
           >
             {t} {t !== "imports" ? <span className="text-[13px] text-muted">{t === "places" ? places.length : guides.length}</span> : null}
           </button>
@@ -126,7 +126,7 @@ export default function SavedPage() {
             title="No saved guides yet"
             body="Browse community guides under Inspiration and save the ones you want to come back to."
             action={
-              <Link href="/inspiration" className="inline-flex h-10 items-center rounded-full bg-foreground px-4 text-sm font-medium text-white hover:bg-neutral-800">
+              <Link href="/inspiration" className="inline-flex h-10 items-center rounded-full bg-brand px-4 text-sm font-medium text-white hover:bg-brand-hover">
                 Browse guides
               </Link>
             }

@@ -1,6 +1,6 @@
 import { findCity } from "@/lib/places/gazetteer";
 import { isLocality } from "@/lib/places/kind";
-import type { LatLng, PlaceKind, ResolvedPlace } from "@/lib/places/types";
+import type { LatLng, PhotoCredit, PlaceKind, ResolvedPlace } from "@/lib/places/types";
 import {
   findAlias,
   fuzzyCatalogMatch,
@@ -40,6 +40,7 @@ const SEARCH_FIELDS = [
   "places.userRatingCount",
   "places.primaryTypeDisplayName",
   "places.photos.name",
+  "places.photos.authorAttributions",
   "places.googleMapsUri",
   "places.websiteUri",
   "places.priceLevel",
@@ -70,6 +71,7 @@ const DETAIL_FIELDS = [
   "userRatingCount",
   "primaryTypeDisplayName",
   "photos.name",
+  "photos.authorAttributions",
   "editorialSummary",
   "googleMapsUri",
   "websiteUri",
@@ -111,7 +113,7 @@ export interface GooglePlace {
   rating?: number;
   userRatingCount?: number;
   primaryTypeDisplayName?: { text?: string };
-  photos?: { name: string }[];
+  photos?: { name: string; authorAttributions?: { displayName?: string; uri?: string; photoUri?: string }[] }[];
   editorialSummary?: { text?: string };
   googleMapsUri?: string;
   websiteUri?: string;
@@ -160,8 +162,15 @@ function localityOf(place: GooglePlace): string | undefined {
   return parts.length ? parts.join(", ") : undefined;
 }
 
+/** The first author Google lists for a photo, with the profile link when there is one. */
+function photoCreditOf(photo: NonNullable<GooglePlace["photos"]>[number]): PhotoCredit {
+  const author = photo.authorAttributions?.find((a) => a.displayName?.trim());
+  return { name: author?.displayName?.trim() || "Google user", ...(author?.uri ? { uri: author.uri } : {}) };
+}
+
 export function toResolved(place: GooglePlace, kind: PlaceKind): ResolvedPlace | null {
   if (!place.location) return null;
+  const photos = (place.photos ?? []).slice(0, 6);
   return {
     id: place.id,
     name: place.displayName?.text ?? "Unknown place",
@@ -175,7 +184,8 @@ export function toResolved(place: GooglePlace, kind: PlaceKind): ResolvedPlace |
     userRatingCount: place.userRatingCount,
     priceLevel: place.priceLevel ? PRICE_LEVEL[place.priceLevel] ?? undefined : undefined,
     summary: place.editorialSummary?.text,
-    photos: (place.photos ?? []).slice(0, 6).map((p) => photoProxyUrl(p.name)),
+    photos: photos.map((p) => photoProxyUrl(p.name)),
+    ...(photos.length ? { photoCredits: photos.map(photoCreditOf) } : {}),
     googleMapsUri: place.googleMapsUri,
     websiteUri: place.websiteUri,
     viewport: place.viewport

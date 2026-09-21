@@ -1,5 +1,6 @@
 "use client";
 
+import { photoCreditTitle } from "@/components/ui/PhotoCredit";
 import { useEffect, useRef } from "react";
 import clsx from "clsx";
 import { Star } from "lucide-react";
@@ -58,12 +59,12 @@ export function PinStrip({
               data-testid="pin-mini-card"
               className={clsx(
                 "flex w-[168px] items-center gap-2 rounded-2xl border bg-white p-1.5 text-left shadow-sm transition-colors",
-                active ? "border-neutral-900" : hovered ? "border-neutral-400" : "border-border hover:bg-surface",
+                active ? "border-brand" : hovered ? "border-neutral-400" : "border-border hover:bg-surface",
               )}
             >
               {photo ? (
                 // eslint-disable-next-line @next/next/no-img-element -- proxied Places photo
-                <img src={photo} alt="" loading="lazy" className="h-12 w-12 shrink-0 rounded-xl object-cover" />
+                <img src={photo} alt="" title={photoCreditTitle(p.photoCredits?.[0])} loading="lazy" className="h-12 w-12 shrink-0 rounded-xl object-cover" />
               ) : (
                 <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-surface text-neutral-500" dangerouslySetInnerHTML={{ __html: iconSvg(p.kind, 18) }} />
               )}

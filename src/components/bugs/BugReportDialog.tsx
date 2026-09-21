@@ -137,7 +137,7 @@ function BugReportForm({ onClose }: { onClose: () => void }) {
                 type="button"
                 aria-pressed={severity === s.value}
                 onClick={() => setSeverity(s.value)}
-                className={clsx("rounded-2xl border px-3 py-2.5 text-left transition-colors", severity === s.value ? "border-neutral-900 bg-neutral-900 text-white" : "border-border bg-white hover:bg-surface")}
+                className={clsx("rounded-2xl border px-3 py-2.5 text-left transition-colors", severity === s.value ? "border-brand bg-brand text-white" : "border-border bg-white hover:bg-surface")}
               >
                 <span className="block text-[13px] font-semibold">{s.label}</span>
                 <span className={clsx("block text-[12px]", severity === s.value ? "text-white/80" : "text-muted")}>{s.hint}</span>

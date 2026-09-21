@@ -157,7 +157,7 @@ export function DayColumn({
             onBlur={onRenameCommit}
             aria-label={`Day ${index + 1} theme`}
             placeholder="Theme of the day"
-            className="min-w-0 flex-1 rounded-lg bg-transparent px-2 py-1 text-[14px] text-neutral-700 outline-none placeholder:text-neutral-400 focus:bg-white focus:ring-1 focus:ring-neutral-900"
+            className="min-w-0 flex-1 rounded-lg bg-transparent px-2 py-1 text-[14px] text-neutral-700 outline-none placeholder:text-neutral-400 focus:bg-white focus:ring-1 focus:ring-brand"
           />
         ) : (
           <span className="flex-1 truncate text-[14px] text-neutral-700">{day.title}</span>

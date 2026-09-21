@@ -51,7 +51,7 @@ export default function InspirationPage() {
       title="Inspiration"
       description="Guides written by the XPMatch community. Save one, or plan a trip around it."
       actions={
-        <Link href="/create" className="inline-flex h-10 items-center gap-2 rounded-full bg-foreground px-4 text-sm font-medium text-white hover:bg-neutral-800">
+        <Link href="/create" className="inline-flex h-10 items-center gap-2 rounded-full bg-brand px-4 text-sm font-medium text-white hover:bg-brand-hover">
           <SquarePlus className="h-4 w-4" /> Create a guide
         </Link>
       }
@@ -73,7 +73,7 @@ export default function InspirationPage() {
             title={q ? `No guides match "${q}"` : "No community guides yet"}
             body={q ? "Try another destination, or write the guide yourself." : "Be the first: share the places you'd send a friend to."}
             action={
-              <Link href="/create" className="inline-flex h-10 items-center gap-2 rounded-full bg-foreground px-4 text-sm font-medium text-white hover:bg-neutral-800">
+              <Link href="/create" className="inline-flex h-10 items-center gap-2 rounded-full bg-brand px-4 text-sm font-medium text-white hover:bg-brand-hover">
                 <SquarePlus className="h-4 w-4" /> Create a guide
               </Link>
             }

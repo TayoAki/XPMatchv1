@@ -73,7 +73,7 @@ export function ConstraintChips({ args, status, toolCallId }: { args: Streaming<
             key={c.label}
             className={clsx(
               "inline-flex h-7 items-center gap-1 rounded-full border pl-2.5 text-[12px] font-medium",
-              c.hard ? "border-neutral-900 bg-neutral-900 text-white" : "border-border bg-surface text-neutral-800",
+              c.hard ? "border-brand bg-brand text-white" : "border-border bg-surface text-neutral-800",
               isLive ? "pr-1" : "pr-2.5",
             )}
             data-testid="constraint-chip"
@@ -103,9 +103,9 @@ export function ConstraintChips({ args, status, toolCallId }: { args: Streaming<
                 onBlur={() => !draft.trim() && setAdding(false)}
                 placeholder="e.g. rooftop bar"
                 aria-label="Add a filter"
-                className="h-7 w-36 rounded-full border border-border px-2.5 text-[12px] outline-none focus:border-neutral-900"
+                className="h-7 w-36 rounded-full border border-border px-2.5 text-[12px] outline-none focus:border-brand"
               />
-              <button type="submit" className="h-7 rounded-full bg-neutral-900 px-2.5 text-[12px] font-semibold text-white">
+              <button type="submit" className="h-7 rounded-full bg-brand px-2.5 text-[12px] font-semibold text-white">
                 Add
               </button>
             </form>
