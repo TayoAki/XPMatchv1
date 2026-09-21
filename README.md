@@ -167,8 +167,9 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   whole UI can be explored; a banner makes this explicit.
 
 See `docs/USER_FLOWS.md` for every user flow screen by screen, `docs/COGS.md` for the unit-cost model
-(the Google Places calls behind the map, not the model, dominate cost), and `docs/PLAN.md` for the
-architecture and build plan.
+(the Google Places calls behind the map, not the model, dominate cost), `docs/PLAN.md` for the
+architecture and build plan, and `docs/BUSINESS_PLAN.md` for the business plan (offers, pricing, and
+the Sales, Marketing, Onboarding, Fulfillment and Retention playbooks with their gates).
 
 ## Getting started
 
