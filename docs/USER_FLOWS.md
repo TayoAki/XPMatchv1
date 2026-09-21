@@ -205,24 +205,32 @@ calendar tab highlights trip date ranges by month.
 **Create** — planner dialog → Create trip; the chat's proposal card → Save to my trips; the Create page's
 Trip tab; or **Add to trip → New trip** from any place.
 
-**Trip page** — `/trips/[id]`, modeled on Mindtrip:
-- Header: title, chips for destination, dates, travelers, budget (each opens the matching section) and
-  members; **Edit details** (title, destination, dates, travelers, budget) and a menu with **Delete
-  trip** (owner) or **Leave trip** (member).
-- Proactive card ("Rome in October — want help getting started…") with Find hotels / Top things to do /
-  Build the itinerary / Neighborhood guide.
-- **Ask anything else** — opens a new chat attached to the trip. In that chat the assistant sees the
+**Trip page** — `/trips/[id]`. On a wide screen it is one workspace with three fixed places for
+things, so nothing competes for attention:
+- **Header** (one band across the top): "Your trips", the title, **Edit details** (title,
+  destination, dates, travelers, budget), a menu with **Delete trip** (owner) or **Leave trip**
+  (member), then chips for destination, dates, travelers, budget (each opens the matching tile
+  section on the right) and members, with the summary on one line.
+- **Board on the left** — the itinerary is the main column and is always in view (the post-trip
+  "How was Rome?" banner sits above it when the trip has ended).
+- **Tiles on the right** — Ideas, Itinerary, Bookings, Media, Trip preferences, Calendar and Members,
+  opening in place. A **Tiles | Map · N pinned** switch at the top of the column brings the **map over
+  the tiles** and back; the map also comes over on its own when a stop or idea is sent to the map
+  ("Show on the map", a stop's name), and the tiles come back when a tile section is opened.
+  `?view=board` from a chat link opens with the map showing.
+- **The assistant in one box along the bottom** — the four starters (Find hotels / Top things to do /
+  Build the itinerary / Neighborhood guide), the **Ask about this trip** input and the trip's recent
+  chats as links. Asking opens a new chat attached to the trip. In that chat the assistant sees the
   trip (dates, members, ideas, itinerary, preferences), the map opens on the destination with the trip's
   ideas pinned, and three extra tools are available: `update_trip_plan` (dates, travelers, budget,
   summary, the whole itinerary as structured stops, preferences), `add_trip_ideas` (adds places to the
   Ideas list) and `schedule_stops` ("put the Colosseum on day 2": places are resolved and pinned; the chip
   links to the board).
-- **Chats** — every conversation attached to this trip, newest first.
-- **Board | Tiles** toggle (right column; the choice is remembered per browser, `?view=board` opens the
-  board from chat). On a phone the page is three tabs, **Overview | Board | Tiles**, and opens on the
-  board when the trip has stops (or `?view=board`); the map is a short header above the board with
-  **Hide map / Show map**, and stops have no drag handle: **up / down** buttons reorder them within
-  the day and **Move to…** sends them to another day, back to ideas or away.
+- On a phone the page is three tabs, **Overview | Board | Tiles** (the overview holds the title, chips,
+  the proactive card, the ask box and the chats), and opens on the board when the trip has stops (or
+  `?view=board`); the map is a short header above the board with **Hide map / Show map**, and stops
+  have no drag handle: **up / down** buttons reorder them within the day and **Move to…** sends them to
+  another day, back to ideas or away.
 - **Board** — Wanderlog-style: dates, travelers, bookings and ideas chips and a **Walk / Drive /
   Transit** travel mode (remembered per browser); then each **Day** (color dot, date, editable theme)
   with the reservations that start on it (time, name, confirmation code) above a list of numbered stops
@@ -389,7 +397,7 @@ imports (source, verified places, unverified mentions), the chat list (titles, t
 transcripts (every message, tool call and card, written by the runtime after each run and restored when a
 chat is reopened) and notifications — all in Postgres. A shared 30-day cache of Place Details (reviews,
 summaries, attributes) backs "Ask about a place". Live runs stream from the runtime's memory; the planner
-bar values, the compare selection, constraint chips of the current session, the Board | Tiles choice, the
+bar values, the compare selection, constraint chips of the current session, the
 board's travel mode, which post-trip prompts were dismissed and small UI preferences (e.g. whether Chats
 is expanded in the sidebar) stay in the browser. Routes API legs are cached in the server process for a
 day per mode and coordinates, not per user.

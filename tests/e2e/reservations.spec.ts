@@ -67,7 +67,6 @@ test("reservations: confirmation text and PDF become bookings on the trip, its B
 
   await test.step("the board shows the booking on its day and routed travel legs per mode", async () => {
     await page.getByRole("button", { name: "Back to overview" }).click();
-    await page.getByRole("button", { name: "Board", exact: true }).click();
     await page.getByRole("button", { name: "Add day" }).click();
     const day1 = page.getByRole("region", { name: "Day 1", exact: true });
     await expect(day1.getByTestId("day-reservations")).toContainText("Hotel Artemide");

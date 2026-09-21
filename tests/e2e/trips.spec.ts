@@ -54,8 +54,9 @@ test("trips: create, members, ideas, itinerary, trip chat, sharing", async ({ pa
     await page.getByLabel("Day 1 title").fill("Ancient Rome");
     await page.getByLabel("Day 1 stops").fill("Colosseum at opening\nRoman Forum\nTrattoria lunch in Monti");
     await page.getByRole("button", { name: "Save itinerary" }).click();
-    await expect(page.getByText("Ancient Rome")).toBeVisible();
-    await expect(page.getByText("Roman Forum")).toBeVisible();
+    // The board on the left and the Itinerary section on the right both show the day now.
+    await expect(page.getByText("Ancient Rome").first()).toBeVisible();
+    await expect(page.getByText("Roman Forum").first()).toBeVisible();
     await page.getByRole("button", { name: "Back to overview" }).click();
     await expect(page.getByRole("button", { name: /^Itinerary 1 day planned/ })).toBeVisible();
   });

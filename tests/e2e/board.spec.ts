@@ -42,9 +42,10 @@ test("board: schedule ideas, keyboard reorder, day layers, chat scheduling", asy
     await page.getByRole("button", { name: "Back to overview" }).click();
   });
 
-  await test.step("the board opens with both ideas unscheduled", async () => {
-    await page.getByRole("button", { name: "Board", exact: true }).click();
+  await test.step("the board is the workspace, with both ideas unscheduled; the map comes over the tiles", async () => {
     await expect(board).toBeVisible();
+    await page.getByRole("button", { name: /^Map/ }).click();
+    await expect(page.getByTestId("trip-map")).toBeVisible();
     const tray = board.getByTestId("ideas-tray");
     await expect(tray).toContainText("2 not scheduled");
     await expect(tray).toContainText("Colosseum");
@@ -94,6 +95,8 @@ test("board: schedule ideas, keyboard reorder, day layers, chat scheduling", asy
     await page.reload();
     await expect(board).toBeVisible({ timeout: 20_000 });
     await expect(day(1).getByTestId("stop-card").first()).toContainText("Pantheon");
+    // A fresh load opens on the tiles; the map comes back over them on request.
+    await page.getByRole("button", { name: /^Map/ }).click();
     await expect(pinList).toContainText("1. Pantheon · Day 1");
   });
 

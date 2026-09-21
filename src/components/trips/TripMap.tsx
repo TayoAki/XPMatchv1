@@ -10,6 +10,14 @@ import { dayColor, scheduledItemIds, stopPinKey } from "@/lib/itinerary";
 
 export const tripItemKey = (itemId: string) => `item:${itemId}`;
 
+/** How many pins the trip map shows with every day on: placed stops plus unscheduled items with a place. */
+export function tripPinCount(trip: TripDetail): number {
+  const scheduled = scheduledItemIds(trip.itinerary);
+  const stops = trip.itinerary.reduce((n, day) => n + day.stops.filter((s) => s.place).length, 0);
+  const items = trip.items.filter((item) => item.place && !(item.kind === "idea" && scheduled.has(item.id))).length;
+  return stops + items;
+}
+
 type DayFilter = "all" | number;
 
 /**
