@@ -142,8 +142,8 @@ concierge line sells from month one at 98% contribution margin and no owner sala
 | Owner salary | $0 | $48,000 | $96,000 |
 | Total operating expenses | $11,100 | $95,400 | $193,800 |
 | **Net operating profit** | **$20,880** | **$35,931** | **$102,073** |
-| Owner add-backs (net) | −$26,455 | +$22,000 | +$70,000 |
-| **SDE** | **−$5,575** | **$57,931** | **$172,073** |
+| Owner add-backs (net) | −$26,455 | +$20,635 | +$70,000 |
+| **SDE** | **−$5,575** | **$56,566** | **$172,073** |
 | SDE margin | −14% | 30% | 40% |
 | Exit-month ARR run-rate | $80,379 | $275,875 | $548,932 |
 
@@ -178,8 +178,8 @@ someone for it.
 | + One-time costs (legal, brand, trademark) | $3,850 | $0 | $0 |
 | + Personal expenses through the business | $0 | $0 | $0 |
 | − Replace second founder (10 h/wk @ $50/h) | −$26,000 | −$26,000 | −$26,000 |
-| − Replace unpaid founder concierge review (82 trips × 1.5 h @ $35/h) | −$4,305 | $0 | $0 |
-| **SDE** | **−$5,575** | **$57,931** | **$172,073** |
+| − Replace unpaid founder concierge review (Y1 82 trips, Y2 26 trips in M13–M14, × 1.5 h @ $35/h) | −$4,305 | −$1,365 | $0 |
+| **SDE** | **−$5,575** | **$56,566** | **$172,073** |
 
 **Year-1 SDE is negative.** The business produces $20,880 of net operating profit in Year 1 and
 still returns −$5,575 of SDE, because two founders working unpaid are worth more than the profit

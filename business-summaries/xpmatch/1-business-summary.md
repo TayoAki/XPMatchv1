@@ -176,8 +176,8 @@ Summarised from `2-financial-model.md`. Read the assumptions table there before 
 | Advertising & marketing | $7,200 | $24,000 | $48,000 |
 | Other operating expenses | $3,900 | $71,400 | $145,800 |
 | Net operating profit | $20,880 | $35,931 | $102,073 |
-| Owner add-backs (net) | −$26,455 | $22,000 | $70,000 |
-| **SDE** | **−$5,575** | **$57,931** | **$172,073** |
+| Owner add-backs (net) | −$26,455 | $20,635 | $70,000 |
+| **SDE** | **−$5,575** | **$56,566** | **$172,073** |
 | SDE margin | −14% | 30% | 40% |
 
 Year-1 monthly detail, the capital deployment schedule, and SDE add-back detail are in the model file.
