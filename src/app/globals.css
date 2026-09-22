@@ -9,26 +9,30 @@
     "Helvetica Neue", Arial, sans-serif;
   --font-serif-app: "Source Serif 4 Variable", "Source Serif 4", Georgia, "Times New Roman", serif;
   /* Serene Resort palette. Prefixed so they never collide with CopilotKit's own --background/--muted/--border tokens. */
+  /* The handoff's tokens: canvas, ink, ink-muted, accent, accent-soft, border, focus, error. */
   --xp-bg: #ffffff;
-  --xp-surface-warm: #f7f6f3;
-  --xp-fg: #081316;
-  --xp-muted: #496261;
+  --xp-canvas: #f8f7f3;
+  --xp-surface-warm: #fcfaf5;
+  --xp-fg: #10272d;
+  --xp-muted: #53646a;
   --xp-secondary: #626966;
-  --xp-brand: #073e45;
-  --xp-brand-hover: #052f35;
-  --xp-brand-soft: #e6efee;
+  --xp-brand: #064650;
+  --xp-brand-hover: #04363e;
+  --xp-brand-soft: #e7f0ef;
   --xp-surface: #f1f1ee;
   --xp-surface-2: #e6e6e1;
-  --xp-border: #dedfda;
-  --xp-focus: #126773;
-  --xp-error: #9f2e29;
+  --xp-border: #d8d3c9;
+  --xp-focus: #147b89;
+  --xp-error: #a33c32;
   --xp-shadow-composer: 0 1px 4px rgb(8 19 22 / 5%);
   --xp-shadow-floating: 0 3px 12px rgb(8 19 22 / 18%);
+  --xp-shadow-card: 0 6px 24px rgb(16 39 45 / 7%);
   --cpk-default-font-family: var(--font-app);
 }
 
 @theme inline {
   --color-background: var(--xp-bg);
+  --color-canvas: var(--xp-canvas);
   --color-foreground: var(--xp-fg);
   --color-muted: var(--xp-muted);
   --color-secondary: var(--xp-secondary);
@@ -45,6 +49,43 @@
   --font-serif: var(--font-serif-app);
   --shadow-composer: var(--xp-shadow-composer);
   --shadow-floating: var(--xp-shadow-floating);
+  --shadow-card: var(--xp-shadow-card);
+}
+
+/* Destination cards: a photo face and a city-profile face on the two sides of one rotating element. */
+.xp-flip {
+  position: relative;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 300ms var(--xp-ease);
+}
+.xp-flip[data-face="profile"] {
+  transform: rotateY(180deg);
+}
+.xp-flip__front,
+.xp-flip__back {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+.xp-flip__back {
+  transform: rotateY(180deg);
+}
+/* Reduced motion: no rotation, the faces crossfade instead. */
+.xp-flip--fade,
+.xp-flip--fade[data-face="profile"] {
+  transform: none;
+  transition: none;
+}
+.xp-flip--fade .xp-flip__back {
+  transform: none;
+}
+.xp-flip--fade .xp-flip__front,
+.xp-flip--fade .xp-flip__back {
+  transition: opacity 150ms var(--xp-ease);
+}
+.xp-flip--fade[data-face="profile"] .xp-flip__front,
+.xp-flip--fade:not([data-face="profile"]) .xp-flip__back {
+  opacity: 0;
 }
 
 html,

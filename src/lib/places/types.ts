@@ -65,6 +65,8 @@ export interface PlaceDetails extends ResolvedPlace {
 export interface MapPlace extends ResolvedPlace {
   key: string;
   toolCallId: string;
+  /** The destination whose recommendation set this pin belongs to (a city selected from a card). */
+  scope?: string;
 }
 
 export interface ResolveRequestItem {

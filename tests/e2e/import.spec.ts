@@ -40,9 +40,7 @@ test("inspiration import: link in chat, add all to a trip, screenshot on Create,
 
   await test.step("Add all to a trip puts every verified place in a new trip's ideas", async () => {
     await page.getByRole("button", { name: "Add all to a trip" }).click();
-    const dialog = page.getByRole("dialog", { name: "Add to trip" });
-    await expect(dialog).toContainText("4 places");
-    await dialog.getByRole("button", { name: "Add", exact: true }).click();
+    // No trip yet: the trip is created from the destination and the places added in one step.
     const done = page.getByRole("dialog", { name: "Added to your trip" });
     await expect(done).toContainText("4 places", { timeout: 30_000 });
     await done.getByRole("link", { name: "Open trip" }).click();

@@ -1,17 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { Check, Plus } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { TextArea, TextInput } from "@/components/ui/Field";
 import { formatDateRange, useTravelStore } from "@/lib/store";
+import { mapActions } from "@/lib/map-store";
 import { reservationSummary } from "@/lib/reservations/types";
 import { useUiState, type AddToTripRequest } from "@/components/providers/UiState";
 
-/** Trip picker opened from "Add to trip" on cards and place sheets. */
+/**
+ * "Add to trip" from cards and place sheets. With trips to choose from it is a picker (the
+ * conversation's trip preselected); a traveler with no trip yet gets one created from the
+ * destination and the item added in the same step.
+ */
 export function AddToTripDialog() {
   const { addToTrip } = useUiState();
   return addToTrip ? <AddToTripForm key={`${addToTrip.place?.id ?? addToTrip.booking?.title ?? "item"}-${addToTrip.tripId ?? ""}`} request={addToTrip} /> : null;
@@ -47,6 +52,9 @@ function AddToTripForm({ request }: { request: AddToTripRequest }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<{ tripId: string; title: string } | null>(null);
+  // No trip yet: skip the picker, create one for the destination and add in one step.
+  const draft = options.length === 0;
+  const started = useRef(false);
 
   const submit = async () => {
     setBusy(true);
@@ -59,6 +67,7 @@ function AddToTripForm({ request }: { request: AddToTripRequest }) {
         tripId = created.id;
         title = created.title;
       }
+      if (request.threadId) mapActions.setThreadTrip(request.threadId, tripId);
       if (booking) {
         await addTripItem(tripId, {
           kind: "booking",
@@ -86,6 +95,39 @@ function AddToTripForm({ request }: { request: AddToTripRequest }) {
       setBusy(false);
     }
   };
+
+  useEffect(() => {
+    if (!draft || started.current) return;
+    started.current = true;
+    void submit();
+    // Runs once, when the dialog opens for a traveler without trips.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft]);
+
+  if (draft && !done) {
+    return (
+      <Modal
+        open
+        onClose={closeAddToTrip}
+        title="Adding to a new trip"
+        footer={
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[13px] text-red-600">{error}</span>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={closeAddToTrip}>
+                Cancel
+              </Button>
+              {error ? <Button onClick={submit}>Try again</Button> : null}
+            </div>
+          </div>
+        }
+      >
+        <p className="text-[14px] text-neutral-700" aria-live="polite">
+          {error ? "That did not go through." : `Creating "${newTitle}" and adding ${many ? `${places.length} places` : label}…`}
+        </p>
+      </Modal>
+    );
+  }
 
   if (done) {
     return (

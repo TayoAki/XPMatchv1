@@ -160,6 +160,21 @@ scheduling chip open the itinerary board as a full-height sheet (short map, then
    Judgments are stored per place, lower the score of a pick the traveler already passed on, dampen
    factors that keep misleading them (calibration), and reach the assistant as "Recommendation
    feedback" so it never re-recommends a recent miss and corrects for repeated reasons.
+   **Destination cards** are two-faced: the photo face (city name, region, a one-line tagline, the
+   match badge and thumbs, "Curated for you" when the pick is tied to the profile) flips to the **city
+   profile**: quick facts (suggested stay, city feel, known for, best season), "Your match" with the
+   strongest reason, and Overview / Stays / Activities / Dining tabs listing this traveler's scored
+   picks for the city (three rows, then Show all; the profile scrolls inside the card). On a desktop
+   the profile appears after a moment's hover and hides again on leaving, unless a click, a tab, a
+   row or keyboard focus pinned it; on a phone the **City profile** and **Photo** controls flip it.
+   Selecting a card (its photo, name or City profile) makes it the active city: the map header reads
+   "Explore {city}" with its recommended places behind one **All / Stays / Dining / Experiences**
+   filter that the card's tabs mirror; a row shows that exact place on the map and opens its panel
+   (with its own Save and Add to trip); "All places" returns to the whole conversation. Every card
+   ends in the same two actions: **Add to trip** (filled) and **Save** (outlined). A traveler with no
+   trip yet gets "Trip to {city}" created and the item added in one step; the trip a conversation adds
+   to is remembered and shown as a small tray on the map (title, nights or "Dates flexible", travelers,
+   View trip).
 4. **Understood as (smart filters)** — when the request carries criteria ("a quiet hotel under $250 a night
    with a pool and good vibes"), the assistant first shows a chip strip: dark chips are must-haves, light
    ones preferences, and "Not applied: 'good vibes'" lists what could not be mapped. Removing a chip, adding

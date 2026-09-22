@@ -7,8 +7,10 @@ import { ToolCallStatus } from "@copilotkit/core";
 import { findSaved, useTravelStore, type SavedKind } from "@/lib/store";
 import type { PlaceKind, ResolvedPlace } from "@/lib/places/types";
 import { verdictFor, verdictRank } from "@/lib/recs/verdict";
+import { useMapView } from "@/lib/map-store";
 import { useUiState } from "@/components/providers/UiState";
 import { useTripScope } from "@/components/trips/TripScope";
+import { useCardThreadId } from "@/components/map/useRegisterPlaces";
 import { PlaceImage } from "@/components/ui/PlaceImage";
 import { PhotoCredit } from "@/components/ui/PhotoCredit";
 import { Carousel } from "@/components/ui/Carousel";
@@ -150,15 +152,17 @@ export function CardPhoto({
   );
 }
 
-/** Opens the trip picker for a resolved place (hidden until the pin is known). */
+/** Opens the trip picker for a resolved place (hidden until the pin is known); the conversation's trip is preselected. */
 export function AddToTripButton({ place }: { place?: ResolvedPlace }) {
   const { openAddToTrip } = useUiState();
-  const tripId = useTripScope();
+  const tripScope = useTripScope();
+  const threadId = useCardThreadId();
+  const view = useMapView(threadId);
   if (!place) return null;
   return (
     <button
       type="button"
-      onClick={() => openAddToTrip({ place, tripId: tripId ?? undefined })}
+      onClick={() => openAddToTrip({ place, tripId: tripScope ?? view.tripId ?? undefined, threadId: threadId ?? undefined })}
       className="inline-flex h-8 items-center gap-1.5 rounded-full bg-surface px-3 text-[13px] font-medium transition-colors hover:bg-surface-2"
     >
       <Plus className="h-3.5 w-3.5" /> Add to trip

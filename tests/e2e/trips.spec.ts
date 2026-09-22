@@ -89,7 +89,9 @@ test("trips: create, members, ideas, itinerary, trip chat, sharing", async ({ pa
 
   await test.step("the trips list shows the card and the calendar", async () => {
     await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "My trips", exact: true }).click();
-    await expect(page.getByRole("link", { name: /Trip to Rome/ })).toBeVisible();
+    // The trip page also links to "Trip to Rome" (the rail) and has a Calendar tile: wait for the list itself.
+    await page.waitForURL(/\/trips$/, { timeout: 15_000 });
+    await expect(page.getByRole("main").getByRole("link", { name: /Trip to Rome/ })).toBeVisible();
     await page.getByRole("button", { name: "calendar" }).click();
     await page.getByRole("button", { name: "Next month" }).click();
     await expect(page.getByRole("link", { name: "Trip to Rome" }).first()).toBeVisible();

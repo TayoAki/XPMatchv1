@@ -8,28 +8,31 @@ import { mapActions, useMapView } from "@/lib/map-store";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { BottomSheet, type SheetSnap } from "@/components/ui/BottomSheet";
 import { GoogleMap } from "./GoogleMap";
+import { MapFilters } from "./MapFilters";
 import { PinStrip } from "./PinStrip";
 import { PlaceDetailSheet } from "./PlaceDetailSheet";
 import { iconSvg } from "./markerIcons";
 
 /**
  * Phones have no side column, so the map lives in a sheet over the chat: a "Map · N pinned" pill
- * while the conversation has pins; the sheet holds the map with the pinned list under it, and a
- * pin (or "View on map" on a card) opens the place detail as a second sheet stacked on top.
- * Closing the place returns to the map, closing the map returns to the same spot in the chat.
+ * while the conversation has pins; the sheet holds the map with the shared category filter and
+ * the pinned list under it, and a pin (or a recommendation row on a card) opens the place detail
+ * as a second sheet stacked on top. Closing the place returns to the map, closing the map returns
+ * to the same spot in the chat.
  */
 export function MobileMapSheet() {
   const wide = useMediaQuery("(min-width: 1280px)");
   const view = useMapView();
   const [opened, setOpened] = useState(false);
   const [snap, setSnap] = useState<SheetSnap>("half");
-  const { threadId, focus, placeList, selectedKey, hoveredKey, selected } = view;
+  const { threadId, focus, visiblePlaces, activeDestination, filter, selectedKey, hoveredKey, selected } = view;
   const onSelect = useCallback((key: string) => threadId && mapActions.selectPlace(threadId, key), [threadId]);
   const onHover = useCallback((key: string | null) => mapActions.setHovered(key), []);
   if (wide || !view.hasContent) return null;
 
-  const count = placeList.length;
+  const count = visiblePlaces.length;
   const label = count ? `Map · ${count} pinned` : "Map";
+  const cityName = activeDestination?.name ?? focus?.name;
   // Selecting a place from a card opens the sheets too; the map panel's own "hide" closes them.
   const open = (opened || !!selected) && !view.collapsed;
 
@@ -58,14 +61,24 @@ export function MobileMapSheet() {
         <MapIcon className="h-4 w-4" /> {label}
       </button>
 
-      <BottomSheet open={open} onClose={close} snap={snap} onSnapChange={setSnap} testId="mobile-map-sheet" label="Map" title={focus ? `${focus.name} · ${count} pinned` : label}>
+      <BottomSheet open={open} onClose={close} snap={snap} onSnapChange={setSnap} testId="mobile-map-sheet" label="Map" title={cityName ? `Explore ${cityName} · ${count} pinned` : label}>
         <div className="flex h-full min-h-0 flex-col">
           <div className={clsx("shrink-0", snap === "full" ? "h-[40dvh]" : "h-[200px]")} data-testid="map-panel">
-            <GoogleMap focus={focus} pins={placeList} selectedKey={selectedKey} hoveredKey={hoveredKey} onSelect={onSelect} onHover={onHover} />
+            <GoogleMap focus={focus} pins={visiblePlaces} selectedKey={selectedKey} hoveredKey={hoveredKey} onSelect={onSelect} onHover={onHover} />
           </div>
-          <PinStrip places={placeList} selectedKey={selectedKey} hoveredKey={hoveredKey} onSelect={onSelect} onHover={onHover} className="shrink-0 border-b border-border" />
+          {threadId ? (
+            <div className="flex shrink-0 items-center gap-2 overflow-x-auto px-3 pt-2 xp-no-scrollbar">
+              <MapFilters value={filter} onChange={(next) => mapActions.setFilter(threadId, next)} className="flex-nowrap" />
+              {activeDestination ? (
+                <button type="button" onClick={() => mapActions.setActiveDestination(threadId, null)} className="h-8 shrink-0 rounded-full border border-border px-3 text-[13px] font-semibold">
+                  All places
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+          <PinStrip places={visiblePlaces} selectedKey={selectedKey} hoveredKey={hoveredKey} onSelect={onSelect} onHover={onHover} className="shrink-0 border-b border-border" />
           <ul className="xp-scroll min-h-0 flex-1 overflow-y-auto px-2 py-2" data-testid="mobile-pin-list" aria-label="Pinned places">
-            {placeList.map((p) => {
+            {visiblePlaces.map((p) => {
               const photo = p.photos?.[0];
               const meta = [p.rating ? `${p.rating.toFixed(1)}` : "", p.category, p.locality].filter(Boolean);
               return (
@@ -92,7 +105,7 @@ export function MobileMapSheet() {
                 </li>
               );
             })}
-            {count === 0 ? <li className="px-3 py-6 text-center text-[13px] text-muted">Places the assistant recommends show up here.</li> : null}
+            {count === 0 ? <li className="px-3 py-6 text-center text-[13px] text-muted">{filter === "all" ? "Places the assistant recommends show up here." : "Nothing in this category yet. Try All."}</li> : null}
           </ul>
         </div>
       </BottomSheet>

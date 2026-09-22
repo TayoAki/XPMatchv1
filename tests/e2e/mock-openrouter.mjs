@@ -86,6 +86,39 @@ const HOTELS = {
   ],
 };
 
+// Destination cards: both cities resolve in the Places stub; only Rome has stays, dining and sights there.
+const DESTINATIONS = {
+  title: "Two places that fit you",
+  destinations: [
+    {
+      name: "Rome",
+      country: "Italy",
+      tagline: "Ancient streets, long lunches, golden light.",
+      whyItFits: "Museums and trattorias on every block match your love of art and food.",
+      bestTime: "April to June, September to October",
+      estimatedDailyBudgetUsd: 180,
+      highlights: ["Colosseum at opening time", "Trastevere trattorias", "Galleria Borghese"],
+      vibes: ["food", "history", "walkable"],
+      suggestedStay: "3–4 nights",
+      cityFeel: "Layered & lively",
+      knownFor: "Food & antiquity",
+    },
+    {
+      name: "Kyoto",
+      country: "Japan",
+      tagline: "Temples, gardens and quiet mornings.",
+      whyItFits: "A slower pace with world-class craft and kaiseki dining.",
+      bestTime: "Late March, November",
+      estimatedDailyBudgetUsd: 160,
+      highlights: ["Fushimi Inari at dawn", "Nishiki Market", "Arashiyama bamboo grove"],
+      vibes: ["culture", "nature", "calm"],
+      suggestedStay: "2–3 nights",
+      cityFeel: "Serene & refined",
+      knownFor: "Temples & craft",
+    },
+  ],
+};
+
 const server = http.createServer((req, res) => {
   let body = "";
   req.on("data", (d) => (body += d));
@@ -377,6 +410,9 @@ const server = http.createServer((req, res) => {
           },
         },
       });
+    }
+    if (/where should (i|we) go|suggest .*destinations|destinations for|go this (fall|spring|summer|winter)/.test(text) && tools.includes("show_destinations")) {
+      return streamReply(res, { text: "Two places that fit you.", toolCall: { name: "show_destinations", args: DESTINATIONS } });
     }
     if (/visit|going to|headed/.test(text) && tools.includes("focus_map")) {
       return streamReply(res, { text: "Rome it is! Let me pull up the map.", toolCall: { name: "focus_map", args: { location: "Rome, Italy", reason: "traveler wants to visit" } } });

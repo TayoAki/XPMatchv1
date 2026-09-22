@@ -90,7 +90,8 @@ test("taste: reactions on cards and the sheet, Your taste, model context, chat f
     const sheet = page.getByTestId("place-sheet");
     await expect(sheet).toBeVisible();
     await sheet.getByRole("button", { name: "Rate Hotel de Russie" }).click();
-    const dialog = sheet.getByRole("dialog", { name: "Rate Hotel de Russie" });
+    // The rating panel floats from the document root, outside the sheet's box.
+    const dialog = page.getByRole("dialog", { name: "Rate Hotel de Russie" });
     await dialog.getByRole("button", { name: "Not for me" }).click();
     await dialog.getByRole("button", { name: "Noisy", exact: true }).click();
     await dialog.getByRole("button", { name: "Done" }).click();

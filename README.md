@@ -50,6 +50,12 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   feedback. Admins see the hit rate. Card sets in chat and the home picks are horizontal rows that
   the thumbs reorder: a thumbs-down slides the card to the end of the row and greys it out, a
   thumbs-up brings it to the front, the same thumb again undoes it.
+- **Destination cards with a city profile** — a photo face (hover on a desktop, tap on a phone) flips
+  to quick facts, "Your match" and Overview / Stays / Activities / Dining tabs of this traveler's
+  scored picks for the city; selecting a card scopes the map to that city ("Explore Rome") behind one
+  All / Stays / Dining / Experiences filter the card's tabs mirror, a row shows that place on the map,
+  and every card ends in Add to trip and Save. A first "Add to trip" creates the trip in one step; a
+  trip tray on the map keeps the trip so far in view.
 - **Learns tastes with your say-so** — when you mention a lasting preference in chat, a "Remember
   this?" card offers **Always / For this trip / No thanks** (`remember_preference`, human-in-the-loop).
   "Update my assistant" lists everything learned with delete buttons and a "Learn from our chats"

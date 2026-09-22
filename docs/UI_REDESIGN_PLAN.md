@@ -491,3 +491,34 @@ expectation was a row. Shipped:
 - **Popovers that escape the row**: "Why this score" and "Why is X a miss?" now float from the
   document root (`src/components/ui/Floating.tsx`), anchored to their trigger and flipping above it when
   there is no room below, so a scrolling row or the chat can no longer clip them.
+
+### Round 4: the frontend handoff (two-face destination cards, the map scoped to a city)
+
+Built from the "xpmatch — Conversational travel planning and interactive destination cards" handoff
+(v1.0, 22 September 2026) with three decisions taken over the spec: hover reveals the profile on
+desktops and a tap does on phones, the swipe row stays on phones, and the profile scrolls inside a
+fixed-height card. The match score and thumbs stay on the cards (the spec's "no percentages" was
+overruled).
+
+- **`DestinationCard`** (`src/components/chat/cards/DestinationCards.tsx`): a 560 px `article` with a
+  face viewport (`.xp-flip`, Y rotation, 300 ms, `backface-visibility`; a crossfade under reduced
+  motion) and a footer outside the rotating element. State: `face` (photo | profile) and `reveal`
+  (closed | hover | pinned); fine pointers reveal after 250 ms and hide 300 ms after leaving the whole
+  card unless pinned; City profile, the photo, the name, a tab, a row or focus pin it; Photo returns
+  and re-arms hover only after the pointer leaves; the hidden face is `inert` and `aria-hidden`; the
+  explicit flips move focus to the counterpart control.
+- **Data**: `show_destinations` gained optional `suggestedStay`, `cityFeel` and `knownFor` for the
+  quick facts (`bestTime` is the fourth); the tabs read the Discover picks endpoint through
+  `src/lib/recs/destination-picks.ts` (one request per destination per session, on pin or tab, never
+  on hover); Overview shows the model's highlights as "Find options" drafts (`draft.ts` fills the
+  composer without sending) until the picks arrive.
+- **Map scope** (`src/lib/map-store.ts`): `activeDestination`, `filter` and `tripId` per thread;
+  scoped pins (`MapPlace.scope`) replace a city's earlier set; `visiblePlaces` applies the scope (a
+  card pin within 40 km counts) and the filter; a new answer's unscoped pins clear the scope. The map
+  header ("Explore {city}", the count, `MapFilters`) and the phone sheet share it; `TripTray` shows
+  the thread's trip.
+- **Add to trip**: no trips yet → the trip is created from the destination and the item added in one
+  step (`AddToTripDialog`); the chosen trip is remembered on the thread (`threadId` on the request).
+- Not built from the spec: the 216 px navigation (the rail stays), the microphone and the
+  conversation-level Save (dropped, as the spec allows), the 3D flip on touch (tap flips without
+  hover timers), and the "View in conversation" action in the place panel.

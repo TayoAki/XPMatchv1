@@ -98,7 +98,8 @@ test("discover: hero photo and attribution, planner fields, create a trip, colle
     await page.getByLabel("Describe your ideal escape").fill("Find hotels in Rome");
     await send.click();
     await page.waitForURL(/\/chat/);
-    await expect(page.getByText("Where to stay in Rome")).toBeVisible({ timeout: 60_000 });
+    // Scoped to the chat: the side panel's picks carry a "Where to stay in Rome" row of their own.
+    await expect(page.locator(".xp-chat").getByText("Where to stay in Rome")).toBeVisible({ timeout: 60_000 });
     await expect(page.getByTestId("concierge-launcher")).toHaveCount(0);
   });
 

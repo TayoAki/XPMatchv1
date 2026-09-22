@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import clsx from "clsx";
 import { Meh, SmilePlus, ThumbsDown, ThumbsUp, X } from "lucide-react";
 import type { PlaceKind, ResolvedPlace } from "@/lib/places/types";
 import { useTravelStore } from "@/lib/store";
 import { findFeedback, reasonChips, VERDICT_LABEL, type FeedbackSource, type FeedbackVerdict, type PlaceFeedback } from "@/lib/feedback/types";
 import { useTripScope } from "@/components/trips/TripScope";
+import { Floating } from "@/components/ui/Floating";
 
 export interface ReactionTarget {
   name?: string;
@@ -60,15 +61,6 @@ export function ReactionControl({ className, size = "md", ...target }: ReactionT
   const [note, setNote] = useState(current?.note ?? "");
   const rootRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [open]);
-
   if (!target.name) return null;
   const name = target.name;
   const verdict = current?.verdict;
@@ -108,8 +100,8 @@ export function ReactionControl({ className, size = "md", ...target }: ReactionT
         {verdict ? VERDICT_LABEL[verdict] : "Rate"}
         {verdict && current?.reasons.length && size !== "sm" ? <span className="text-[12px] opacity-80">· {current.reasons.slice(0, 2).join(", ")}</span> : null}
       </button>
-      {open ? (
-        <div role="dialog" aria-label={`Rate ${name}`} className={clsx("absolute z-30 w-[300px] rounded-2xl border border-border bg-white p-3 text-left shadow-xl", size === "lg" ? "right-0 top-12" : "left-0 top-9")}>
+      {/* Floats from the document root, so a card row, the map column or a sheet never clips it. */}
+      <Floating anchor={rootRef} open={open} onClose={done} label={`Rate ${name}`} width={300}>
           <div className="flex items-center justify-between">
             <div className="text-[13px] font-semibold">How was {name}?</div>
             <button type="button" onClick={() => setOpen(false)} aria-label="Close rating" className="rounded-full p-1 text-neutral-500 hover:bg-surface">
@@ -175,8 +167,7 @@ export function ReactionControl({ className, size = "md", ...target }: ReactionT
           ) : (
             <p className="mt-2 text-[12px] text-muted">Pick one; you can add why afterwards. Reactions shape what XPMatch suggests next.</p>
           )}
-        </div>
-      ) : null}
+      </Floating>
     </div>
   );
 }

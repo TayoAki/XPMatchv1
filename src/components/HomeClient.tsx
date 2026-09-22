@@ -28,7 +28,7 @@ export function HomeClient({ threadId, initialPrompt, tripId }: { threadId?: str
           <TripBoardSheet />
         </section>
         {wide ? (
-          <aside className="w-[44%] min-w-[420px] max-w-[900px] shrink-0 border-l border-border/60 bg-white">
+          <aside className="w-[clamp(360px,30vw,520px)] shrink-0 border-l border-border/60 bg-white">
             <RightPanel />
           </aside>
         ) : null}

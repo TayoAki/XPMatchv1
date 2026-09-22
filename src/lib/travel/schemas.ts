@@ -22,6 +22,9 @@ export const destinationSchema = z.object({
     .describe("Realistic mid-range daily budget per person in USD, excluding flights"),
   highlights: z.array(z.string()).describe("3-5 short highlights (places, foods, experiences)"),
   vibes: z.array(z.string()).describe("2-4 vibe tags, e.g. 'food', 'beach', 'nightlife'"),
+  suggestedStay: z.string().optional().describe("How long to give it, e.g. '2–3 nights'"),
+  cityFeel: z.string().optional().describe("How the city feels, in two or three words, e.g. 'Creative & lively'"),
+  knownFor: z.string().optional().describe("What it is known for, in two or three words, e.g. 'Food & culture'"),
 });
 
 export const showDestinationsSchema = z.object({

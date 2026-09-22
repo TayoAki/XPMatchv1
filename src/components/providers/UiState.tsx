@@ -17,6 +17,8 @@ export interface AddToTripRequest {
   /** Preselected trip, e.g. the trip whose page or chat is open. */
   tripId?: string;
   note?: string;
+  /** The conversation the request came from; it remembers the trip chosen for later adds. */
+  threadId?: string;
 }
 
 interface UiStateValue {

@@ -67,6 +67,9 @@ export function TravelChat({ threadId, initialPrompt, tripId }: { threadId?: str
     copilotkit.runAgent({ agent }).catch((err) => console.error("XPMatch: runAgent failed", err));
   }, [initialPrompt, isReady, agent, copilotkit, router, tripId]);
 
+  // The conversation's title over the transcript once it has one (the first message names it).
+  const chatTitle = chats.find((c) => c.id === agent.threadId)?.title;
+
   const toolsMenu = useMemo(
     () => [
       { label: "Import inspiration (link or screenshot)", action: () => openImport() },
@@ -88,6 +91,12 @@ export function TravelChat({ threadId, initialPrompt, tripId }: { threadId?: str
         </div>
       ) : null}
       {tripId ? <TripChatScope tripId={tripId} threadId={agent.threadId} /> : null}
+      {chatTitle && messageCount > 0 ? (
+        <div className="shrink-0 border-b border-border/60 bg-canvas px-4 py-3 pr-44 sm:px-6 sm:pr-44 xl:pr-6" data-testid="chat-header">
+          <h1 className="truncate font-serif text-[22px] leading-tight">{chatTitle}</h1>
+          <p className="text-[13px] text-muted">Your personal travel concierge</p>
+        </div>
+      ) : null}
       <CopilotChat
         className="min-h-0 flex-1"
         threadId={threadId}
