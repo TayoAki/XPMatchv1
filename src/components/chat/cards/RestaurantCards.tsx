@@ -1,11 +1,10 @@
 "use client";
 
-import { MapPin } from "lucide-react";
 import { ToolCallStatus } from "@copilotkit/core";
 import type { ShowRestaurantsArgs, Streaming } from "@/lib/travel/schemas";
-import { googleMapsSearchUrl, openTableSearchUrl } from "@/lib/travel/links";
+import { googleMapsSearchUrl } from "@/lib/travel/links";
 import { placeKey, usePlacePin, useRegisterPlaces } from "@/components/map/useRegisterPlaces";
-import { CardPhoto, AddToTripButton, Body, CardRow, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Tag, Text, Tradeoffs, ViewOnMapButton } from "./shared";
+import { CardPhoto, AddToTripButton, Body, CardActions, CardRow, CardShell, SaveButton, SectionHeader, Tag, Text, Tradeoffs } from "./shared";
 import { CompareToggle } from "./CompareControls";
 import { HiddenPlaceCard, ReactionControl, useReaction } from "@/components/feedback/ReactionControl";
 import { TasteFit } from "@/components/feedback/TasteFit";
@@ -58,8 +57,19 @@ function RestaurantCard({
                     <div className="text-[15px] font-semibold">{r.name}</div>
                     <SaveButton place={pin.place} kind="restaurant" title={r.name} subtitle={[r.cuisine, dest].filter(Boolean).join(" · ")} destination={dest} url={googleMapsSearchUrl(query)} className="bg-surface shadow-none" />
                   </div>
-                  <div className="text-[13px] text-muted">
-                    <Text value={[r.cuisine, r.neighborhood, r.priceTier].filter(Boolean).join(" · ")} />
+                  {/* Cuisine, area and price, with Compare across from it. */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0 truncate text-[13px] text-muted">
+                      <Text value={[r.cuisine, r.neighborhood, r.priceTier].filter(Boolean).join(" · ")} />
+                    </div>
+                    <CompareToggle
+                      pinKey={placeKey(toolCallId, index)}
+                      name={r.name}
+                      kind="restaurant"
+                      facts={[r.cuisine, r.neighborhood, r.priceTier].filter(Boolean).join(", ")}
+                      place={pin.place}
+                      size="sm"
+                    />
                   </div>
                   <div className="mt-1 text-[13px]">
                     <span className="font-medium">Must try: </span>
@@ -91,22 +101,11 @@ function RestaurantCard({
                   className="pt-1"
                 />
               </Body>
-              <Footer>
-                <ExtLink primary href={googleMapsSearchUrl(query)}>
-                  <MapPin className="h-3.5 w-3.5" /> Map & hours
-                </ExtLink>
-                {r.reservationRecommended ? <ExtLink href={openTableSearchUrl(query)}>Reserve</ExtLink> : null}
-                <ViewOnMapButton pin={pin} />
-                <AddToTripButton place={pin.place} />
-                <ReactionControl name={r.name} kind="restaurant" place={pin.place} destination={dest} source="card" />
-                <CompareToggle
-                  pinKey={placeKey(toolCallId, index)}
-                  name={r.name}
-                  kind="restaurant"
-                  facts={[r.cuisine, r.neighborhood, r.priceTier].filter(Boolean).join(", ")}
-                  place={pin.place}
-                />
-              </Footer>
+              {/* Hours, maps and reservations live in the place panel (a tap on the photo). */}
+              <CardActions>
+                <AddToTripButton place={pin.place} primary />
+                <ReactionControl name={r.name} kind="restaurant" place={pin.place} destination={dest} source="card" size="sm" />
+              </CardActions>
             </CardShell>
   );
 }

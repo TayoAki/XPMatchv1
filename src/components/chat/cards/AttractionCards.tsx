@@ -1,11 +1,11 @@
 "use client";
 
-import { Clock, MapPin, Ticket } from "lucide-react";
+import { Clock, Ticket } from "lucide-react";
 import { ToolCallStatus } from "@copilotkit/core";
 import type { ShowAttractionsArgs, Streaming } from "@/lib/travel/schemas";
-import { getYourGuideSearchUrl, googleMapsSearchUrl } from "@/lib/travel/links";
+import { googleMapsSearchUrl } from "@/lib/travel/links";
 import { placeKey, usePlacePin, useRegisterPlaces } from "@/components/map/useRegisterPlaces";
-import { CardPhoto, AddToTripButton, Body, CardRow, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Tag, Text, Tradeoffs, ViewOnMapButton } from "./shared";
+import { CardPhoto, AddToTripButton, Body, CardActions, CardRow, CardShell, SaveButton, SectionHeader, Tag, Text, Tradeoffs } from "./shared";
 import { CompareToggle } from "./CompareControls";
 import { HiddenPlaceCard, ReactionControl, useReaction } from "@/components/feedback/ReactionControl";
 import { TasteFit } from "@/components/feedback/TasteFit";
@@ -57,8 +57,19 @@ function AttractionCard({
               </CardPhoto>
               <Body>
                 <div className="text-[15px] font-semibold">{a.name}</div>
-                <div className="text-[13px] text-muted">
-                  <Text value={a.neighborhood} />
+                {/* The area, with Compare across from it. */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0 truncate text-[13px] text-muted">
+                    <Text value={[a.neighborhood, a.category].filter(Boolean).join(" · ")} />
+                  </div>
+                  <CompareToggle
+                    pinKey={placeKey(toolCallId, index)}
+                    name={a.name}
+                    kind="attraction"
+                    facts={[a.category, a.neighborhood, a.durationHours ? `${a.durationHours}h` : "", a.ticketNote].filter(Boolean).join(", ")}
+                    place={pin.place}
+                    size="sm"
+                  />
                 </div>
                 <p className="text-[13px] text-neutral-700">
                   <Text value={a.description} lines={2} />
@@ -92,22 +103,11 @@ function AttractionCard({
                   className="pt-1"
                 />
               </Body>
-              <Footer>
-                <ExtLink primary href={googleMapsSearchUrl(query)}>
-                  <MapPin className="h-3.5 w-3.5" /> Map
-                </ExtLink>
-                <ExtLink href={getYourGuideSearchUrl(query)}>Tickets & tours</ExtLink>
-                <ViewOnMapButton pin={pin} />
-                <AddToTripButton place={pin.place} />
-                <ReactionControl name={a.name} kind="attraction" place={pin.place} destination={dest} source="card" />
-                <CompareToggle
-                  pinKey={placeKey(toolCallId, index)}
-                  name={a.name}
-                  kind="attraction"
-                  facts={[a.category, a.neighborhood, a.durationHours ? `${a.durationHours}h` : "", a.ticketNote].filter(Boolean).join(", ")}
-                  place={pin.place}
-                />
-              </Footer>
+              {/* Maps and tickets live in the place panel (a tap on the photo). */}
+              <CardActions>
+                <AddToTripButton place={pin.place} primary />
+                <ReactionControl name={a.name} kind="attraction" place={pin.place} destination={dest} source="card" size="sm" />
+              </CardActions>
             </CardShell>
   );
 }

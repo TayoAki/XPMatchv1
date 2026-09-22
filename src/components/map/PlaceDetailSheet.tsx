@@ -5,7 +5,7 @@ import clsx from "clsx";
 import { ExternalLink, Heart, PanelLeftClose, Plus, Sparkles, Star, X } from "lucide-react";
 import { findSaved, useTravelStore } from "@/lib/store";
 import { fetchPlaceDetails } from "@/lib/places/client";
-import { googleMapsSearchUrl, wikipediaSummaryUrl } from "@/lib/travel/links";
+import { bookingSearchUrl, getYourGuideSearchUrl, googleHotelsUrl, googleMapsSearchUrl, openTableSearchUrl, wikipediaSummaryUrl } from "@/lib/travel/links";
 import type { PlaceDetails, PlaceKind, ResolvedPlace } from "@/lib/places/types";
 import { PlaceImage } from "@/components/ui/PlaceImage";
 import { PhotoCredit } from "@/components/ui/PhotoCredit";
@@ -107,6 +107,7 @@ export function PlaceDetailSheet({
   const isSaved = !!findSaved(saved, { kind: place.kind, title: place.name, refId: place.source === "google" ? place.id : undefined });
   const isDestination = place.kind === "destination";
   const mapsUrl = data.googleMapsUri ?? googleMapsSearchUrl(`${place.name}${place.locality ? `, ${place.locality}` : ""}`);
+  const bookingQuery = [place.name, data.locality ?? focusName].filter(Boolean).join(", ");
 
   const save = () =>
     toggleSaved({
@@ -259,7 +260,26 @@ export function PlaceDetailSheet({
                   </ul>
                 </div>
               ) : null}
-              <div className="mt-5 flex flex-wrap gap-2 text-[14px]">
+              <div className="mt-5 flex flex-wrap gap-2 text-[14px]" data-testid="place-links">
+                {/* Live inventory by kind: the cards keep to one action, so booking starts here. */}
+                {place.kind === "hotel" ? (
+                  <>
+                    <a href={bookingSearchUrl({ query: bookingQuery })} target="_blank" rel="noreferrer noopener" className="inline-flex h-9 items-center gap-1.5 rounded-full bg-brand px-3 font-semibold text-white hover:bg-brand-hover">
+                      Check rates <ExternalLink className="h-3.5 w-3.5 opacity-80" />
+                    </a>
+                    <a href={googleHotelsUrl(bookingQuery)} target="_blank" rel="noreferrer noopener" className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3 font-medium hover:bg-surface">
+                      Google Hotels <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  </>
+                ) : place.kind === "restaurant" ? (
+                  <a href={openTableSearchUrl(bookingQuery)} target="_blank" rel="noreferrer noopener" className="inline-flex h-9 items-center gap-1.5 rounded-full bg-brand px-3 font-semibold text-white hover:bg-brand-hover">
+                    Reserve <ExternalLink className="h-3.5 w-3.5 opacity-80" />
+                  </a>
+                ) : place.kind === "attraction" ? (
+                  <a href={getYourGuideSearchUrl(bookingQuery)} target="_blank" rel="noreferrer noopener" className="inline-flex h-9 items-center gap-1.5 rounded-full bg-brand px-3 font-semibold text-white hover:bg-brand-hover">
+                    Tickets &amp; tours <ExternalLink className="h-3.5 w-3.5 opacity-80" />
+                  </a>
+                ) : null}
                 {data.websiteUri ? (
                   <a href={data.websiteUri} target="_blank" rel="noreferrer noopener" className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3 font-medium hover:bg-surface">
                     Website <ExternalLink className="h-3.5 w-3.5" />

@@ -522,3 +522,8 @@ overruled).
 - Not built from the spec: the 216 px navigation (the rail stays), the microphone and the
   conversation-level Save (dropped, as the spec allows), the 3D flip on touch (tap flips without
   hover timers), and the "View in conversation" action in the place panel.
+- **The other cards follow the hierarchy** (feedback on the first deploy: the hotel card still had six
+  buttons): hotel, restaurant and attraction cards keep one main action, Add to trip, with Rate in the
+  bottom-right corner and Compare across from the category line; View on map is gone (the photo opens
+  the panel), and Check rates, Google Hotels, Reserve and Tickets & tours moved into the place panel's
+  Overview, built from the place's name and locality. Amenity chips are capped at three.

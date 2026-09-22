@@ -141,11 +141,14 @@ scheduling chip open the itinerary board as a full-height sheet (short map, then
    list searches), so the first traveler there pays cents and the next ones nothing.
 3. **Recommendations** — the assistant renders cards for destinations, hotels, flights, restaurants and
    things to do, each set as one **row** that scrolls sideways (snapping card by card, arrows on
-   pointer devices, a swipe on phones) rather than a grid to scroll down through. Each card links to
-   live inventory (Google Flights, Booking.com/Google Hotels, Google Maps, OpenTable, GetYourGuide) and
-   has **Save** (heart), **View on map**, **Add to trip** and **Compare**. Hotels, restaurants and
-   attractions are resolved through Google Places and pinned on the map; hovering a card highlights
-   its pin and vice versa. Under the reasons to like a pick, amber
+   pointer devices, a swipe on phones) rather than a grid to scroll down through. A hotel, restaurant
+   or attraction card keeps to one main action, **Add to trip**, with **Rate** in its bottom-right
+   corner, **Compare** across from the category line and the **Save** heart on the photo; tapping the
+   photo opens the place panel, where the live inventory links live (Check rates on Booking.com and
+   Google Hotels for a stay, Reserve on OpenTable for a restaurant, Tickets & tours on GetYourGuide for
+   an attraction, plus the website and Google Maps). Flight cards link to Google Flights. Hotels,
+   restaurants and attractions are resolved through Google Places and pinned on the map; hovering a
+   card highlights its pin and vice versa. Under the reasons to like a pick, amber
    **Heads-up** chips name its honest downsides for this traveler ("Busy street, ask for a courtyard room",
    "Well over $250/night"); a pick that conflicts with one of the traveler's dealbreakers says so.
    Every destination, hotel, restaurant and attraction card then carries a **match score** ("Good match

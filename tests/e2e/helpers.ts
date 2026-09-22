@@ -73,6 +73,13 @@ export async function signup(page: Page, options: OnboardingAnswers & { name?: s
   await completeOnboarding(page, options);
   // Signing up lands on Discover; the hero is the sign the shell is up and the wizard is gone.
   await page.getByRole("heading", { name: /Go somewhere that stays with you/ }).waitFor({ timeout: 15_000 });
+  // The wizard closes before its keepalive save lands. Leaving the page right away can let the next
+  // page hydrate from the old profile and reopen the wizard, so wait until the save is on the server.
+  await eventually(
+    () => page.request.get("/api/me/state").then((r) => r.json() as Promise<{ profile: { onboarded: boolean } }>),
+    (state) => state.profile.onboarded === true,
+    60,
+  );
 }
 
 /** Opens the concierge page unless it is already the page on screen (a chat, a thread or a trip-scoped chat). */

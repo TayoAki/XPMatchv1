@@ -152,22 +152,36 @@ export function CardPhoto({
   );
 }
 
-/** Opens the trip picker for a resolved place (hidden until the pin is known); the conversation's trip is preselected. */
-export function AddToTripButton({ place }: { place?: ResolvedPlace }) {
+/**
+ * Opens the trip picker for a place; the conversation's trip is preselected. The plain button
+ * hides until the pin is known; the `primary` one (a card's main action) shows at once and waits.
+ */
+export function AddToTripButton({ place, primary = false }: { place?: ResolvedPlace; primary?: boolean }) {
   const { openAddToTrip } = useUiState();
   const tripScope = useTripScope();
   const threadId = useCardThreadId();
   const view = useMapView(threadId);
-  if (!place) return null;
+  if (!place && !primary) return null;
   return (
     <button
       type="button"
-      onClick={() => openAddToTrip({ place, tripId: tripScope ?? view.tripId ?? undefined, threadId: threadId ?? undefined })}
-      className="inline-flex h-8 items-center gap-1.5 rounded-full bg-surface px-3 text-[13px] font-medium transition-colors hover:bg-surface-2"
+      disabled={!place}
+      title={place ? undefined : "Finding it on the map…"}
+      onClick={() => place && openAddToTrip({ place, tripId: tripScope ?? view.tripId ?? undefined, threadId: threadId ?? undefined })}
+      className={
+        primary
+          ? "inline-flex h-10 items-center gap-1.5 rounded-full bg-brand px-4 text-[14px] font-semibold text-white transition-colors hover:bg-brand-hover disabled:cursor-wait disabled:bg-brand/50"
+          : "inline-flex h-8 items-center gap-1.5 rounded-full bg-surface px-3 text-[13px] font-medium transition-colors hover:bg-surface-2"
+      }
     >
-      <Plus className="h-3.5 w-3.5" /> Add to trip
+      <Plus className={primary ? "h-4 w-4" : "h-3.5 w-3.5"} /> Add to trip
     </button>
   );
+}
+
+/** A card's closing row: the main action on the left, the rating in the bottom-right corner. */
+export function CardActions({ children }: { children: ReactNode }) {
+  return <div className="mt-auto flex items-center justify-between gap-2 px-4 pb-4 pt-2">{children}</div>;
 }
 
 export function SectionHeader({

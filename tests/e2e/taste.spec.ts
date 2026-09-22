@@ -86,7 +86,8 @@ test("taste: reactions on cards and the sheet, Your taste, model context, chat f
   });
 
   await test.step("rating from the place sheet; two Noisy dislikes become a learned preference", async () => {
-    await page.getByRole("button", { name: "View on map" }).first().click();
+    // Scoped to the chat: the map's pin strip offers the same "Open …" mini card.
+    await page.locator(".xp-chat").getByRole("button", { name: "Open Hotel de Russie" }).click();
     const sheet = page.getByTestId("place-sheet");
     await expect(sheet).toBeVisible();
     await sheet.getByRole("button", { name: "Rate Hotel de Russie" }).click();

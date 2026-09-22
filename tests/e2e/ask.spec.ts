@@ -10,9 +10,12 @@ test("questions answered from reviews in the sheet and in chat", async ({ page }
   await test.step("hotel cards, then the sheet of one hotel", async () => {
     await sendChat(page, "Find hotels in Rome");
     await expect(page.getByText("Where to stay in Rome")).toBeVisible({ timeout: 40_000 });
-    await page.getByRole("button", { name: "View on map" }).first().click();
+    // The photo opens the place panel (the cards keep to one action). Scoped to the chat: the map's
+    // pin strip offers the same "Open …" mini card.
+    await page.locator(".xp-chat").getByRole("button", { name: "Open Hotel de Russie" }).click();
     await expect(page.getByTestId("place-sheet")).toBeVisible();
     await expect(page.getByTestId("place-sheet").getByRole("heading", { name: "Hotel de Russie" })).toBeVisible();
+    await expect(page.getByTestId("place-sheet").getByRole("link", { name: /Check rates/ })).toBeVisible();
   });
 
   await test.step("a suggested question is answered with a verbatim quote that also appears in Reviews", async () => {

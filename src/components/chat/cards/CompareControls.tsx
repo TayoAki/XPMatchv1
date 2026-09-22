@@ -9,7 +9,7 @@ import { useCardThreadId } from "@/components/map/useRegisterPlaces";
 import { useSendMessage } from "@/components/chat/useSendMessage";
 
 /** "Compare" toggle on a recommendation card. */
-export function CompareToggle({ pinKey, name, kind, facts, place }: { pinKey: string; name?: string; kind: PlaceKind; facts: string; place?: ResolvedPlace }) {
+export function CompareToggle({ pinKey, name, kind, facts, place, size = "md" }: { pinKey: string; name?: string; kind: PlaceKind; facts: string; place?: ResolvedPlace; size?: "sm" | "md" }) {
   const threadId = useCardThreadId();
   const selection = useCompareSelection(threadId);
   const selected = selection.some((o) => o.key === pinKey);
@@ -30,11 +30,12 @@ export function CompareToggle({ pinKey, name, kind, facts, place }: { pinKey: st
       title={full ? `Compare up to ${COMPARE_LIMIT} at a time` : selected ? "Remove from comparison" : "Add to comparison"}
       onClick={() => threadId && compareActions.toggle(threadId, option)}
       className={clsx(
-        "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40",
+        "inline-flex shrink-0 items-center gap-1.5 rounded-full font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40",
+        size === "sm" ? "h-7 px-2.5 text-[12px]" : "h-8 px-3 text-[13px]",
         selected ? "bg-brand text-white hover:bg-brand-hover" : "bg-surface hover:bg-surface-2",
       )}
     >
-      <Columns3 className="h-3.5 w-3.5" /> {selected ? "Comparing" : "Compare"}
+      <Columns3 className={size === "sm" ? "h-3 w-3" : "h-3.5 w-3.5"} /> {selected ? "Comparing" : "Compare"}
     </button>
   );
 }
