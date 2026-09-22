@@ -294,7 +294,7 @@ export function HomePicks({ options, initialKey, compact = false }: { options: F
                 {row.basedOn.length ? <span className="truncate text-[12px] text-muted">Because you like {row.basedOn.slice(0, 2).join(" and ")}</span> : null}
               </div>
               {row.flat ? (
-                <button type="button" onClick={openAssistant} className="mt-0.5 text-[12px] text-muted underline-offset-2 hover:text-foreground hover:underline" data-testid="flat-row-notice">
+                <button type="button" onClick={openAssistant} className="mt-0.5 text-left text-[12px] text-muted underline-offset-2 hover:text-foreground hover:underline" data-testid="flat-row-notice">
                   Nothing in your profile tells these apart yet · Update my assistant
                 </button>
               ) : null}
