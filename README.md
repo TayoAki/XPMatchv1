@@ -65,7 +65,8 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   applied" for what could not be mapped, and every edit re-runs the search. Explore parses price
   words, ratings and "open now" into Google Places filters and shows the same kind of chips.
 - **Honest heads-ups** — every hotel, restaurant, attraction and flight card carries `tradeoffs`:
-  amber chips with the downsides for this traveler, including any conflict with a dealbreaker.
+  the downsides for this traveler, including any conflict with a dealbreaker, folded into one amber
+  "2 heads-ups" chip whose list opens as a tooltip (hover or focus on a desktop, a tap on a phone).
 - **Side-by-side comparison** — Compare on two or three cards → floating bar → `compare_options`
   card: your priorities as rows with strong / ok / weak / unknown verdicts, Price, Rating (Google's
   numbers when the option is pinned), Location, Strengths, Compromises and Couldn't verify, with Map,

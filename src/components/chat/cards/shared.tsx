@@ -1,6 +1,6 @@
 "use client";
 
-import { Children, useMemo, useState, type HTMLAttributes, type MouseEvent, type ReactNode } from "react";
+import { Children, useMemo, useRef, useState, type HTMLAttributes, type MouseEvent, type ReactNode } from "react";
 import clsx from "clsx";
 import { ExternalLink, Heart, MapPin, Plus, TriangleAlert } from "lucide-react";
 import { ToolCallStatus } from "@copilotkit/core";
@@ -14,6 +14,7 @@ import { useCardThreadId } from "@/components/map/useRegisterPlaces";
 import { PlaceImage } from "@/components/ui/PlaceImage";
 import { PhotoCredit } from "@/components/ui/PhotoCredit";
 import { Carousel } from "@/components/ui/Carousel";
+import { Floating } from "@/components/ui/Floating";
 
 export interface CardRowItem {
   /** Stable within the set: the card keeps it while the row reorders. */
@@ -232,19 +233,73 @@ export function Tag({ children, tone = "neutral" }: { children: ReactNode; tone?
   );
 }
 
-/** Amber "Heads-up" chips: the honest downsides of a pick for this traveler. */
-export function Tradeoffs({ items }: { items?: (string | undefined)[] }) {
+/** Whether focus came from the keyboard (a pointer press focuses too, but must not open a tooltip). */
+function focusVisible(el: Element): boolean {
+  try {
+    return el.matches(":focus-visible");
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * The honest downsides of a pick, folded into one amber "2 heads-ups" chip so the card stays short
+ * and easy to scan. The list opens as a tooltip: hover or keyboard focus shows it on pointer
+ * devices; a tap pins it open on phones, and another tap, Escape or a press elsewhere closes it.
+ */
+export function Tradeoffs({ items, name }: { items?: (string | undefined)[]; name?: string }) {
+  const [hover, setHover] = useState(false);
+  const [focus, setFocus] = useState(false);
+  const [pinned, setPinned] = useState(false);
+  const anchorRef = useRef<HTMLButtonElement>(null);
   const list = (items ?? []).filter((t): t is string => typeof t === "string" && t.trim() !== "").slice(0, 3);
   if (list.length === 0) return null;
+  const open = pinned || hover || focus;
+  const closeAll = () => {
+    setPinned(false);
+    setHover(false);
+    setFocus(false);
+  };
+  const count = list.length === 1 ? "1 heads-up" : `${list.length} heads-ups`;
+  const who = name ? ` for ${name}` : "";
   return (
-    <ul className="flex flex-wrap gap-1.5 pt-1" aria-label="Heads-up" data-testid="tradeoffs">
-      {list.map((t) => (
-        <li key={t} className="inline-flex items-start gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[12px] font-medium text-amber-800">
-          <TriangleAlert className="mt-0.5 h-3 w-3 shrink-0" />
-          <span>{t}</span>
-        </li>
-      ))}
-    </ul>
+    <>
+      <button
+        ref={anchorRef}
+        type="button"
+        data-testid="tradeoffs"
+        aria-label={`${count}${who}`}
+        aria-expanded={open}
+        onPointerEnter={(e) => {
+          if (e.pointerType !== "touch") setHover(true);
+        }}
+        onPointerLeave={() => setHover(false)}
+        onFocus={(e) => setFocus(focusVisible(e.currentTarget))}
+        onBlur={() => setFocus(false)}
+        onClick={() => {
+          if (open) closeAll();
+          else setPinned(true);
+        }}
+        className="ml-auto inline-flex h-6 shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2 text-[12px] font-medium text-amber-800 transition-colors hover:bg-amber-100"
+      >
+        <TriangleAlert className="h-3 w-3" />
+        {count}
+      </button>
+      <Floating anchor={anchorRef} open={open} onClose={closeAll} label={`Heads-up${who}`} role="tooltip" width={260}>
+        <div className="flex items-center gap-1.5 text-[13px] font-semibold text-amber-800">
+          <TriangleAlert className="h-3.5 w-3.5" /> Heads-up
+        </div>
+        <ul className="mt-1.5 grid gap-1 text-[12px] text-neutral-700">
+          {list.map((t) => (
+            <li key={t} className="flex items-start gap-1.5">
+              <span className="mt-[6px] h-1 w-1 shrink-0 rounded-full bg-amber-500" aria-hidden="true" />
+              <span>{t}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-2 text-[11px] text-muted">Worth knowing before you choose.</p>
+      </Floating>
+    </>
   );
 }
 

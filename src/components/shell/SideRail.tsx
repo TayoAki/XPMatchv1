@@ -35,9 +35,10 @@ function ChatHistory({ collapsed }: { collapsed: boolean }) {
   const visible = showAll ? chats : chats.slice(0, INITIAL_CHATS);
   if (collapsed) return null;
   return (
-    <div className="mb-1 ml-[22px] border-l border-border pl-2" data-testid="chat-nav-list">
+    // Set off from the Chats row above it, so the open chat's highlight never runs into the row's.
+    <div className="mb-2 ml-[22px] mt-2 border-l border-border pl-2" data-testid="chat-nav-list">
       {chats.length === 0 ? <p className="px-2 py-1.5 text-[12px] text-muted">No conversations yet.</p> : null}
-      <ul className="grid gap-0.5">
+      <ul className="grid gap-1">
         {visible.map((c) => {
           const active = c.id === threadId;
           const trip = c.tripId ? trips.find((t) => t.id === c.tripId) : undefined;

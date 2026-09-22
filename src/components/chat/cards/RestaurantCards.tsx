@@ -81,13 +81,14 @@ function RestaurantCard({
                 <p className="text-[13px] text-neutral-700">
                   <Text value={r.whyItFits} lines={2} />
                 </p>
-                <div className="flex flex-wrap gap-1.5 pt-1">
+                {/* Tags, with the heads-ups folded into one chip at the end of the row. */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
                   {r.bestFor ? <Tag>Best for {r.bestFor}</Tag> : null}
                   {r.reservationRecommended === true ? <Tag tone="warn">Book ahead</Tag> : null}
                   {r.reservationRecommended === false ? <Tag tone="accent">Walk-ins OK</Tag> : null}
+                  <Tradeoffs items={r.tradeoffs} name={r.name} />
                 </div>
                 <TasteFit kind="restaurant" name={r.name} category={pin.place?.category ?? r.cuisine} text={[r.whyItFits, r.cuisine, r.bestFor, r.mustTry].filter(Boolean).join(" ")} />
-                <Tradeoffs items={r.tradeoffs} />
                 <MatchLine
                   name={r.name}
                   kind="restaurant"

@@ -104,13 +104,14 @@ function HotelCard({
                 <p className="text-[13px] text-neutral-700">
                   <Text value={h.whyItFits} lines={2} />
                 </p>
-                <div className="flex flex-wrap gap-1.5 pt-1">
+                {/* Amenities, with the heads-ups folded into one chip at the end of the row. */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
                   {(h.amenities ?? []).filter(Boolean).slice(0, 3).map((a) => (
                     <Tag key={a}>{a}</Tag>
                   ))}
+                  <Tradeoffs items={h.tradeoffs} name={h.name} />
                 </div>
                 <TasteFit kind="hotel" name={h.name} category={pin.place?.category ?? h.style} text={[h.whyItFits, h.style, ...(h.amenities ?? [])].filter(Boolean).join(" ")} />
-                <Tradeoffs items={h.tradeoffs} />
                 <MatchLine
                   name={h.name}
                   kind="hotel"

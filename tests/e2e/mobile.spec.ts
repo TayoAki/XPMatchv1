@@ -119,6 +119,16 @@ test("phone: quiz in the Discover hero, picks, tab bar, card rows, proposal, she
     // Two cards side by side in a row wider than the phone, scrolling inside the row, not the page.
     await expect.poll(async () => row.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
     await expectFits(page, "the hotel cards");
+    // The heads-ups are one chip; a tap opens the list over the chat and another tap closes it.
+    // Tap once the turn is over: the cards re-render when the tool call completes.
+    await expect(page.getByText(/Done — those are on the cards above/)).toBeVisible({ timeout: 30_000 });
+    const headsUp = page.getByRole("button", { name: "1 heads-up for Hotel Artemide" });
+    await headsUp.scrollIntoViewIfNeeded();
+    await headsUp.tap();
+    const tip = page.getByRole("tooltip", { name: "Heads-up for Hotel Artemide" });
+    await expect(tip.getByText("Busy street, ask for a courtyard room")).toBeVisible();
+    await headsUp.tap();
+    await expect(tip).toBeHidden();
     const photo = page.getByRole("button", { name: "Open Hotel Artemide" });
     await photo.scrollIntoViewIfNeeded();
     await photo.click();

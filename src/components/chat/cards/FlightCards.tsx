@@ -56,10 +56,12 @@ function FlightCard({
           </div>
           <SaveButton kind="flight" title={`${o.airline} ${o.routeSummary ?? ""}`.trim()} subtitle={dates || undefined} destination={destination} url={searchUrl} className="bg-surface shadow-none" />
         </div>
-        <div className="flex flex-wrap gap-1.5 pt-1">
+        {/* Tags, with the heads-ups folded into one chip at the end of the row. */}
+        <div className="flex flex-wrap items-center gap-1.5 pt-1">
           {o.stops !== undefined ? <Tag tone={o.stops === 0 ? "accent" : "neutral"}>{o.stops === 0 ? "Nonstop" : `${o.stops} stop${o.stops > 1 ? "s" : ""}`}</Tag> : null}
           {o.durationText ? <Tag>{o.durationText}</Tag> : null}
           {o.cabin ? <Tag>{o.cabin}</Tag> : null}
+          <Tradeoffs items={o.tradeoffs} name={[o.airline, o.routeSummary].filter(Boolean).join(" ") || undefined} />
         </div>
         <div className="pt-1 text-[13px]">
           {o.estimatedPriceUsd ? (
@@ -75,7 +77,6 @@ function FlightCard({
           <Text value={o.departureWindow} />
         </div>
         {o.notes ? <p className="text-[13px] text-neutral-600">{o.notes}</p> : null}
-        <Tradeoffs items={o.tradeoffs} />
       </Body>
       <Footer>{searchUrl ? <ExtLink primary href={searchUrl}>Search on Google Flights</ExtLink> : null}</Footer>
     </CardShell>

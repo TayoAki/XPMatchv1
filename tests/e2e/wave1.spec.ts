@@ -17,9 +17,19 @@ test("smart filters, heads-ups, comparison, remembered preferences and Explore p
     await expect(strip.getByText("Under $250/night")).toBeVisible();
     await expect(strip.getByText("Not applied:")).toBeVisible();
     await expect(page.getByText("Where to stay in Rome")).toBeVisible({ timeout: 40_000 });
-    await expect(page.getByTestId("tradeoffs").first()).toBeVisible();
-    await expect(page.getByText("Piazza traffic noise in front rooms")).toBeVisible();
+    // The heads-ups are one chip; the list is a tooltip on hover, gone again on Escape. Hover once
+    // the turn is over: the cards re-render when the tool call completes, which resets a hover.
     await expect(page.getByText(/Done — those are on the cards above/)).toBeVisible({ timeout: 30_000 });
+    const headsUp = page.getByRole("button", { name: "2 heads-ups for Hotel de Russie" });
+    await expect(headsUp).toBeVisible();
+    await expect(page.getByText("Piazza traffic noise in front rooms")).toHaveCount(0);
+    await headsUp.hover();
+    const tip = page.getByRole("tooltip", { name: "Heads-up for Hotel de Russie" });
+    await expect(tip.getByText("Piazza traffic noise in front rooms")).toBeVisible();
+    await expect(tip.getByText("Well over $250/night")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(tip).toBeHidden();
+    await page.mouse.move(8, 8);
   });
 
   await test.step("removing a chip searches again with the remaining filters", async () => {

@@ -148,9 +148,11 @@ scheduling chip open the itinerary board as a full-height sheet (short map, then
    Google Hotels for a stay, Reserve on OpenTable for a restaurant, Tickets & tours on GetYourGuide for
    an attraction, plus the website and Google Maps). Flight cards link to Google Flights. Hotels,
    restaurants and attractions are resolved through Google Places and pinned on the map; hovering a
-   card highlights its pin and vice versa. Under the reasons to like a pick, amber
-   **Heads-up** chips name its honest downsides for this traveler ("Busy street, ask for a courtyard room",
-   "Well over $250/night"); a pick that conflicts with one of the traveler's dealbreakers says so.
+   card highlights its pin and vice versa. A pick's honest downsides for this traveler ("Busy street,
+   ask for a courtyard room", "Well over $250/night") fold into one amber **heads-ups** chip at the end
+   of its tag row, so the card stays short; the list opens as a tooltip on hover or keyboard focus, or
+   on a tap on phones (another tap, Escape or a press elsewhere closes it). A pick that conflicts with
+   one of the traveler's dealbreakers says so there.
    Every destination, hotel, restaurant and attraction card then carries a **match score** ("Good match
    · 87%") computed by the app, never by the model, from the profile (budget vs price, interests, stay
    types, must-haves, cuisines, dietary tags, companions), the learned preferences (a dealbreaker named

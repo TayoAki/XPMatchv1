@@ -527,3 +527,7 @@ overruled).
   bottom-right corner and Compare across from the category line; View on map is gone (the photo opens
   the panel), and Check rates, Google Hotels, Reserve and Tickets & tours moved into the place panel's
   Overview, built from the place's name and locality. Amenity chips are capped at three.
+- **Heads-ups as a tooltip** (feedback: the amber warning chips made the cards long and hard to
+  scan): the downsides fold into one "2 heads-ups" chip at the end of the tag row; the list opens as
+  a tooltip on hover or keyboard focus, and a tap pins it open on phones (`Tradeoffs` in
+  `src/components/chat/cards/shared.tsx`, `Floating` with `role="tooltip"`).

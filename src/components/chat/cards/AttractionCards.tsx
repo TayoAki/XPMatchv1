@@ -75,7 +75,8 @@ function AttractionCard({
                   <Text value={a.description} lines={2} />
                 </p>
                 {a.whyItFits ? <p className="text-[13px] text-neutral-600">{a.whyItFits}</p> : null}
-                <div className="flex flex-wrap gap-1.5 pt-1">
+                {/* Tags, with the heads-ups folded into one chip at the end of the row. */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
                   {a.bestTimeOfDay ? <Tag>{a.bestTimeOfDay}</Tag> : null}
                   {a.durationHours ? (
                     <Tag>
@@ -87,9 +88,9 @@ function AttractionCard({
                       <Ticket className="mr-1 h-3 w-3" /> {a.ticketNote}
                     </Tag>
                   ) : null}
+                  <Tradeoffs items={a.tradeoffs} name={a.name} />
                 </div>
                 <TasteFit kind="attraction" name={a.name} category={pin.place?.category ?? a.category} text={[a.description, a.whyItFits, a.category].filter(Boolean).join(" ")} />
-                <Tradeoffs items={a.tradeoffs} />
                 <MatchLine
                   name={a.name}
                   kind="attraction"

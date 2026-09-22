@@ -30,6 +30,7 @@ export function Floating({
   open,
   onClose,
   label,
+  role = "dialog",
   width = 280,
   className,
   children,
@@ -38,6 +39,8 @@ export function Floating({
   open: boolean;
   onClose: () => void;
   label: string;
+  /** A dialog holds controls; a tooltip is read-only text that hover or a tap reveals. */
+  role?: "dialog" | "tooltip";
   width?: number;
   className?: string;
   children: ReactNode;
@@ -84,7 +87,7 @@ export function Floating({
   return createPortal(
     <div
       ref={panelRef}
-      role="dialog"
+      role={role}
       aria-label={label}
       style={{ width }}
       className={clsx("xp-pop fixed left-0 top-0 z-[90] max-w-[calc(100vw-16px)] rounded-2xl border border-border bg-white p-3 text-left shadow-floating", className)}
