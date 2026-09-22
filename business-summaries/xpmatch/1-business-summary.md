@@ -63,7 +63,7 @@ It may be incomplete or out of date.
    Scorecard if they are not already there.
 3. **Validate** — run the Scorecard tests in cost order. Each either moves a number to Verified or
    kills the assumption. Budget: **$979 and 8 weeks**.
-4. **Decide** — go / no-go on $12,061 of business capital and a 12-month unpaid founder year. A "go"
+4. **Decide** — go / no-go on $12,095 of business capital and a 12-month unpaid founder year. A "go"
    means the Quickview numbers are the commitment.
 5. **Build** — Stripe billing, the three paywall moments, and the concierge order form. Four days of
    founder work; nothing else ships until money can be taken.
@@ -86,9 +86,9 @@ which established both the category and the buyer. The gap competitors left is s
 2026 roundup of AI trip planners concludes that occasional travellers should use ChatGPT, because
 the planners produce the same generic lists. XPMatch sells the match, not the itinerary.
 
-The headline numbers: **$12,061** of business capital, first revenue in **month 1**, cash breakeven
+The headline numbers: **$12,095** of business capital, first revenue in **month 1**, cash breakeven
 in **month 2**, **$40,123** of Year-1 revenue growing to **$427,320** in Year 3, at a Year-3 SDE of
-**$172,073** (40% margin). The founders work a combined 50 hours a week at launch, 30 at steady
+**$197,357** (46% margin). The founders work a combined 50 hours a week at launch, 30 at steady
 state, and draw nothing for twelve months.
 
 It runs lean by design. One founder does sales, delivery and product; the second contributes 10
@@ -97,42 +97,43 @@ hours a week. A part-time concierge reviewer joins at month 15 and a support con
 AI-drafted, per `docs/OPERATING_SYSTEM.md`.
 
 What a buyer would see in three years: **$548,932 of ARR run-rate**, 405 advisor seats at 89% gross
-margin, 69% blended gross margin, a place catalog that costs $1.40–2.00 per active user per month
-where it once cost $10, and a taste-profile dataset that improves the product with every reaction.
-At 3.2x SDE that is a **$550,635** business.
+margin, 75% blended gross margin, a place catalog whose cost is shared by every traveller in a city
+rather than charged per head, and a taste-profile dataset that improves the product with every reaction.
+At 3.2x SDE that is a **$631,542** business.
 
 **Note:** There are no customers, no revenue, and no way to accept payment — the codebase contains
 no billing integration. Twenty of thirty-eight assumptions are Assumed, giving a Verified fact share
-of 3%. Year-1 SDE is **negative $5,575** once the second founder's unpaid time is priced at market.
-And the $60,061 of total cash the plan requires, including a 12-month unpaid runway, exceeds the
-founders' stated $25,000 by **$35,061**. This business is not financeable today and is not yet
+of 3%. Year-1 SDE is **negative $5,121** once the second founder's unpaid time is priced at market.
+And the $60,095 of total cash the plan requires, including a 12-month unpaid runway, exceeds the
+founders' stated $25,000 by **$35,095**. This business is not financeable today and is not yet
 proven at any gate beyond the first.
 
 ### Financial Quickview
 
 | | | Tag |
 |---|---|---|
-| Startup capital required (business) | $12,061 | [E] |
-| Total cash founders must hold (incl. 12-month runway) | $60,061 | [A] |
+| Startup capital required (business) | $12,095 | [E] |
+| Total cash founders must hold (incl. 12-month runway) | $60,095 | [A] |
 | Months to first revenue | 1 | [E] |
 | Months to breakeven (cash) | 2 | [E] |
 | Year-1 revenue (projected) | $40,123 | [A] |
 | Year-3 revenue (projected) | $427,320 | [A] |
-| Year-3 SDE (projected) | $172,073 | [A] |
+| Year-3 SDE (projected) | $197,357 | [A] |
 | Year-3 SDE margin | 40% | [A] |
 | Founder hours / week (launch → steady state) | 50 → 30 | [A] |
 | Target exit multiple (SDE) | 3.2x | [E] |
-| Implied Year-3 valuation | $550,635 | derived |
+| Implied Year-3 valuation | $631,542 | derived |
 | Financing path | Bootstrapped, revenue-first | — |
 | Facts Verified / Estimated / Assumed | 1 / 17 / 20 | — |
 
 ### Key Benefits
 
 - **The product is already built:** onboarding, taste matching, the package builder with swap and
-  lock, trip boards, maps and a place catalog are live in production, so the $12,061 of capital
+  lock, trip boards, maps and a place catalog are live in production, so the $12,095 of capital
   buys distribution rather than software.
-- **Unit costs already solved:** the place catalog took cost per active user from about $10/month to
-  $1.40–2.00, which is what makes a $49/year consumer plan viable at 51–66% margin.
+- **Unit costs already solved:** the place catalog is bought once per city and served to everyone,
+  so Google spend is **$0.72 per effective user per month** at Year-3 density against about $10 before
+  it — which is what makes a $49/year consumer plan viable at 75% blended margin.
 - **A 90% margin segment with a $400 CAC ceiling:** advisor seats carry an estimated $1,600 lifetime
   value at 3% monthly churn, which is what makes outbound economic for that segment and not for
   consumers.
@@ -151,13 +152,13 @@ proven at any gate beyond the first.
 
 - **No customer has ever paid:** zero revenue, zero paid pilots, and no billing integration in the
   codebase — Gate 1 of the founders' own method is unstarted.
-- **The funding gap is 58% of the requirement:** $60,061 is needed including the unpaid year against
+- **The funding gap is 58% of the requirement:** $60,095 is needed including the unpaid year against
   $25,000 of stated founder cash.
-- **Year-1 SDE is negative:** −$5,575, because two founders working unpaid are worth more than the
-  $20,880 of operating profit they generate.
-- **One assumption dominates the outcome:** a 30% miss on advisor seat adds costs $46,291 of Year-3
+- **Year-1 SDE is negative:** −$5,121, because two founders working unpaid are worth more than the
+  $21,334 of operating profit they generate.
+- **One assumption dominates the outcome:** a 30% miss on advisor seat adds costs $50,057 of Year-3
   SDE, more than the entire concierge line contributes.
-- **The exit thesis is 4x apart from the business plan:** 3.2x SDE gives $550,635 against the plan's
+- **The exit thesis is 4x apart from the business plan:** 3.2x SDE gives $631,542 against the plan's
   $2.0–2.7M, because that figure applies an ARR multiple at an SDE margin the cost structure does
   not produce.
 - **Costs are set by two suppliers:** Google Places pricing and OpenRouter model pricing determine
@@ -170,23 +171,24 @@ Summarised from `2-financial-model.md`. Read the assumptions table there before 
 | | Year 1 | Year 2 | Year 3 |
 |---|---|---|---|
 | Revenue | $40,123 | $190,673 | $427,320 |
-| Cost of goods sold | $8,143 | $59,342 | $131,447 |
-| Gross profit | $31,980 | $131,331 | $295,873 |
-| Gross margin | 80% | 69% | 69% |
+| Cost of goods sold | $7,688 | $48,920 | $106,163 |
+| Gross profit | $32,434 | $141,753 | $321,157 |
+| Gross margin | 81% | 74% | 75% |
 | Advertising & marketing | $7,200 | $24,000 | $48,000 |
 | Other operating expenses | $3,900 | $71,400 | $145,800 |
-| Net operating profit | $20,880 | $35,931 | $102,073 |
+| Net operating profit | $21,334 | $46,353 | $127,357 |
 | Owner add-backs (net) | −$26,455 | $20,635 | $70,000 |
-| **SDE** | **−$5,575** | **$56,566** | **$172,073** |
-| SDE margin | −14% | 30% | 40% |
+| **SDE** | **−$5,121** | **$66,988** | **$197,357** |
+| SDE margin | −13% | 35% | 46% |
 
 Year-1 monthly detail, the capital deployment schedule, and SDE add-back detail are in the model file.
 
 Three assumptions carry the projection. **Advisor seat adds** is the largest single driver of Year-3
 SDE by a wide margin — seats are 41% of Year-3 revenue at roughly 90% margin, and a 30% miss costs
-$46,291. **Free-to-paid conversion at 4–6%** determines whether the consumer funnel is a business or
-a lead source for concierge. **Cost per paying user at $2.00/month** is the one that runs backwards:
-a 30% overrun costs $28,797 of Year-3 SDE and would make the $49 annual plan unsellable at a profit.
+$50,057. **Free-to-paid conversion at 4–6%** determines whether the consumer funnel is a business or
+a lead source for concierge. The third is new: **Google spend scales with cities and days, not users**,
+because every expensive cache in the app is keyed on the place, not the account. Between 50 and 250
+seeded cities, Year-3 SDE swings $63,775 — a driver the earlier flat per-user rate hid entirely.
 
 ## 6. Demand Overview
 
@@ -248,7 +250,8 @@ Answers marked *[default]* were not supplied by a founder and are the skill's st
    Three things landed in 2026. Expedia bought Layla on July 31 **[E]**, which told every advisor
    platform this category is strategic. Fora reached a $1B valuation with 15,000+ advisors, 97% of
    them new to the profession **[E]** — a large, new, under-tooled buyer segment. And model costs
-   fell far enough that our cost per active user is $1.40–2.00/month **[E]** instead of $10.
+   fell far enough, and the place catalog now spreads Google's fee across every traveller in a city,
+   so cost per effective user is **$0.72/month [E]** at Year-3 density instead of about $10.
 
 6. **What assets will the business own on day one, and what has to be built?**
    Owned: the application, the place catalog and its resolution logic, the match model, the taste
@@ -581,9 +584,9 @@ Answers marked *[default]* were not supplied by a founder and are the skill's st
 ### FINANCIAL
 
 69. **What capital is required to reach first revenue and cash breakeven?**
-    $12,061 of business capital: $3,850 of one-time costs, $3,636 of month-1 drawdown, $4,575 of
+    $12,095 of business capital: $3,850 of one-time costs, $3,670 of month-1 drawdown, $4,575 of
     working-capital buffer. Separately the founders need $48,000 of personal runway for the unpaid
-    year. Against $25,000 available that is a $35,061 shortfall. **[E/A]**
+    year. Against $25,000 available that is a $35,095 shortfall. **[E/A]**
 
 70. **What accounting software, who does the books, and will they be separate?**
     Not yet chosen. Separate business banking and bookkeeping from day one is non-negotiable if a
@@ -599,8 +602,8 @@ Answers marked *[default]* were not supplied by a founder and are the skill's st
     Tax. **[V]**
 
 73. **What is the expected gross margin, and the biggest COGS line?**
-    80% in Year 1, 69% thereafter. The biggest line is per-user API, model and hosting cost, at
-    $95,990 in Year 3 — 73% of all COGS.
+    81% in Year 1, 74–75% thereafter. The biggest line is Google and model cost, at
+    $70,706 in Year 3 — 67% of all COGS.
 
 74. **What owner compensation is assumed?**
     $0 through month 12, $4,000/month in Year 2, $8,000/month in Year 3. *[default, A]* This is the
@@ -631,8 +634,8 @@ Answers marked *[default]* were not supplied by a founder and are the skill's st
 78. **What advantages will you have, stated so they could be checked?**
     Every card is a verified Google place with a live link, so the hallucinated-restaurant failure
     does not occur. The package is built from an eight-factor taste model and the score is shown
-    with its reasons. Cost per active user is $1.40–2.00/month, which is what lets a $49/year plan
-    carry a real place catalog. Each is testable by a third party.
+    with its reasons. A city's places are bought once and served to everyone, so Google cost per
+    effective user falls to about $0.72/month once a city has a hundred travellers in it. Each is testable by a third party.
 
 79. **Is the barrier to entry high or low?**
     Low on the surface and moderate underneath. Anyone can wire a model to Google Places in a
@@ -675,7 +678,7 @@ Answers marked *[default]* were not supplied by a founder and are the skill's st
 ### LAUNCH PLAN & FINANCING
 
 87. **Where does the capital come from, and on what terms?**
-    $25,000 of founder cash, no outside capital, no lender approached. *[default, A]* The $35,061
+    $25,000 of founder cash, no outside capital, no lender approached. *[default, A]* The $35,095
     shortfall against the full requirement is unresolved and is the first thing a partner would ask
     about.
 
@@ -741,8 +744,9 @@ Answers marked *[default]* were not supplied by a founder and are the skill's st
 ### SWOT ANALYSIS
 
 97. **Strengths**
-    - A working product with a solved cost problem: $1.40–2.00 per active user per month, down from
-      about $10, which is what makes a $49/year plan possible.
+    - A working product with a solved cost problem: Google spend is shared across everyone in a city
+      rather than charged per head, so it falls to about $0.72 per effective user per month at density,
+      down from about $10 before the catalog.
     - A 90%-margin segment (advisor seats) with an 18:1 lifetime-value advantage over consumers.
     - Revenue available in month one from concierge, with no funnel and no marketing spend.
     - A documented operating system that assigns every recurring job to automation, an agent or an SOP.
@@ -750,7 +754,7 @@ Answers marked *[default]* were not supplied by a founder and are the skill's st
 98. **Weaknesses**
     - Zero customers, zero revenue, no billing integration, and no paid pilot — the second gate of
       the founders' own method is unstarted.
-    - The funding gap: $60,061 needed against $25,000 available.
+    - The funding gap: $60,095 needed against $25,000 available.
     - No sales experience in the target segment; neither founder has sold software to travel advisors
       or run outbound at 400 sends a week.
     - Founder concentration: one person does sales, delivery and product, and every relationship is
@@ -772,7 +776,7 @@ Answers marked *[default]* were not supplied by a founder and are the skill's st
     - **AI search summaries:** the destination-page channel is aimed at exactly the informational
       queries AI summaries absorb.
     - **Supplier pricing:** Google Places and OpenRouter set our gross margin and neither founder
-      controls either; a 30% COGS overrun costs $28,797 of Year-3 SDE.
+      controls either, and Google spend rises with every city we open.
     - **Copycat density:** every 2026 roundup of AI trip planners is written by another AI trip
       planner, so the generic pitch is worthless and differentiation must hold.
     - **Incumbent down-market moves:** Expedia now owns Layla and can bundle planning into supply at
@@ -801,13 +805,13 @@ Every Assumed number, ranked by how much the projection depends on it. Sensitivi
 |---|---|---|---|---|---|---|---|
 | 1 | Advisor seat adds per month | 2/mo at M3 → 33/mo at M36 | 41% of Y3 revenue; largest SDE driver ($92,583 swing) | Warm two sending domains, run 400 sends/week to Fora-directory advisors for 6 weeks, log every reply against CAOS | $300 | 8 weeks | Under 2% reply rate after list, deliverability and copy fixes, with zero paid seats → kill the advisor segment |
 | 2 | Free → paid conversion | 4% Y1 → 6% Y3 | Plus and Trip Pass volume ($50,402 swing) | Ship Stripe billing and the three paywalls; measure 30-day conversion on the first 500 signups | $0 | 6 weeks | Under 2% at the "Turn into a trip" paywall → consumer tier becomes a funnel only, not a revenue line |
-| 3 | COGS per paying user | $2.00/mo | Gross margin; a 30% overrun costs $28,797 of Y3 SDE | Add the cost-per-active-user tile to `/admin` from Google SKU counts and OpenRouter spend; read it weekly | $0 | 2 weeks | Above $3.00/mo for two consecutive weeks → tighten the free tier or reprice Plus |
+| 3 | Usage per effective user (places, photos, sheets, days active) | 60 / 60 / 10 / 6 per month | The whole COGS engine; cities seeded swings Y3 SDE $63,775 | **Built.** `/admin` now counts every paid Google call by SKU and reports cost per effective user and catalog hit rate (`docs/COGS.md` §9). Read it weekly | $0 | Read at M1 | Cost per effective user above $2.00 for two consecutive weeks → tighten the free tier or slow city expansion |
 | 4 | Free signup volume | 7,970 in Y1 | Every consumer line ($47,772 swing) | Answer 5 questions a day in the named communities for 4 weeks with the profile link; count signups by referrer | $0 | 4 weeks | Under 100 signups in 4 weeks → no organic consumer channel exists; concierge and advisors carry the plan |
 | 5 | Concierge trips per month | 2 → 10 → 30 | 51% of Y1 revenue | Sell 3 pilots to the founders' network at a founding-client price, in week 1 | $0 | 2 weeks | Fewer than 2 sold in 3 weeks of asking → willingness to pay is not there at any price |
 | 6 | Affiliate revenue per trip | $1.50 / $3.00 / $4.00 (pessimistic attach) | 14% of Y3 revenue ($34,126 swing) | Put Booking.com and activity-partner links on every card with the price shown; measure click-through and attach on the first 200 trips | $0 | 6 weeks | Attach below 3% on stays → drop affiliate from the model entirely |
 | 7 | Trip Pass at $19 / 60 days | $19 | 9% of revenue; no competitor comparable exists | Price test $19 against $29 at the paywall, 50/50, first 400 signups | $0 | 6 weeks | Conversion indifferent to price → the price is not the objection; the offer is |
 | 8 | Advisor seat churn | 5%/mo → 3%/mo | Seat lifetime value ($1,600) and the $400 CAC ceiling | Cannot be tested inside 8 weeks. Instrument it now: seat start date, second-client-link date, cancel date | $0 | Instrument in 1 week; read at M6 | Above 8%/mo at M6 → lifetime value falls under $700 and outbound stops paying |
-| 9 | Founder cash available | $25,000 against $60,061 needed | Whether the plan is executable at all | A conversation between the founders about personal runway, and a written answer | $0 | 1 week | Combined available cash under $40,000 → the unpaid year is not survivable; cut to concierge-only and keep day jobs |
+| 9 | Founder cash available | $25,000 against $60,095 needed | Whether the plan is executable at all | A conversation between the founders about personal runway, and a written answer | $0 | 1 week | Combined available cash under $40,000 → the unpaid year is not survivable; cut to concierge-only and keep day jobs |
 | 10 | SEO head-term volumes | Unmeasured | Channel 3 of the growth plan | One afternoon in a keyword tool across 10 head terms | $99 | 1 week | Under 1,000 monthly searches across the head set → drop destination pages |
 | 11 | Name clearance for XPMatch | Unverified | The brand and the trademark filing | USPTO TESS search plus domain and social check | $0 | 1 week | A live mark in class 42 or 39 → rename before any spend on brand |
 | 12 | Books separate from personal accounts | Not set up | Whether a buyer can ever verify the numbers | Open business banking and bookkeeping | $80 | 2 weeks | — (do it regardless; a buyer will not accept a spreadsheet) |

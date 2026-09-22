@@ -60,15 +60,47 @@ receipts. Trip Pass is recognised at purchase (60-day access; the timing differe
 
 ### Cost of goods
 
+**This section was rebuilt from the code, not the rate card.** Every expensive cache in the app is
+keyed on the place or the query, never on the account (`places`, `place_facts`, `photo_urls`,
+`search_cache` — see `docs/COGS.md` §2), so Google spend **saturates per city**. A flat per-head rate
+cannot express that: it overstates a dense user base and understates city expansion.
+
 | Assumption | Value | Tag | Source | Used in |
 |---|---|---|---|---|
-| COGS per free active user | $0.20/mo | [E] | `docs/COGS.md` free-tier cap, enforced by catalog-only cards and 40 lookups/day | User COGS |
-| COGS per paying consumer | $2.00/mo | [E] | `docs/COGS.md` post-catalog range $1.40–2.00; cap $3.00 | User COGS |
-| COGS per advisor seat (incl. clients) | $4.00/mo | [E] | `docs/COGS.md` advisor cap $6.00; modelled at the plan's estimate | User COGS |
-| Free-base monthly decay | 20% | [A] | No cohort data exists | Active-user count |
-| Concierge API cost | $5.00/trip | [E] | `docs/COGS.md` per-action pricing | Concierge COGS |
-| Concierge human review | 1.5 h/trip; founder unpaid to M14, then $35/h contractor from M15 | [E] | Plan's SOP time; $25–35/h stated hiring range | Concierge COGS, SDE add-back |
-| Payment processing | 2.9% + $0.30 per transaction | [V] | Stripe published US pricing | Processing COGS |
+| Place Details Enterprise | $0.035/call | [V] | Only for a place id never stored, plus the 30-day refresh | Shared city cost |
+| Place Details + Atmosphere | $0.040/call | [V] | Place sheet and Ask; cached 30 days in `place_facts`, shared | Shared city cost |
+| Text / Nearby Search Enterprise | $0.035/call | [V] | Returns up to 20 places for one fee; cached 24 h, shared | Shared city cost, seeding |
+| Place Photos | $0.007/call | [V] | Cached 24 h in `photo_urls`, shared by everyone | Shared city cost |
+| Dynamic Maps | $0.007/load | [V] | Client-side, per user, never shared | Unshared per user |
+| Routes Essentials | $0.005/leg | [V] | Per routed leg | Unshared per user |
+| Model | $0.005/message | [E] | OpenRouter, `openai/gpt-4o-mini` | Unshared per user |
+| Seed queries per city | 20 | [V] | `SEED_QUERIES` in `src/server/seed.ts` | Seeding cost |
+| Catalog places per city | 380 | [E] | ~20 queries × ~20 results, deduped | Saturation pool |
+| Distinct list-search queries per city | 60 | [A] | Explore tabs plus home picks | Saturation pool |
+| Places shown / effective user / month | 60 | [A] | **Unmeasured** — `/admin` now reports the real number | Shared city cost |
+| Photos shown / effective user / month | 60 | [A] | **Unmeasured** | Shared city cost |
+| Place sheets / effective user / month | 10 | [A] | **Unmeasured** | Shared city cost |
+| List searches / effective user / month | 8 | [A] | **Unmeasured** | Shared city cost |
+| Messages / effective user / month | 20 | [A] | **Unmeasured** | Unshared per user |
+| Map loads / effective user / month | 10 | [A] | **Unmeasured** | Unshared per user |
+| Routed legs / effective user / month | 6 | [A] | **Unmeasured** | Unshared per user |
+| Days active / month | 6 | [A] | Drives the 24 h photo and search TTLs | Shared city cost |
+| Free-user traffic weight | 0.30 | [A] | Lookup traffic vs one paying consumer; free tier is capped at 40/day | Effective users |
+| Paying-consumer traffic weight | 1.00 | [A] | The reference | Effective users |
+| Advisor-seat traffic weight | 2.00 | [A] | A seat serves several clients | Effective users |
+| Cities with a seeded catalog, year end | 12 / 45 / 100 | [A] | The dominant COGS driver | Shared city cost |
+| Payment processing | 2.9% + $0.30 | [V] | Stripe published US pricing | Processing COGS |
+
+**How the engine works.** Effective users = free × 0.30 + paying × 1.00 + seats × 2.00. Divide by
+cities to get users per city. Each city's shared cost saturates as those users collectively touch the
+whole catalog — past roughly 250 users in a city, the next user shows Google nothing new. On top sits
+an unshared floor of **$0.20 per effective user per month** (model, maps, routes) that never
+amortises, plus **$0.70 to seed each new city** (20 searches × $0.035 for ~380 places, which is
+19× cheaper than buying each place individually).
+
+**What this produces at month 36:** 100 cities, 10,757 effective users, 108 per city, $56.16 of
+shared cost per city, and **$0.72 per effective user per month** — against the flat $2.00 the previous
+version of this model charged.
 
 ### Operating
 
@@ -97,6 +129,8 @@ receipts. Trip Pass is recognised at purchase (60-day access; the timing differe
 | Plus subs — monthly | 1 | 2 | 4 | 6 | 9 | 12 | 17 | 22 | 28 | 34 | 42 | 50 | **50** |
 | Advisor seats | 0 | 0 | 2 | 5 | 9 | 13 | 19 | 24 | 29 | 36 | 42 | 49 | **49** |
 | Concierge trips | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 8 | 9 | 10 | 10 | 10 | **82** |
+| Cities seeded | 1.0 | 2.0 | 3.0 | 4.0 | 5.0 | 6.0 | 7.0 | 8.0 | 9.0 | 10.0 | 11.0 | 12.0 | **12.0** |
+| Effective users | 32 | 73 | 133 | 210 | 306 | 420 | 562 | 727 | 912 | 1,114 | 1,344 | 1,597 | **1,597** |
 | *Revenue* | | | | | | | | | | | | | |
 | Plus annual | 4 | 9 | 17 | 28 | 43 | 61 | 85 | 115 | 150 | 190 | 238 | 293 | **1,233** |
 | Plus monthly | 7 | 17 | 31 | 49 | 72 | 99 | 134 | 175 | 223 | 275 | 335 | 403 | **1,820** |
@@ -106,19 +140,19 @@ receipts. Trip Pass is recognised at purchase (60-day access; the timing differe
 | Affiliate | 0 | 0 | 0 | 0 | 0 | 157 | 205 | 253 | 302 | 351 | 416 | 481 | **2,165** |
 | **Total revenue** | 551 | 836 | 1,234 | 1,688 | 2,200 | 2,918 | 3,597 | 4,028 | 4,755 | 5,529 | 6,089 | 6,698 | **40,123** |
 | *Cost of goods sold* | | | | | | | | | | | | | |
-| API, model & hosting per user | 24 | 55 | 105 | 170 | 253 | 352 | 475 | 615 | 773 | 947 | 1,142 | 1,359 | **6,268** |
+| Google + model (cost engine) | 57 | 118 | 184 | 256 | 332 | 412 | 500 | 592 | 687 | 786 | 890 | 999 | **5,813** |
 | Concierge delivery | 10 | 15 | 20 | 25 | 30 | 35 | 40 | 40 | 45 | 50 | 50 | 50 | **410** |
 | Payment processing | 19 | 29 | 43 | 60 | 78 | 104 | 129 | 147 | 174 | 203 | 227 | 252 | **1,465** |
-| **Gross profit** | 498 | 737 | 1,066 | 1,433 | 1,838 | 2,427 | 2,954 | 3,226 | 3,763 | 4,329 | 4,671 | 5,038 | **31,980** |
+| **Gross profit** | 465 | 675 | 987 | 1,347 | 1,759 | 2,366 | 2,929 | 3,249 | 3,849 | 4,490 | 4,922 | 5,397 | **32,434** |
 | *Operating expenses* | | | | | | | | | | | | | |
 | Advertising & marketing | 0 | 0 | 0 | 400 | 500 | 600 | 700 | 800 | 900 | 1,000 | 1,100 | 1,200 | **7,200** |
 | Contractors & staff | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | **0** |
 | Software, hosting & sending | 325 | 325 | 325 | 325 | 325 | 325 | 325 | 325 | 325 | 325 | 325 | 325 | **3,900** |
 | Owner salary | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | **0** |
-| **Net operating profit** | 173 | 412 | 741 | 708 | 1,013 | 1,502 | 1,929 | 2,101 | 2,538 | 3,004 | 3,246 | 3,513 | **20,880** |
+| **Net operating profit** | 140 | 350 | 662 | 622 | 934 | 1,441 | 1,904 | 2,124 | 2,624 | 3,165 | 3,497 | 3,872 | **21,334** |
 | One-time costs | 3,850 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | **3,850** |
-| Net cash flow | -3,636 | 469 | 821 | 812 | 1,147 | 1,662 | 2,130 | 2,339 | 2,807 | 3,299 | 3,581 | 3,881 | **19,312** |
-| **Cumulative cash** | 21,364 | 21,833 | 22,654 | 23,465 | 24,612 | 26,273 | 28,404 | 30,743 | 33,550 | 36,849 | 40,430 | 44,312 | **44,312** |
+| Net cash flow | -3,670 | 407 | 742 | 726 | 1,068 | 1,601 | 2,105 | 2,362 | 2,893 | 3,460 | 3,833 | 4,241 | **19,766** |
+| **Cumulative cash** | 21,330 | 21,737 | 22,478 | 23,205 | 24,272 | 25,873 | 27,978 | 30,340 | 33,233 | 36,693 | 40,525 | 44,766 | **44,766** |
 
 Cumulative cash opens at the $25,000 founder capital. The cash low point is **M1 at $21,364**, a
 drawdown of **$3,636** against opening capital — the business never goes cash-negative because the
@@ -133,18 +167,18 @@ concierge line sells from month one at 98% contribution margin and no owner sala
 |---|---|---|---|
 | Revenue | $40,123 | $190,673 | $427,320 |
 | Growth YoY | — | +375% | +124% |
-| Cost of goods sold | $8,143 | $59,342 | $131,447 |
-| **Gross profit** | **$31,980** | **$131,331** | **$295,873** |
-| Gross margin | 80% | 69% | 69% |
+| Cost of goods sold | $7,688 | $48,920 | $106,163 |
+| **Gross profit** | **$32,434** | **$141,753** | **$321,157** |
+| Gross margin | 81% | 74% | 75% |
 | Advertising & marketing | $7,200 | $24,000 | $48,000 |
 | Contractors & staff | $0 | $15,000 | $36,000 |
 | Software, hosting & sending | $3,900 | $8,400 | $13,800 |
 | Owner salary | $0 | $48,000 | $96,000 |
 | Total operating expenses | $11,100 | $95,400 | $193,800 |
-| **Net operating profit** | **$20,880** | **$35,931** | **$102,073** |
+| **Net operating profit** | **$21,334** | **$46,353** | **$127,357** |
 | Owner add-backs (net) | −$26,455 | +$20,635 | +$70,000 |
-| **SDE** | **−$5,575** | **$56,566** | **$172,073** |
-| SDE margin | −14% | 30% | 40% |
+| **SDE** | **−$5,121** | **$66,988** | **$197,357** |
+| SDE margin | −13% | 35% | 46% |
 | Exit-month ARR run-rate | $80,379 | $275,875 | $548,932 |
 
 **Growth drivers.** Year 1: concierge trips sold by hand (51% of revenue) plus the first 49 advisor
@@ -171,7 +205,7 @@ someone for it.
 
 | Add-back | Year 1 | Year 2 | Year 3 |
 |---|---|---|---|
-| Net operating profit | $20,880 | $35,931 | $102,073 |
+| Net operating profit | $21,334 | $46,353 | $127,357 |
 | + Owner salary and payroll taxes | $0 | $48,000 | $96,000 |
 | + Owner benefits | $0 | $0 | $0 |
 | + Interest, depreciation, amortisation | $0 | $0 | $0 |
@@ -179,12 +213,12 @@ someone for it.
 | + Personal expenses through the business | $0 | $0 | $0 |
 | − Replace second founder (10 h/wk @ $50/h) | −$26,000 | −$26,000 | −$26,000 |
 | − Replace unpaid founder concierge review (Y1 82 trips, Y2 26 trips in M13–M14, × 1.5 h @ $35/h) | −$4,305 | −$1,365 | $0 |
-| **SDE** | **−$5,575** | **$56,566** | **$172,073** |
+| **SDE** | **−$5,121** | **$66,988** | **$197,357** |
 
-**Year-1 SDE is negative.** The business produces $20,880 of net operating profit in Year 1 and
-still returns −$5,575 of SDE, because two founders working unpaid are worth more than the profit
-they generate. This is the single most important number in the document: it says Year 1 is not a
-business yet, it is a funded experiment.
+**Year-1 SDE is still negative.** The business produces $21,334 of net operating profit in Year 1 and
+returns −$5,121 of SDE, because two founders working unpaid are worth more than the profit they
+generate. Rebuilding COGS improved this by $454; it did not change the conclusion. Year 1 is a funded
+experiment, not yet a business.
 
 ---
 
@@ -194,19 +228,19 @@ business yet, it is a funded experiment.
 |---|---|
 | One-time build costs (legal, landing pages, trademark) | $3,850 |
 | Initial inventory | $0 |
-| Cash low point (M1 drawdown against opening capital) | $3,636 |
+| Cash low point (M1 drawdown against opening capital) | $3,670 |
 | Working-capital buffer (3 × month-12 operating expenses) | $4,575 |
-| **Business capital required** | **$12,061** |
+| **Business capital required** | **$12,095** |
 
 The business is cheap to start. The founders are not.
 
 | Line | Amount |
 |---|---|
-| Business capital required | $12,061 |
+| Business capital required | $12,095 |
 | Founder personal runway (12 months unpaid × $4,000/mo) | $48,000 |
-| **Total cash the founders must hold** | **$60,061** |
+| **Total cash the founders must hold** | **$60,095** |
 | Founder cash available [A] | $25,000 |
-| **Shortfall** | **$35,061** |
+| **Shortfall** | **$35,095** |
 
 Already sunk and excluded above: **$3,500** of founder contribution during the build.
 
@@ -221,36 +255,35 @@ not qualify today. Tagged **[A]**.
 
 | | | Tag |
 |---|---|---|
-| Startup capital required (business) | $12,061 | [E] |
-| Total cash founders must hold (incl. 12-month runway) | $60,061 | [A] |
+| Startup capital required (business) | $12,095 | [E] |
+| Total cash founders must hold (incl. 12-month runway) | $60,095 | [A] |
 | Months to first revenue | 1 | [E] |
 | Months to breakeven (cash) | 2 | [E] |
 | Year-1 revenue (projected) | $40,123 | [A] |
 | Year-3 revenue (projected) | $427,320 | [A] |
-| Year-3 SDE (projected) | $172,073 | [A] |
-| Year-3 SDE margin | 40% | [A] |
+| Year-3 SDE (projected) | $197,357 | [A] |
+| Year-3 SDE margin | 46% | [A] |
 | Founder hours / week (launch → steady state) | 50 → 30 | [A] |
 | Target exit multiple (SDE) | 3.2x | [E] |
-| Implied Year-3 valuation | $550,635 | derived |
+| Implied Year-3 valuation | $631,542 | derived |
 | Financing path | Bootstrapped, revenue-first | — |
-| Facts Verified / Estimated / Assumed | 1 / 17 / 20 | — |
+| Facts Verified / Estimated / Assumed | 8 / 15 / 25 | — |
 
 ### Choosing 3.2x
 
 Comparable packages priced between 1.9x and 4.2x SDE. The top of that band went to a vertical SaaS
 with 0.6% monthly churn, 96% contracted annual revenue and 70%+ margins; the bottom to a small SaaS
-with flat revenue and a departing team. XPMatch at Year 3 sits in the middle: 69% gross margin and a
+with flat revenue and a departing team. XPMatch at Year 3 sits in the middle: 75% gross margin and a
 41%-of-revenue subscription seat line argue upward, while four things pull down — a single founder
-who still runs sales, a concierge line that is 20% of revenue and does not transfer, cost dependence
+who still runs sales, a concierge line that is 19% of revenue and does not transfer, cost dependence
 on Google Places and OpenRouter pricing neither founder controls, and 14% of revenue from affiliate
 attach rates that have never been measured. 3.2x.
 
 **This is materially below `docs/BUSINESS_PLAN.md` §1**, which targets a $2.0–2.7M sale. That figure
-applies a 3–4x multiple to *ARR*, not SDE. At a 40% SDE margin the two methods cannot both hold:
-3.2x SDE is $551K, while 3.5x ARR would be $1.9M. Marketplace comparables reach 3–4x ARR only when
-SDE margin approaches 70–80%. Reconciling the two requires either a materially leaner cost structure
-or a revenue mix weighted much harder toward advisor seats. This is the largest single disagreement
-between this model and the business plan.
+applies a 3–4x multiple to *ARR*, not SDE. At a 46% SDE margin the two methods still cannot both
+hold: 3.2x SDE is $632K, while 3.5x ARR would be $1.9M. Marketplace comparables reach 3–4x ARR only
+when SDE margin approaches 70–80%. Rebuilding COGS closed part of this gap — margin rose from 40% to
+46% and the implied valuation from $551K to $632K — but it did not close it.
 
 ---
 
@@ -260,20 +293,20 @@ Year-3 SDE at base, 30% worse and 30% better, ranked by swing.
 
 | Assumption | −30% | Base | +30% | Swing |
 |---|---|---|---|---|
-| Advisor seat adds per month | $125,782 | $172,073 | $218,365 | $92,583 |
-| COGS per paid user per month | $200,870 | $172,073 | $143,276 | $57,594 |
-| Free → paid conversion rate | $146,872 | $172,073 | $197,274 | $50,402 |
-| Free signup volume | $148,187 | $172,073 | $195,959 | $47,772 |
-| Concierge trips per month | $153,675 | $172,073 | $190,471 | $36,796 |
-| Affiliate revenue per trip | $155,010 | $172,073 | $189,136 | $34,126 |
+| Advisor seat adds per month | $147,302 | $197,357 | $247,415 | $100,113 |
+| Free signup volume | $155,452 | $197,357 | $239,772 | $84,320 |
+| Free → paid conversion rate | $164,425 | $197,357 | $230,301 | $65,876 |
+| Cities with a seeded catalog | $212,314 | $197,357 | $183,243 | $29,071 |
+| Days active per month | $205,901 | $197,357 | $188,813 | $17,088 |
 
-No single 30% miss makes Year-3 SDE negative, which is the one genuinely reassuring result in this
-file. **Advisor seat adds dominate** — a 30% miss costs $46K of Year-3 SDE, more than the entire
-concierge line contributes. Seat acquisition is row 1 of the Validation Scorecard.
+No single 30% miss makes Year-3 SDE negative. **Advisor seat adds still dominate** — a 30% miss costs
+$50K of Year-3 SDE, more than the entire concierge line contributes.
 
-Note the COGS row runs the other way: a 30% *overrun* on cost per user costs $29K of Year-3 SDE.
-The catalog work that took COGS from ~$10 to $1.40–2.00 per active user is what makes the consumer
-tier viable at all; losing it would not be survivable at these prices.
+Two things changed when COGS was rebuilt around cities. **Signup volume moved from fourth to second**,
+because a higher gross margin means each marginal signup carries more profit. And **cities seeded and
+days active are new levers that did not exist before** — they run the other way, since more cities and
+more engaged users both cost more Google. Between 50 and 250 cities, Year-3 SDE swings $63,775: the
+old flat $2.00 per-user rate was, without anyone saying so, an implicit bet on roughly 150–180 cities.
 
 ---
 
@@ -282,3 +315,4 @@ tier viable at all; losing it would not be survivable at these prices.
 | Date | Change | Why |
 |---|---|---|
 | Sep 21, 2026 | Initial model | First build, founder inputs defaulted |
+| Sep 22, 2026 | COGS rebuilt around cities, not users | The flat $0.20/$2.00/$4.00 per-head rates did not match the code. Every expensive cache is shared, so spend scales with cities and days. Year-3 COGS $131,447 → $106,163, margin 69% → 75%, SDE $172,073 → $197,357, valuation $551K → $632K. Instrumentation added in the same change (`docs/COGS.md` §9) so these become measurements rather than estimates |
