@@ -5,7 +5,7 @@ import { ToolCallStatus } from "@copilotkit/core";
 import type { ShowAttractionsArgs, Streaming } from "@/lib/travel/schemas";
 import { getYourGuideSearchUrl, googleMapsSearchUrl } from "@/lib/travel/links";
 import { placeKey, usePlacePin, useRegisterPlaces } from "@/components/map/useRegisterPlaces";
-import { CardPhoto, AddToTripButton, Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Tag, Text, Tradeoffs, ViewOnMapButton } from "./shared";
+import { CardPhoto, AddToTripButton, Body, CardRow, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Tag, Text, Tradeoffs, ViewOnMapButton } from "./shared";
 import { CompareToggle } from "./CompareControls";
 import { HiddenPlaceCard, ReactionControl, useReaction } from "@/components/feedback/ReactionControl";
 import { TasteFit } from "@/components/feedback/TasteFit";
@@ -14,6 +14,7 @@ import { MatchLine } from "@/components/recs/MatchLine";
 export function AttractionCards({ args, status, toolCallId }: { args: Streaming<ShowAttractionsArgs>; status: ToolCallStatus; toolCallId: string }) {
   const items = (args.attractions ?? []).filter((a) => a && a.name);
   const dest = args.destination ?? "";
+  const title = dest ? `Things to do in ${dest}` : "Things to do";
   useRegisterPlaces({
     toolCallId,
     status,
@@ -23,12 +24,12 @@ export function AttractionCards({ args, status, toolCallId }: { args: Streaming<
   });
   return (
     <div>
-      <SectionHeader title={dest ? `Things to do in ${dest}` : "Things to do"} status={status} />
-      <CardGrid>
-        {items.map((a, i) => (
-          <AttractionCard key={`${a.name}-${i}`} attraction={a} index={i} dest={dest} toolCallId={toolCallId} />
-        ))}
-      </CardGrid>
+      <SectionHeader title={title} status={status} />
+      <CardRow
+        kind="attraction"
+        label={title}
+        items={items.map((a, i) => ({ id: `${a.name}-${i}`, name: a.name, node: <AttractionCard attraction={a} index={i} dest={dest} toolCallId={toolCallId} /> }))}
+      />
     </div>
   );
 }

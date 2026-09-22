@@ -470,3 +470,24 @@ planner values belonged under the chat bar. Shipped:
   photos that fade (the hero settles from a slight zoom), pops for menus, popovers and the badge
   detail, a lift for modals and sheets, a fade for every route change, card lifts on hover, the rail
   width animating, shimmer skeletons; all disabled under `prefers-reduced-motion`.
+
+### Round 3: card rows in the chat, thumbs that order the row
+
+"I want to go to Japan" rendered its destination cards as a two-column grid inside the chat; the
+expectation was a row. Shipped:
+
+- **Every recommendation set in chat is a row** (`CardRow` in `src/components/chat/cards/shared.tsx`,
+  on the shared `Carousel`): destinations, hotels, restaurants, things to do and flights snap card by
+  card on every width, with arrows on pointer devices tucked inside the message column. The package
+  card, imported places and reservations keep the two-column grid (`CardGrid`).
+- **Thumbs on every card**: destination cards gained the match line (badge + thumbs) the other kinds
+  already had.
+- **Thumbs order the row**: liked cards first, undecided next, passed cards last and dimmed
+  (`opacity-55 saturate-50`, `data-verdict` on the card wrapper); the same thumb again undoes it.
+  `src/lib/recs/verdict.ts` reads the latest judgment by kind and name; `src/lib/use-flip.ts` animates
+  the reorder (FLIP on `data-flip-key` children, 480 ms, skipped under reduced motion). The "For you in"
+  picks on Discover follow the same rule; their Top pick mark stays on the model's best among the picks
+  not passed on.
+- **Popovers that escape the row**: "Why this score" and "Why is X a miss?" now float from the
+  document root (`src/components/ui/Floating.tsx`), anchored to their trigger and flipping above it when
+  there is no room below, so a scrolling row or the chat can no longer clip them.

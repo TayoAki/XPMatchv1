@@ -47,7 +47,9 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   recommendation card in chat, Explore, the home picks and the board's stop details shows the score
   with a "Why this score" breakdown and **thumbs up / down**; judgments lower repeat offenders,
   recalibrate the factors that keep misleading that traveler, and reach the agent as recommendation
-  feedback. Admins see the hit rate.
+  feedback. Admins see the hit rate. Card sets in chat and the home picks are horizontal rows that
+  the thumbs reorder: a thumbs-down slides the card to the end of the row and greys it out, a
+  thumbs-up brings it to the front, the same thumb again undoes it.
 - **Learns tastes with your say-so** — when you mention a lasting preference in chat, a "Remember
   this?" card offers **Always / For this trip / No thanks** (`remember_preference`, human-in-the-loop).
   "Update my assistant" lists everything learned with delete buttons and a "Learn from our chats"

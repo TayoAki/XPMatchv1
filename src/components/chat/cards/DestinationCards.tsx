@@ -6,11 +6,13 @@ import type { ShowDestinationsArgs, Streaming } from "@/lib/travel/schemas";
 import { googleMapsSearchUrl } from "@/lib/travel/links";
 import { useSendMessage } from "@/components/chat/useSendMessage";
 import { usePlacePin, useRegisterPlaces } from "@/components/map/useRegisterPlaces";
-import { CardPhoto, AddToTripButton, ActionButton, Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Tag, Text, ViewOnMapButton, usd } from "./shared";
+import { CardPhoto, AddToTripButton, ActionButton, Body, CardRow, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Tag, Text, ViewOnMapButton, usd } from "./shared";
 import { HiddenPlaceCard, ReactionControl, useReaction } from "@/components/feedback/ReactionControl";
+import { MatchLine } from "@/components/recs/MatchLine";
 
 export function DestinationCards({ args, status, toolCallId }: { args: Streaming<ShowDestinationsArgs>; status: ToolCallStatus; toolCallId: string }) {
   const items = (args.destinations ?? []).filter((d) => d && d.name);
+  const title = args.title || "Destinations for you";
   useRegisterPlaces({
     toolCallId,
     status,
@@ -19,12 +21,12 @@ export function DestinationCards({ args, status, toolCallId }: { args: Streaming
   });
   return (
     <div>
-      <SectionHeader title={args.title || "Destinations for you"} status={status} />
-      <CardGrid>
-        {items.map((d, i) => (
-          <DestinationCard key={`${d.name}-${i}`} destination={d} index={i} toolCallId={toolCallId} />
-        ))}
-      </CardGrid>
+      <SectionHeader title={title} status={status} />
+      <CardRow
+        kind="destination"
+        label={title}
+        items={items.map((d, i) => ({ id: `${d.name}-${i}`, name: d.name, node: <DestinationCard destination={d} index={i} toolCallId={toolCallId} /> }))}
+      />
     </div>
   );
 }
@@ -73,6 +75,15 @@ function DestinationCard({
                     ))}
                   </ul>
                 ) : null}
+                <MatchLine
+                  name={d.name}
+                  kind="destination"
+                  place={pin.place}
+                  destination={d.name}
+                  context="chat"
+                  text={[d.tagline, d.whyItFits, ...(d.vibes ?? []), ...(d.highlights ?? [])].filter(Boolean).join(" ")}
+                  className="pt-1"
+                />
               </Body>
               <Footer>
                 <ActionButton onClick={() => send(`Plan a trip to ${label} for me.`)}>Plan a trip</ActionButton>

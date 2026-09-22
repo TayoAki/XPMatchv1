@@ -7,6 +7,8 @@ import { ChevronDown, Heart, LocateFixed, Map, MapPin, MessageCircle, Plus, Star
 import { api } from "@/lib/api";
 import type { ResolvedPlace } from "@/lib/places/types";
 import { candidateFromPlace, scoreMatch, type MatchResult } from "@/lib/match";
+import type { RecVerdict } from "@/lib/recs/types";
+import { verdictFor, verdictRank } from "@/lib/recs/verdict";
 import { findSaved, formatDateRange, useTravelStore } from "@/lib/store";
 import { googleMapsSearchUrl } from "@/lib/travel/links";
 import { useSendMessage } from "@/components/chat/useSendMessage";
@@ -75,14 +77,14 @@ function ReasonChips({ match }: { match: MatchResult }) {
   );
 }
 
-function PickCard({ place, match, destination, context, topPick, className }: { place: ResolvedPlace; match: MatchResult; destination: string; context: "home"; topPick?: boolean; className?: string }) {
+function PickCard({ place, match, destination, context, topPick, verdict, className }: { place: ResolvedPlace; match: MatchResult; destination: string; context: "home"; topPick?: boolean; verdict?: RecVerdict; className?: string }) {
   const { saved, toggleSaved } = useTravelStore();
   const { openAddToTrip } = useUiState();
   const send = useSendMessage();
   const isSaved = !!findSaved(saved, { kind: place.kind, title: place.name, refId: place.id });
   const kindWord = place.kind === "hotel" ? "stay" : place.kind === "restaurant" ? "restaurant" : "place";
   return (
-    <article className={clsx("xp-lift flex flex-col overflow-hidden rounded-2xl border border-border bg-white", className)} data-testid="home-pick" data-top-pick={topPick || undefined}>
+    <article className={clsx("xp-lift flex flex-col overflow-hidden rounded-2xl border border-border bg-white", className)} data-testid="home-pick" data-top-pick={topPick || undefined} data-verdict={verdict ?? ""}>
       <div className="relative bg-surface-2">
         <Photo src={place.photos?.[0]} alt={place.name} queries={[place.name, destination]} className="h-[150px] w-full" />
         {place.photos?.[0] ? <PhotoCredit credit={place.photoCredits?.[0]} /> : null}
@@ -192,18 +194,26 @@ export function HomePicks({ options, initialKey, compact = false }: { options: F
     };
   }, [hydrated, destination, profileSaving]);
 
-  // Scores are recomputed on the client so thumbs and reactions move the badges at once; rows sort best-first.
+  // Scores are recomputed on the client so thumbs and reactions move the badges at once. Rows sort
+  // best-first, then the traveler's thumbs take over: liked picks lead, passed ones trail and dim.
   const data = state?.destination === destination ? state.data : null;
   const rows = useMemo(() => {
     if (!data) return null;
     return data.rows.map((row) => {
-      const items = row.items
-        .map((item) => ({ place: item.place, match: scoreMatch(candidateFromPlace(item.place), { profile, taste, preferences, recFeedback, packageCalibration }) }))
+      const scored = row.items
+        .map((item) => ({
+          place: item.place,
+          match: scoreMatch(candidateFromPlace(item.place), { profile, taste, preferences, recFeedback, packageCalibration }),
+          verdict: verdictFor(recFeedback, item.place.kind, item.place.name),
+        }))
         .sort((a, b) => b.match.score - a.match.score);
-      const topPick = items.length > 1 && items[0].match.score > items[1].match.score;
+      // The model's best among the picks not passed on, when it clearly beats the runner-up.
+      const contenders = scored.filter((i) => i.verdict !== "down");
+      const topPickId = contenders.length > 1 && contenders[0].match.score > contenders[1].match.score ? contenders[0].place.id : null;
       // Every score equal and nothing from the profile behind them: the row cannot tell the picks apart yet.
-      const flat = items.length > 1 && items.every((i) => i.match.score === items[0].match.score) && items.every((i) => !i.match.reasons.some((r) => !GENERIC_FACTORS.has(r.factor)));
-      return { ...row, items, topPick, flat };
+      const flat = scored.length > 1 && scored.every((i) => i.match.score === scored[0].match.score) && scored.every((i) => !i.match.reasons.some((r) => !GENERIC_FACTORS.has(r.factor)));
+      const items = scored.map((item, index) => ({ ...item, index })).sort((a, b) => verdictRank(a.verdict) - verdictRank(b.verdict) || a.index - b.index);
+      return { ...row, items, topPickId, flat };
     });
   }, [data, profile, taste, preferences, recFeedback, packageCalibration]);
   const error = state?.destination === destination ? state.error : null;
@@ -299,9 +309,13 @@ export function HomePicks({ options, initialKey, compact = false }: { options: F
                 </button>
               ) : null}
               {row.items.length ? (
-                <Carousel label={row.title} className="mt-2" itemGap={compact ? "gap-3" : "gap-4"}>
-                  {row.items.map((item, index) => (
-                    <PickCard key={item.place.id} place={item.place} match={item.match} destination={headerName} context="home" topPick={index === 0 && row.topPick} className={clsx("shrink-0 snap-start", compact ? "w-[230px]" : "w-[250px]")} />
+                <Carousel label={row.title} className="mt-2" itemGap={compact ? "gap-3" : "gap-4"} flipKey={row.items.map((item) => item.place.id).join("|")}>
+                  {row.items.map((item) => (
+                    <div key={item.place.id} data-flip-key={item.place.id} className={clsx("flex shrink-0 snap-start", compact ? "w-[230px]" : "w-[250px]")}>
+                      <div className={clsx("flex w-full transition-[opacity,filter] duration-500 [&>*]:w-full", item.verdict === "down" && "opacity-55 saturate-50")}>
+                        <PickCard place={item.place} match={item.match} destination={headerName} context="home" topPick={item.place.id === row.topPickId} verdict={item.verdict} />
+                      </div>
+                    </div>
                   ))}
                 </Carousel>
               ) : (

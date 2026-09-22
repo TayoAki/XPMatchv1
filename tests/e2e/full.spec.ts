@@ -26,6 +26,29 @@ test("accounts, chat cards, saving, trips and sessions", async ({ page, browser 
     await expect(page.getByRole("button", { name: /^Remove Hotel de Russie/ })).toBeVisible();
   });
 
+  await test.step("the cards sit in a row; a thumbs-down sends the card to the end greyed out, and again brings it back", async () => {
+    const row = page.getByTestId("card-row").first();
+    const cards = row.locator("[data-flip-key]");
+    await expect(cards).toHaveCount(2);
+    await expect(cards.first()).toContainText("Hotel de Russie");
+    // A row, not a grid: the cards line up left to right inside a scroller.
+    const tops = await cards.evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().top)));
+    expect(new Set(tops).size).toBe(1);
+    await row.getByRole("button", { name: "Miss: Hotel de Russie" }).click();
+    await page.getByRole("dialog", { name: "Why is Hotel de Russie a miss?" }).getByRole("button", { name: "Too pricey" }).click();
+    await expect(cards.last()).toContainText("Hotel de Russie");
+    await expect(cards.last()).toHaveAttribute("data-verdict", "down");
+    await expect(cards.first()).toHaveAttribute("data-verdict", "");
+    // The same thumb again undoes the judgment and the card returns to its place.
+    await row.getByRole("button", { name: "Miss: Hotel de Russie" }).click();
+    await expect(cards.first()).toContainText("Hotel de Russie");
+    await expect(cards.first()).toHaveAttribute("data-verdict", "");
+    // A thumbs-up moves a card to the front.
+    await row.getByRole("button", { name: "Good pick: Hotel Artemide" }).click();
+    await expect(cards.first()).toContainText("Hotel Artemide");
+    await expect(cards.first()).toHaveAttribute("data-verdict", "up");
+  });
+
   await test.step("the planner creates a trip on the server", async () => {
     await page.getByRole("banner").getByRole("button", { name: "Create a trip" }).click();
     await page.getByPlaceholder(/Dallas, Lisbon/).fill("Rome");

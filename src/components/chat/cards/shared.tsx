@@ -1,19 +1,58 @@
 "use client";
 
-import { Children, useState, type HTMLAttributes, type MouseEvent, type ReactNode } from "react";
+import { Children, useMemo, useState, type HTMLAttributes, type MouseEvent, type ReactNode } from "react";
 import clsx from "clsx";
 import { ExternalLink, Heart, MapPin, Plus, TriangleAlert } from "lucide-react";
 import { ToolCallStatus } from "@copilotkit/core";
 import { findSaved, useTravelStore, type SavedKind } from "@/lib/store";
-import type { ResolvedPlace } from "@/lib/places/types";
+import type { PlaceKind, ResolvedPlace } from "@/lib/places/types";
+import { verdictFor, verdictRank } from "@/lib/recs/verdict";
 import { useUiState } from "@/components/providers/UiState";
 import { useTripScope } from "@/components/trips/TripScope";
 import { PlaceImage } from "@/components/ui/PlaceImage";
 import { PhotoCredit } from "@/components/ui/PhotoCredit";
+import { Carousel } from "@/components/ui/Carousel";
+
+export interface CardRowItem {
+  /** Stable within the set: the card keeps it while the row reorders. */
+  id: string;
+  /** The place name the thumbs are recorded under. */
+  name?: string;
+  node: ReactNode;
+}
 
 /**
- * Cards of one recommendation set: a two-column grid from tablet width up; on phones a
- * swipeable row that snaps card by card, with the next card peeking in from the right.
+ * One recommendation set as a horizontal row on every width: it snaps card by card, with arrows
+ * on pointer devices. The traveler's thumbs order the row — liked cards first, undecided next,
+ * passed cards last and dimmed — and each move glides rather than jumps. Sets without a place
+ * kind (flights) keep the model's order.
+ */
+export function CardRow({ items, kind, label, className }: { items: CardRowItem[]; kind?: PlaceKind; label: string; className?: string }) {
+  const { recFeedback } = useTravelStore();
+  const ordered = useMemo(
+    () =>
+      items
+        .map((item, index) => {
+          const verdict = kind ? verdictFor(recFeedback, kind, item.name) : undefined;
+          return { item, index, verdict, rank: verdictRank(verdict) };
+        })
+        .sort((a, b) => a.rank - b.rank || a.index - b.index),
+    [items, kind, recFeedback],
+  );
+  return (
+    <Carousel label={label} className={clsx("mt-2", className)} itemGap="gap-3" bleed={false} testId="card-row" flipKey={ordered.map((o) => o.item.id).join("|")}>
+      {ordered.map(({ item, verdict }) => (
+        <div key={item.id} data-flip-key={item.id} data-verdict={verdict ?? ""} className="flex w-[300px] shrink-0 snap-start sm:w-[340px]">
+          <div className={clsx("flex w-full transition-[opacity,filter] duration-500 [&>*]:w-full", verdict === "down" && "opacity-55 saturate-50")}>{item.node}</div>
+        </div>
+      ))}
+    </Carousel>
+  );
+}
+
+/**
+ * Cards of one set that read side by side (a package, imported places, reservations): a
+ * two-column grid from tablet width up; on phones a swipeable row that snaps card by card.
  */
 export function CardGrid({ children, className }: { children: ReactNode; className?: string }) {
   return (

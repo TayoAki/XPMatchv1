@@ -6,7 +6,7 @@ import type { ShowHotelsArgs, Streaming } from "@/lib/travel/schemas";
 import { bookingSearchUrl, googleHotelsUrl, googleMapsSearchUrl } from "@/lib/travel/links";
 import { formatDateRange } from "@/lib/store";
 import { placeKey, usePlacePin, useRegisterPlaces } from "@/components/map/useRegisterPlaces";
-import { CardPhoto, AddToTripButton, Body, CardGrid, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Stars, Tag, Text, Tradeoffs, ViewOnMapButton, usd } from "./shared";
+import { CardPhoto, AddToTripButton, Body, CardRow, CardShell, ExtLink, Footer, SaveButton, SectionHeader, Stars, Tag, Text, Tradeoffs, ViewOnMapButton, usd } from "./shared";
 import { CompareToggle } from "./CompareControls";
 import { HiddenPlaceCard, ReactionControl, useReaction } from "@/components/feedback/ReactionControl";
 import { TasteFit } from "@/components/feedback/TasteFit";
@@ -16,6 +16,7 @@ export function HotelCards({ args, status, toolCallId }: { args: Streaming<ShowH
   const items = (args.hotels ?? []).filter((h) => h && h.name);
   const dates = formatDateRange(args.checkIn, args.checkOut);
   const dest = args.destination ?? "";
+  const title = dest ? `Where to stay in ${dest}` : "Where to stay";
   useRegisterPlaces({
     toolCallId,
     status,
@@ -26,15 +27,15 @@ export function HotelCards({ args, status, toolCallId }: { args: Streaming<ShowH
   return (
     <div>
       <SectionHeader
-        title={dest ? `Where to stay in ${dest}` : "Where to stay"}
+        title={title}
         subtitle={[dates, args.guests ? `${args.guests} guests` : ""].filter(Boolean).join(" · ") || "Rates are estimates; check live prices"}
         status={status}
       />
-      <CardGrid>
-        {items.map((h, i) => (
-          <HotelCard key={`${h.name}-${i}`} hotel={h} index={i} args={args} dest={dest} toolCallId={toolCallId} />
-        ))}
-      </CardGrid>
+      <CardRow
+        kind="hotel"
+        label={title}
+        items={items.map((h, i) => ({ id: `${h.name}-${i}`, name: h.name, node: <HotelCard hotel={h} index={i} args={args} dest={dest} toolCallId={toolCallId} /> }))}
+      />
     </div>
   );
 }

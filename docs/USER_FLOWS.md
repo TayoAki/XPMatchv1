@@ -107,8 +107,8 @@ chips and the composer.
 
 On a phone the concierge page is the chat and everything else opens over it in sheets: the greeting,
 suggestion chips and the composer sit at the top of one scrolling page with the picks (as the
-assistant's first message), Jump back in and Get inspired below them. Recommendation cards come as a
-row that swipes card by card; tapping a card's photo opens the place detail as a sheet. Once the
+assistant's first message), Jump back in and Get inspired below them. Recommendation cards come as the
+same row as on desktop, swiped card by card; tapping a card's photo opens the place detail as a sheet. Once the
 conversation has pins, a **Map · N pinned** pill (top right) opens the map in a half-height sheet with
 the pinned places listed under it (drag the handle for peek, half or full); tapping a pin or a row
 stacks the place sheet on top, closing it returns to the map, closing the map returns to the same place
@@ -140,21 +140,26 @@ scheduling chip open the itinerary board as a full-height sheet (short map, then
    hotels" or "swap the dinner" requests. A city the catalog has never seen is seeded first (a few
    list searches), so the first traveler there pays cents and the next ones nothing.
 3. **Recommendations** — the assistant renders cards for destinations, hotels, flights, restaurants and
-   things to do. Each card links to live inventory (Google Flights, Booking.com/Google Hotels, Google
-   Maps, OpenTable, GetYourGuide) and has **Save** (heart), **View on map**, **Add to trip** and
-   **Compare**. Hotels, restaurants and attractions are resolved through Google Places and pinned on the
-   map; hovering a card highlights its pin and vice versa. Under the reasons to like a pick, amber
+   things to do, each set as one **row** that scrolls sideways (snapping card by card, arrows on
+   pointer devices, a swipe on phones) rather than a grid to scroll down through. Each card links to
+   live inventory (Google Flights, Booking.com/Google Hotels, Google Maps, OpenTable, GetYourGuide) and
+   has **Save** (heart), **View on map**, **Add to trip** and **Compare**. Hotels, restaurants and
+   attractions are resolved through Google Places and pinned on the map; hovering a card highlights
+   its pin and vice versa. Under the reasons to like a pick, amber
    **Heads-up** chips name its honest downsides for this traveler ("Busy street, ask for a courtyard room",
    "Well over $250/night"); a pick that conflicts with one of the traveler's dealbreakers says so.
-   Every hotel, restaurant and attraction card then carries a **match score** ("87% match · Good match")
-   computed by the app, never by the model, from the profile (budget vs price, interests, stay types,
-   must-haves, cuisines, dietary tags, companions), the learned preferences (a dealbreaker named in the
-   heads-ups costs 25 points), the taste profile ("Like Da Enzo, which you loved") and the pin's rating;
-   clicking it opens **Why this score** with every reason and its points. Next to it, **Right for you?**
-   thumbs up / down record whether the pick landed; thumbs down asks why (too pricey, wrong vibe, too far,
-   already been, not my thing). Judgments are stored per place, lower the score of a pick the traveler
-   already passed on, dampen factors that keep misleading them (calibration), and reach the assistant as
-   "Recommendation feedback" so it never re-recommends a recent miss and corrects for repeated reasons.
+   Every destination, hotel, restaurant and attraction card then carries a **match score** ("Good match
+   · 87%") computed by the app, never by the model, from the profile (budget vs price, interests, stay
+   types, must-haves, cuisines, dietary tags, companions), the learned preferences (a dealbreaker named
+   in the heads-ups costs 25 points), the taste profile ("Like Da Enzo, which you loved") and the pin's
+   rating; clicking it opens **Why this score** with every reason and its points. Next to it, **Right
+   for you?** thumbs up / down record whether the pick landed; thumbs down asks why (too pricey, wrong
+   vibe, too far, already been, not my thing). The thumbs also order the row: a thumbs-down slides the
+   card to the end of the row and greys it out, a thumbs-up brings it to the front, and the same thumb
+   again undoes it (the move is animated; the "For you in" picks on Discover follow the same rule).
+   Judgments are stored per place, lower the score of a pick the traveler already passed on, dampen
+   factors that keep misleading them (calibration), and reach the assistant as "Recommendation
+   feedback" so it never re-recommends a recent miss and corrects for repeated reasons.
 4. **Understood as (smart filters)** — when the request carries criteria ("a quiet hotel under $250 a night
    with a pool and good vibes"), the assistant first shows a chip strip: dark chips are must-haves, light
    ones preferences, and "Not applied: 'good vibes'" lists what could not be mapped. Removing a chip, adding
