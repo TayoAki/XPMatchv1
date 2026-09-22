@@ -2,9 +2,9 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import clsx from "clsx";
-import { Bug, Database, Sparkles, ThumbsDown, ThumbsUp, Users } from "lucide-react";
+import { Bug, Database, Receipt, Sparkles, ThumbsDown, ThumbsUp, Users } from "lucide-react";
 import { api } from "@/lib/api";
-import { QUIZ_FIELD_LABELS, type AdminUser, type BetaStats, type CatalogStats, type PackageStats, type QuizAnswers, type QuizStatus } from "@/lib/admin/types";
+import { QUIZ_FIELD_LABELS, type AdminUser, type BetaStats, type CatalogStats, type PackageStats, type QuizAnswers, type QuizStatus, type SpendStats } from "@/lib/admin/types";
 import { BUG_SEVERITIES, type BugReport, type BugStatus } from "@/lib/bugs/types";
 import type { RecQuality } from "@/lib/recs/types";
 import { useTravelStore } from "@/lib/store";
@@ -183,6 +183,73 @@ interface SeedResponse {
   byKind: { hotel: number; restaurant: number; attraction: number };
 }
 
+/**
+ * What Google actually cost us, counted call by call rather than estimated from the rate card.
+ * List prices ignore the monthly free tiers, so the total reads high: reconcile it against the
+ * Cloud bill before quoting it.
+ */
+function Spend({ spend }: { spend: SpendStats | null }) {
+  const money = (v: number) => `$${v.toFixed(2)}`;
+  return (
+    <section className="mt-8" data-testid="api-spend">
+      <h2 className="flex items-center gap-2 text-[19px] font-semibold tracking-tight">
+        <Receipt className="h-5 w-5" /> Google spend
+      </h2>
+      <p className="mt-1 text-[13px] text-muted">
+        Every paid call, counted as it happens and priced at Google&rsquo;s list rate. List prices ignore the monthly free
+        tiers, so treat this as an upper bound and check it against the Cloud bill.
+      </p>
+      {spend ? (
+        spend.totalCalls ? (
+          <>
+            <div className="mt-3 grid gap-3 sm:grid-cols-3">
+              <Stat
+                label={`Estimated spend, ${spend.days} days`}
+                value={spend.estimatedCost}
+                testId="stat-spend"
+                note={`${spend.paidCalls.toLocaleString()} paid calls of ${spend.totalCalls.toLocaleString()}`}
+              />
+              <Stat
+                label="Cost per active user"
+                value={spend.costPerActiveUser ?? 0}
+                testId="stat-cost-per-user"
+                note={spend.costPerActiveUser === null ? "no active accounts yet" : `${spend.activeUsers} active in ${spend.days} days`}
+              />
+              <Stat
+                label="Catalog hit rate"
+                value={spend.catalogHitRate ?? 0}
+                note={spend.catalogHitRate === null ? "no lookups yet" : `% of lookups answered without paying · ${spend.newPlaces} new places`}
+              />
+            </div>
+            <table className="mt-3 w-full text-[13px]">
+              <thead className="text-muted">
+                <tr>
+                  <th className="py-1 text-left font-medium">SKU</th>
+                  <th className="py-1 text-right font-medium">Calls</th>
+                  <th className="py-1 text-right font-medium">Cost</th>
+                </tr>
+              </thead>
+              <tbody>
+                {spend.bySku.map((row) => (
+                  <tr key={row.sku} className="border-t border-border">
+                    <td className="py-1">{row.label}</td>
+                    <td className="py-1 text-right tabular-nums">{row.calls.toLocaleString()}</td>
+                    <td className="py-1 text-right tabular-nums">{row.cost === 0 ? "free" : money(row.cost)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        ) : (
+          <p className="mt-2 text-[13px] text-muted">No Google calls counted yet. Numbers appear here once travelers start looking places up.</p>
+        )
+      ) : (
+        <p className="mt-2 text-[13px] text-muted">Loading&hellip;</p>
+      )}
+    </section>
+  );
+}
+
 /** The place catalog: what is stored, how often lookups came from it, the package numbers, and a way to fill a city ahead of testers. */
 function Catalog({ catalog, packages, onChanged }: { catalog: CatalogStats | null; packages: PackageStats | null; onChanged: () => void }) {
   const [destination, setDestination] = useState("");
@@ -273,6 +340,7 @@ export function AdminClient() {
   const [quiz, setQuiz] = useState<QuizAnswers | null>(null);
   const [catalog, setCatalog] = useState<CatalogStats | null>(null);
   const [packages, setPackages] = useState<PackageStats | null>(null);
+  const [spend, setSpend] = useState<SpendStats | null>(null);
   const [statsVersion, setStatsVersion] = useState(0);
   const [members, setMembers] = useState<AdminUser[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -281,13 +349,14 @@ export function AdminClient() {
   useEffect(() => {
     if (!hydrated || !admin) return;
     let active = true;
-    api<{ stats: BetaStats; quiz: QuizAnswers; catalog: CatalogStats; packages: PackageStats }>("/api/admin/stats")
+    api<{ stats: BetaStats; quiz: QuizAnswers; catalog: CatalogStats; packages: PackageStats; spend: SpendStats }>("/api/admin/stats")
       .then((data) => {
         if (!active) return;
         setStats(data.stats);
         setQuiz(data.quiz);
         setCatalog(data.catalog);
         setPackages(data.packages);
+        setSpend(data.spend);
       })
       .catch(() => undefined);
     return () => {
@@ -378,6 +447,7 @@ export function AdminClient() {
       <Members users={members} />
 
       <Catalog catalog={catalog} packages={packages} onChanged={() => setStatsVersion((v) => v + 1)} />
+      <Spend spend={spend} />
 
       <section className="mt-8" data-testid="quiz-answers">
         <h2 className="text-[19px] font-semibold tracking-tight">What people answered</h2>

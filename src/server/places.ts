@@ -14,6 +14,7 @@ import {
   upsertPlaces,
   type CatalogPlace,
 } from "./catalog";
+import { classifyPlacesCall, recordCall } from "./api-spend";
 
 /**
  * Server-side place resolution. Uses the Google Places API (New) when a key is
@@ -197,6 +198,8 @@ const notLocality = (p: ResolvedPlace) => !isLocality(p.types);
 async function googleFetch<T>(url: string, init: RequestInit, fieldMask: string): Promise<T> {
   const key = placesApiKey();
   if (!key) throw new Error("No Google Places API key configured");
+  // The field mask decides the billing tier, so count the call the way Google bills it.
+  recordCall(classifyPlacesCall(url, fieldMask));
   const res = await fetch(url, {
     ...init,
     headers: {
@@ -611,6 +614,8 @@ export async function resolvePhotoUri(photoName: string, width: number, fresh = 
     }
   }
   const url = `${PLACES_BASE}/${photoName}/media?maxWidthPx=${px}&skipHttpRedirect=true&key=${key}`;
+  // Past both caches, so this one is bought: the photo URL lives 24 h, the place itself 30 days.
+  recordCall("place_photos");
   const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
   if (!res.ok) return null;
   const data = (await res.json()) as { photoUri?: string };

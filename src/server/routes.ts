@@ -1,5 +1,6 @@
 import { estimateLeg, type LatLngLike, type TravelLeg } from "@/lib/itinerary";
 import { placesApiKey } from "./places";
+import { recordCall } from "./api-spend";
 
 /**
  * Travel legs between consecutive stops of a day. With a Google key (and
@@ -85,6 +86,7 @@ async function computeRoutes(points: LatLngLike[], mode: TravelMode): Promise<Ro
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
   try {
+    recordCall("routes_essentials");
     const res = await fetch(`${ROUTES_BASE}/directions/v2:computeRoutes`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Goog-Api-Key": key, "X-Goog-FieldMask": "routes.legs.distanceMeters,routes.legs.duration" },

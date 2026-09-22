@@ -229,8 +229,10 @@ no invite code.
 - Railway logs for `Agent execution failed` (model or tool errors), `[places]` warnings (Places API
   failures fall back to estimated pins) and `[routes]` warnings (Routes API failures fall back to
   estimated legs; a steady `403` means the API is not enabled on the key's project).
-- OpenRouter usage per day and Google Places SKU counts per day; the Places cache is in-process, so every
-  redeploy starts cold.
+- OpenRouter usage per day, and Google Places SKU counts per day from the Google spend panel on
+  `/admin` (`docs/COGS.md` section 9). Places, photos and list searches are cached in Postgres and
+  shared by everyone, so a redeploy no longer starts cold; only routes and the small in-process
+  layers do.
 - Postgres size (transcripts grow with use; `place_facts` is capped by its 30-day refresh; bug report
   screenshots are up to 1.5 MB each).
 - `/admin`: open bug reports and the recommendation hit rate. A hit rate under about 60%, or one miss

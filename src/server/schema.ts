@@ -335,4 +335,17 @@ export const MIGRATIONS: Migration[] = [
       `CREATE INDEX IF NOT EXISTS package_events_user_idx ON package_events(user_id, created_at DESC)`,
     ],
   },
+  {
+    id: "0009_api_calls",
+    statements: [
+      // Every paid Google call, counted by SKU per day, so cost per active user is measured rather than estimated.
+      `CREATE TABLE IF NOT EXISTS api_calls (
+        day date NOT NULL,
+        sku text NOT NULL,
+        calls bigint NOT NULL DEFAULT 0,
+        PRIMARY KEY (day, sku)
+      )`,
+      `CREATE INDEX IF NOT EXISTS api_calls_day_idx ON api_calls(day DESC)`,
+    ],
+  },
 ];

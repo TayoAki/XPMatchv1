@@ -416,8 +416,11 @@ resolution are already live.
 | Concierge | $5.00 API + human time | Built inside the app |
 
 **Guardrails already in the docs.** Google Cloud quotas and budget alerts, OpenRouter spending limit,
-quotas that bound the worst day at about $45. Add: a cost-per-active-user tile on `/admin`, computed
-from SKU counts, reviewed weekly.
+quotas that bound the worst day at about $45. **Built:** `/admin` now has a Google spend panel that
+counts every paid call by SKU as it happens and reports cost per active user and the catalog hit rate
+(`src/server/api-spend.ts`, `docs/COGS.md` section 9). Review it weekly and reconcile it monthly
+against the Cloud bill; until a seeded city has run for a month, the COGS figures in section 11 stay
+Assumed.
 
 **Quality.** The recommendation hit rate on `/admin` (thumbs up over judged) is the product's quality
 number: keep it at or above 60%; one miss reason dominating means retune `src/lib/match.ts` or the

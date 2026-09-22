@@ -1,14 +1,15 @@
 # XPMatch cost of goods sold (COGS)
 
-**Status:** the place catalog and the package opener described in sections 6 and 7 are built
-(`docs/PACKAGES_PLAN.md`), so the "Catalog + packages" columns in `docs/PACKAGES_PLAN.md` are the
-running model; the "today" figures below describe the app before that change and remain the
-reference for what each Google call costs.
+**Status:** section 2 describes the code as it runs today, after the place catalog and the package
+opener shipped (`docs/PLACE_CATALOG.md`, `docs/PACKAGES_PLAN.md`). Sections 3 to 5 are the
+**pre-catalog** model and are kept as the before picture; they are no longer what the app costs.
+Section 9 is the one that matters going forward: the app now counts its own Google calls, so cost
+per active user can be read instead of estimated.
 
-Unit costs as the app stood on September 20, 2026 before the catalog, priced against Google's current core-services
-list (per 1,000 calls, with the monthly free calls per SKU: Essentials 10,000, Pro 5,000,
-Enterprise 1,000). Usage assumptions are stated so the model can be re-run with real numbers from the
-Google Cloud billing console once testers are on.
+Prices are Google's core-services list (per 1,000 calls, with the monthly free calls per SKU:
+Essentials 10,000, Pro 5,000, Enterprise 1,000). List prices ignore those free tiers, so every
+total here is an upper bound. Reconcile against the Google Cloud billing console before quoting
+any of it.
 
 ## 1. Price list used
 
@@ -41,24 +42,51 @@ Details the IDs-only tier covers `id`, `name`, `photos` and `attributions`.
 
 ## 2. What the app calls today, and the SKU each call bills at
 
-| App feature | Call (`src/server/places.ts`) | Field mask | SKU today | Cache today |
+Read from `src/server/places.ts`, `src/server/catalog.ts` and `src/server/routes.ts`. The field mask
+is what decides the billing tier, so the SKU column is the mask, not the feature.
+
+| App feature | Call | Field mask | SKU today | Cache, and who shares it |
 | --- | --- | --- | --- | --- |
-| Every recommendation card, destination focus, trip/guide lookups, import candidates | `places:searchText`, `maxResultCount: 1` | rating, price, website **+ editorialSummary** | **Text Search Enterprise + Atmosphere, $40** | In-process map, per process, 500 entries |
-| Explore category tabs | `places:searchNearby` | rating, price, website | **Nearby Search Enterprise, $35** | 10 minutes, in-process |
-| Explore typed search or filters, home picks (6 queries per destination) | `places:searchText`, 8–20 results | rating, price, website | **Text Search Enterprise, $35** | 10 minutes (Explore), 6 hours (home picks), in-process |
-| Place sheet, Ask about a place, board stop details | `places/{id}` | reviews, summaries, atmosphere | **Place Details Enterprise + Atmosphere, $25** | **30 days in Postgres** (`place_facts`), shared by everyone |
-| Every card image, sheet gallery, Explore card | photo media (`skipHttpRedirect`) | — | Place Photos, $7 | Photo URL 2 hours in-process; the image 24 hours in the browser |
-| Any page that creates a map | Maps JavaScript API | — | Dynamic Maps, $7 | One load per map created |
-| Board travel legs | Compute Routes | — | Routes Essentials, $5 | 24 hours in-process |
+| Every recommendation card, destination focus, trip/guide lookup, import candidate | `places:searchText`, `maxResultCount: 1` | `places.id` only | **Text Search ids only, free** | `place_aliases` then a fuzzy match on `places`, both in Postgres, shared by everyone |
+| …and only when that id has never been stored | `places/{id}` | card mask: rating, price, website. **No editorial summary** | **Place Details Enterprise, $35** | `places` in Postgres, 30 days, shared by everyone |
+| Explore category tabs | `places:searchNearby` | rating, price, website | **Nearby Search Enterprise, $35** | `search_cache` in Postgres, 24 h, shared; 10 min in-process |
+| Explore typed search, home picks | `places:searchText`, 8–20 results | rating, price, website | **Text Search Enterprise, $35** | `search_cache` in Postgres, 24 h, shared; 6 h in-process for home picks |
+| Place sheet, Ask about a place, board stop details | `places/{id}` | reviews, summaries, atmosphere | **Place Details Enterprise + Atmosphere, $40** | `place_facts` in Postgres, 30 days, shared by everyone |
+| Every card image, sheet gallery, Explore card | photo media (`skipHttpRedirect`) | — | **Place Photos, $7** | `photo_urls` in Postgres, 24 h, shared by everyone; 2 h in-process |
+| Any page that creates a map | Maps JavaScript API | — | Dynamic Maps, $7 | One load per map. **Client-side, so section 9 cannot count it** |
+| Board travel legs | Compute Routes | — | Routes Essentials, $5 | 24 h in-process |
 | Weather chip, destination blurbs, fallback photos | Open-Meteo, Wikipedia | — | free | 15 minutes / per page |
-| Chat, helpers, imports | OpenRouter | — | about $0.005 per message | prompt caching on OpenAI models |
+| Chat, helpers, imports | OpenRouter (`openai/gpt-4o-mini` by default) | — | about $0.005 per message | prompt caching on OpenAI models |
 
-Two things stand out. Cards are bought at the most expensive tier because of one field
-(`editorialSummary`) the card never shows on its own line, and every cache except place facts lives
-in the server process: a deploy or restart throws it away and the same "Trattoria X, Rome" is bought
-again, for every user.
+**What changed, and why the old numbers are wrong.** Before the catalog, every card was a Text Search
+carrying `editorialSummary`, which billed the whole search at Enterprise + Atmosphere, and every cache
+except place facts lived in the server process — so a deploy re-bought the same place for every user.
+Today the card path asks Google for an **id only**, which is free, and pays for a place exactly once:
 
-## 3. Cost per action
+```
+model names a place ──▶ place_aliases (name + city → id)      0 calls  ┐
+                        └─ miss ▶ fuzzy match on `places`     0 calls  │ free once a city is seeded
+                                  └─ miss ▶ Text Search, ids  free     │
+                                            └─ known id ▶ `places`  0  ┘
+                                            └─ new id   ▶ Place Details, $0.035, once, then stored
+```
+
+**So cost scales with cities and days, not with users.** Every expensive cache is keyed on the place
+or the query, never on the account: `places`, `place_facts`, `photo_urls` and `search_cache` are all
+shared. The first traveler in an unseeded city is expensive; the next thousand in that city are nearly
+free. A flat "cost per user" hides this in both directions.
+
+**Two things the catalog does not protect.** A place is re-fetched when it is shown and older than
+30 days (`isCatalogFresh`), and a photo URL expires after 24 hours, so both recur with days rather
+than with users. Routes are still in-process only.
+
+**The daily cap is not a spend cap.** `assertLookupBudget` charges 400 lookups per account per day
+*before* resolution runs, so 400 catalog hits costing nothing exhaust the same budget as 400 new
+places costing about $14. The cap bounds request volume; section 9 is what bounds the bill.
+
+## 3. Cost per action (pre-catalog, historical)
+
+> These figures are the *before* picture. The card path they price no longer exists; see section 2.
 
 List prices, before free tiers. "Catalog" is the design in section 6.
 
@@ -91,7 +119,7 @@ List prices, before free tiers. "Catalog" is the design in section 6.
 
 The Enterprise tiers are the binding ones: 1,000 cards is roughly a week of 25 active testers.
 
-## 5. Monthly picture
+## 5. Monthly picture (pre-catalog, historical)
 
 Assumed active tester: 30 chat messages, half with six cards (90 cards), 20 place sheets, 20 Explore
 views, 3 destinations of home picks, 60 maps, 20 board changes, 1 import, about 460 photos.
@@ -189,3 +217,61 @@ are spread across 25 people; a heavy tester (100 card messages, 50 sheets, 50 Ex
 $30 at list price. Nothing a single tester does is expensive per action (the priciest single turn is a
 full plan at $0.85), so the beta risk is volume and runaway loops, not any one feature. The quotas in
 section 7 bound the worst day at roughly $45.
+
+---
+
+## 9. Measuring it, instead of estimating it
+
+Everything above section 9 is arithmetic on a rate card. Nothing in the app used to count a Google
+call, so "$1.40–2.00 per active user" was a projection that could not be checked from inside the
+product. It can be now.
+
+### What was added
+
+| Piece | Where |
+| --- | --- |
+| SKU classifier and price table | `src/server/api-spend.ts` |
+| Counter on every Places call | `googleFetch` in `src/server/places.ts` |
+| Counter on every photo fetch past both caches | `resolvePhotoUri` in `src/server/places.ts` |
+| Counter on every route computed | `src/server/routes.ts` |
+| Daily totals by SKU | `api_calls` table, migration `0009_api_calls` |
+| Google spend panel | `/admin`, under the place catalog |
+| Tier assertions | `tests/unit/api-spend.test.ts` |
+
+`classifyPlacesCall` reads the request URL and the field mask, which is exactly what Google's billing
+reads, so the SKU recorded is the SKU charged. `recordCall` is fire and forget and wrapped in a catch:
+a counter problem never breaks a lookup.
+
+### What `/admin` shows
+
+- **Estimated spend, 30 days** — calls × list price, and how many of the calls were paid at all.
+- **Cost per active user** — the number the business plan has been assuming. Active means an account
+  with chat activity in the window.
+- **Catalog hit rate** — the share of lookups answered from `place_aliases` rather than a paid call.
+  This is the number that decides whether the catalog is working.
+- **A row per SKU** — so a tier moving (a field mask quietly adding `editorialSummary`, say) shows up
+  as a line item instead of a surprise on the invoice.
+
+### How to read it honestly
+
+1. **It is an upper bound.** List prices ignore the monthly free tiers (10,000 Essentials, 5,000 Pro,
+   1,000 Enterprise). At beta volumes much of this is free in reality.
+2. **Dynamic Maps is missing.** Map loads happen in the browser against the public key, so the server
+   cannot count them. Read those from the Cloud console.
+3. **Model spend is missing.** OpenRouter bills separately; read it from the OpenRouter dashboard.
+4. **Per-user is the wrong denominator early on.** While the catalog is filling, spend tracks cities
+   and days. Cost per active user only becomes meaningful once a city has a stable user base.
+5. **Reconcile monthly.** Compare the panel's total against the Cloud bill. If they diverge, the
+   classifier or the price table is wrong, and both are one small file.
+
+### What this changes in the business plan
+
+`docs/BUSINESS_PLAN.md` §9.1 sets cost caps of $0.20 (free), $3.00 (Trip Pass and Plus) and $6.00
+(advisor seat) per month, and the financial model charges a flat $2.00 per paying consumer and $4.00
+per seat. Those were assumptions standing in for a measurement. The caps can now be checked against
+what actually happened, and the flat per-user rate can be replaced with the shape the code really has:
+a cost that rises with each new city and each new place, and barely moves with each additional user in
+a city already covered.
+
+Until at least one seeded city has run for a month with real travellers, every COGS figure in the
+business plan and the financial model stays tagged **[A] Assumed**.

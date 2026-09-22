@@ -90,3 +90,33 @@ export interface BetaStats {
   bugReportsOpen: number;
   recFeedback: number;
 }
+
+/** One Google SKU over the reporting window: how many calls and what they cost at list price. */
+export interface SpendBySku {
+  sku: string;
+  label: string;
+  calls: number;
+  cost: number;
+}
+
+/**
+ * Measured Google spend. Counted by `src/server/api-spend.ts` as each call happens, priced at
+ * Google's list rate. List prices ignore the monthly free tiers, so read `estimatedCost` as an
+ * upper bound and reconcile it against the Cloud bill.
+ */
+export interface SpendStats {
+  days: number;
+  bySku: SpendBySku[];
+  totalCalls: number;
+  /** Calls on a SKU that is not free (ids-only Text Search is free and excluded). */
+  paidCalls: number;
+  estimatedCost: number;
+  activeUsers: number;
+  /** null until at least one account has been active in the window. */
+  costPerActiveUser: number | null;
+  newPlaces: number;
+  /** null until at least one new place has been stored in the window. */
+  costPerNewPlace: number | null;
+  /** Share of lookups answered from the catalog instead of a paid call, 0-100. null before any lookup. */
+  catalogHitRate: number | null;
+}

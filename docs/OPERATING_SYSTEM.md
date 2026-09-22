@@ -39,7 +39,7 @@ The founder's day: sales calls, exception queue, gate decisions. Under ten hours
 | Taking money | Stripe billing, portal, dunning | Build | 3–4 days |
 | Answering support and bug reports | Support inbox with AI drafts; bug reports already reach `/admin` | Build on existing | 2 days |
 | Building concierge trips | Draft board built automatically from the intake; QA by a reviewer with a checklist | Build | 3 days + SOP |
-| Knowing costs and health | Digest from Google SKU counts, OpenRouter, Railway, error tracker | Build | 2 days |
+| Knowing costs and health | Digest from Google SKU counts, OpenRouter, Railway, error tracker | Part built: `/admin` counts Google calls by SKU (`docs/COGS.md` §9); the digest and the other sources remain | 1 day |
 | Finding leads and writing outreach | Weekly list build, sequences, reply triage | Buy + build | 1 week |
 | Publishing content | Drafts from activity, approval queue, scheduled posting | Build + buy | 2 days |
 | Shipping code safely | CI with the unit and e2e suites, preview deploys, release checklist | Exists partly | 1 day |
