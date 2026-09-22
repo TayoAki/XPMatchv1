@@ -9,6 +9,7 @@ import { useSendMessage } from "@/components/chat/useSendMessage";
 import { buildPlanPrompt } from "@/components/profile/TripPlannerDialog";
 import { useDiscoveryFocus } from "@/components/panel/DiscoveryPanel";
 import { Button } from "@/components/ui/Button";
+import { Reveal } from "@/components/ui/Reveal";
 import { PhoneQuiz } from "@/components/chat/PhoneQuiz";
 import { PromptComposer } from "./PromptComposer";
 import { PlannerFields } from "./PlannerFields";
@@ -47,7 +48,8 @@ export function DiscoverHero({ destination, phoneQuiz }: { destination: string |
   };
 
   return (
-    <section className="bg-surface-warm lg:grid lg:grid-cols-[minmax(0,0.473fr)_minmax(0,0.527fr)]" data-testid="discover-hero">
+    // z-10 keeps the field editors above the sections that follow.
+    <section className="relative z-10 bg-surface-warm lg:grid lg:grid-cols-[minmax(0,0.473fr)_minmax(0,0.527fr)]" data-testid="discover-hero">
       <div className="flex flex-col justify-center px-4 pb-8 pt-9 sm:px-8 lg:px-[60px] lg:py-10">
         <div className="mx-auto w-full max-w-[640px] lg:mx-0">
           {phoneQuiz ? (
@@ -56,33 +58,42 @@ export function DiscoverHero({ destination, phoneQuiz }: { destination: string |
             </div>
           ) : (
             <>
-              <p className="text-[12px] font-semibold uppercase tracking-[0.3em] text-muted">Travel, at your pace</p>
-              <h1 className="mt-3 text-[clamp(2.5rem,3.8vw,3.875rem)] font-semibold leading-[1.04] tracking-[-0.045em] text-foreground">
-                Go somewhere <br className="hidden lg:block" />
-                that stays with you.
-              </h1>
-              <p className="mt-3 font-serif text-[clamp(1.125rem,1.5vw,1.5rem)] leading-[1.4] text-muted">Thoughtful journeys, shaped around you.</p>
-              <div className="mt-5">
+              {/* The copy lifts in line by line on arrival. */}
+              <Reveal immediate>
+                <p className="text-[12px] font-semibold uppercase tracking-[0.3em] text-muted">Travel, at your pace</p>
+              </Reveal>
+              <Reveal immediate delay={70}>
+                <h1 className="mt-3 text-[clamp(2.5rem,3.8vw,3.875rem)] font-semibold leading-[1.04] tracking-[-0.045em] text-foreground">
+                  Go somewhere <br className="hidden lg:block" />
+                  that stays with you.
+                </h1>
+              </Reveal>
+              <Reveal immediate delay={140}>
+                <p className="mt-3 font-serif text-[clamp(1.125rem,1.5vw,1.5rem)] leading-[1.4] text-muted">Thoughtful journeys, shaped around you.</p>
+              </Reveal>
+              <Reveal immediate delay={220} className="mt-5">
                 <PromptComposer onSend={send} />
-              </div>
+              </Reveal>
               {/* Phones scroll the chips sideways; wider screens wrap them. */}
-              <div className="xp-no-scrollbar -mx-4 mt-2.5 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0" data-testid="hero-chips">
-                {chips.map((chip) => (
-                  <button
-                    key={chip.label}
-                    type="button"
-                    onClick={() => void send(chip.prompt)}
-                    className="h-8 shrink-0 rounded-full border border-border bg-white px-3.5 text-[13px] font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-                  >
-                    {chip.label}
-                  </button>
-                ))}
-              </div>
-              <div className="mt-3">
+              <Reveal immediate delay={290} className="xp-no-scrollbar -mx-4 mt-2.5 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0">
+                <div className="contents" data-testid="hero-chips">
+                  {chips.map((chip) => (
+                    <button
+                      key={chip.label}
+                      type="button"
+                      onClick={() => void send(chip.prompt)}
+                      className="h-8 shrink-0 rounded-full border border-border bg-white px-3.5 text-[13px] font-medium text-foreground transition-all duration-200 hover:-translate-y-px hover:bg-surface active:translate-y-0 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                </div>
+              </Reveal>
+              <Reveal immediate delay={360} className="mt-3">
                 <PlannerFields />
-              </div>
-              <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3">
-                <Button size="lg" onClick={() => openPlanner("where")} className="h-[52px] px-6 text-[15px]">
+              </Reveal>
+              <Reveal immediate delay={430} className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3">
+                <Button size="lg" onClick={() => openPlanner("where")} className="h-[52px] px-6 text-[15px] hover:-translate-y-0.5">
                   Create a trip <ArrowRight className="h-4 w-4" aria-hidden="true" />
                 </Button>
                 <button
@@ -92,7 +103,7 @@ export function DiscoverHero({ destination, phoneQuiz }: { destination: string |
                 >
                   or chat with your AI concierge
                 </button>
-              </div>
+              </Reveal>
             </>
           )}
         </div>

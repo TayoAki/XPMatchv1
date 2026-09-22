@@ -74,7 +74,7 @@ test("community guides and Explore near you", async ({ page, browser, request, b
       () => readerPage.request.get("/api/saved").then((r) => r.json() as Promise<{ saved: { kind: string; title: string }[] }>),
       (d) => d.saved.some((s) => s.kind === "guide" && s.title === title),
     );
-    await readerPage.getByRole("navigation").getByRole("link", { name: "Saved", exact: true }).click();
+    await readerPage.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Saved", exact: true }).click();
     await readerPage.getByRole("button", { name: /^guides/i }).click();
     await expect(readerPage.getByText(title).first()).toBeVisible();
     await readerPage.goto(guideUrl);

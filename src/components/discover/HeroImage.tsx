@@ -10,12 +10,14 @@ import { PhotoCredit } from "@/components/ui/PhotoCredit";
 
 /**
  * The hero photograph: the Google Places photo of the destination in focus through the photo
- * proxy, with the motto, the caption naming the place and the photo's author attribution. While
- * the place resolves the slot keeps its height; without a Places photo the Wikipedia thumbnail
- * steps in, and without that a flat brand panel keeps the text readable.
+ * proxy, with the motto, the caption naming the place and the photo's author attribution. It
+ * fades and settles in once loaded; while the place resolves the slot keeps its height; without
+ * a Places photo the Wikipedia thumbnail steps in, and without that a flat brand panel keeps the
+ * text readable.
  */
 export function HeroImage({ destination, place, loading, className }: { destination: string; place: ResolvedPlace | null; loading: boolean; className?: string }) {
   const [failed, setFailed] = useState<string | null>(null);
+  const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
   const photo = place?.photos?.[0];
   const src = photo && failed !== photo ? photoAtWidth(photo, 1920) : null;
   const caption = destinationCaption(place, destination);
@@ -23,7 +25,16 @@ export function HeroImage({ destination, place, loading, className }: { destinat
     <div className={clsx("relative overflow-hidden bg-brand", className)} data-testid="hero-image" aria-busy={loading || undefined}>
       {src ? (
         // eslint-disable-next-line @next/next/no-img-element -- proxied Places photo
-        <img src={src} alt={caption} fetchPriority="high" onError={() => setFailed(photo ?? null)} className="absolute inset-0 h-full w-full object-cover" />
+        <img
+          key={src}
+          src={src}
+          alt={caption}
+          fetchPriority="high"
+          onLoad={() => setLoadedSrc(src)}
+          onError={() => setFailed(photo ?? null)}
+          data-loaded={loadedSrc === src ? "true" : undefined}
+          className="xp-photo xp-photo--settle absolute inset-0 h-full w-full object-cover"
+        />
       ) : !loading ? (
         <PlaceImage queries={[place?.name ?? destination.split(",")[0].trim(), destination]} alt={caption} className="absolute inset-0 rounded-none" />
       ) : null}

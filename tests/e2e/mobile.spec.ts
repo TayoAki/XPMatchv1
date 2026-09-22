@@ -73,6 +73,7 @@ test("phone: quiz in the Discover hero, picks, tab bar, card rows, proposal, she
     const stays = page.getByTestId("home-row-stays");
     await stays.scrollIntoViewIfNeeded();
     await expect(stays.getByTestId("home-pick")).toHaveCount(3, { timeout: 60_000 });
+    await expect(page.getByTestId("home-row-things").getByTestId("home-pick")).toHaveCount(4);
     await expect(stays.getByTestId("match-badge").first()).toBeVisible();
     await expectFits(page, "the Discover page");
   });

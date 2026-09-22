@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
-import { completeOnboarding, PASSWORD } from "./helpers";
+import { completeOnboarding, openChatHistory, PASSWORD } from "./helpers";
 
 /**
  * Transcript persistence: this spec runs its own app instance so it can restart
@@ -87,12 +87,11 @@ test.describe("chat transcripts survive a server restart", () => {
     await expect(page.getByText("Where to stay in Rome")).toBeVisible({ timeout: 60_000 });
     await expect(page.getByText(/Done — those are on the cards above/)).toBeVisible({ timeout: 30_000 });
 
-    await page.getByTestId("chat-menu-button").click();
+    await openChatHistory(page);
     const link = page.getByTestId("chat-nav-list").getByRole("link", { name: /Find hotels in Rome|Exploring Rome/ });
     await expect(link).toBeVisible();
     const threadId = new URL((await link.getAttribute("href")) ?? "", BASE).searchParams.get("thread");
     expect(threadId).toBeTruthy();
-    await page.keyboard.press("Escape");
 
     await expect
       .poll(async () => ((await (await page.request.get(`${BASE}/api/chats/${encodeURIComponent(threadId!)}/messages`)).json()) as { count: number }).count, { timeout: 20_000 })

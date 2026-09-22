@@ -12,6 +12,7 @@ import { useUiState } from "@/components/providers/UiState";
 import { WelcomeHero } from "@/components/chat/WelcomeHero";
 import { TripChatScope } from "@/components/chat/TripChatScope";
 import { CompareBar } from "@/components/chat/cards/CompareControls";
+import { PlannerChips } from "@/components/shell/PlannerChips";
 
 function messageText(m: Message): string {
   const content = (m as { content?: unknown }).content;
@@ -92,14 +93,21 @@ export function TravelChat({ threadId, initialPrompt, tripId }: { threadId?: str
         threadId={threadId}
         labels={{
           chatInputPlaceholder: "Ask your concierge",
-          chatDisclaimerText: `XPMatch can make mistakes. Double-check prices, hours and availability before booking.${
-            config?.mode === "live" && config.model && config.model !== "unknown" ? ` · Model: ${config.model}` : ""
-          }`,
+          // Blank: the planner chips and our own line render under the composer instead (globals.css hides the empty slot).
+          chatDisclaimerText: "",
           welcomeMessageText: "Where to today?",
         }}
         welcomeScreen={WelcomeHero}
         input={{ toolsMenu, autoFocus: true }}
       />
+      {/* Under the composer: the trip planner values as chips, then the disclaimer. */}
+      <div className="mx-auto w-full max-w-[780px] shrink-0 px-4 pb-2 pt-1 sm:px-6" data-testid="chat-footer">
+        <PlannerChips />
+        <p className="mt-1.5 text-center text-[11px] leading-4 text-muted">
+          XPMatch can make mistakes. Double-check prices, hours and availability before booking.
+          {config?.mode === "live" && config.model && config.model !== "unknown" ? ` · Model: ${config.model}` : ""}
+        </p>
+      </div>
     </div>
   );
 }

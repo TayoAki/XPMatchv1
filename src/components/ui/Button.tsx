@@ -12,7 +12,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variants: Record<Variant, string> = {
-  primary: "bg-brand text-white hover:bg-brand-hover disabled:bg-neutral-400",
+  primary: "bg-brand text-white shadow-sm hover:bg-brand-hover hover:shadow-md disabled:bg-neutral-400 disabled:shadow-none",
   secondary: "bg-surface text-foreground hover:bg-surface-2",
   ghost: "bg-transparent text-foreground hover:bg-surface",
   outline: "bg-white text-foreground border border-border hover:bg-surface",
@@ -34,7 +34,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       ref={ref}
       type={type}
       className={clsx(
-        "inline-flex items-center justify-center rounded-full font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed",
+        "inline-flex items-center justify-center rounded-full font-medium transition-all duration-200 ease-[var(--xp-ease)] active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:active:scale-100",
         variants[variant],
         sizes[size],
         className,

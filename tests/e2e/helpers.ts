@@ -106,6 +106,14 @@ export async function login(page: Page, email: string, options: { finishOnboardi
   if (options.finishOnboarding) await completeOnboarding(page);
 }
 
+/** Makes sure the conversation list under Chats in the side rail is showing (it is by default; a browser may have collapsed it). */
+export async function openChatHistory(page: Page) {
+  const list = page.getByTestId("chat-nav-list");
+  if (await list.count()) return;
+  await page.getByRole("button", { name: "Expand chats" }).click();
+  await list.waitFor();
+}
+
 /** Types into the chat (opening the concierge page first when needed) and sends once agent discovery has enabled the composer. */
 export async function sendChat(page: Page, text: string) {
   await goToChat(page);

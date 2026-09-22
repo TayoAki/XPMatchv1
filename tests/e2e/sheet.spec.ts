@@ -1,15 +1,14 @@
 import { expect, test } from "@playwright/test";
-import { sendChat, signup, uniqueEmail } from "./helpers";
+import { openChatHistory, sendChat, signup, uniqueEmail } from "./helpers";
 
-test("destination sheet tabs, recent chats and card photos", async ({ page }) => {
+test("destination sheet tabs, side rail chats and card photos", async ({ page }) => {
   await signup(page, { email: uniqueEmail("tayo"), dietary: "Vegetarian", accommodation: "Boutique hotels", styles: ["Food & drink"] });
 
-  await test.step("focusing on Rome opens the map and the Recent menu lists the chat", async () => {
+  await test.step("focusing on Rome opens the map and the side rail lists the chat", async () => {
     await sendChat(page, "I want to visit roam");
     await expect(page.getByTestId("map-panel")).toBeVisible({ timeout: 40_000 });
-    await page.getByTestId("chat-menu-button").click();
+    await openChatHistory(page);
     await expect(page.getByTestId("chat-nav-list").getByRole("link", { name: /visit roam|Exploring Rome/ })).toBeVisible();
-    await page.keyboard.press("Escape");
   });
 
   await test.step("the Stays tab shows preference-based results", async () => {

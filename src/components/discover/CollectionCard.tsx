@@ -19,18 +19,19 @@ export function CollectionCard({ collection }: { collection: Collection }) {
   const { saved, toggleSaved } = useTravelStore();
   const { place, loading } = useDestinationPlace(collection.destination);
   const [failed, setFailed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const photo = place?.photos?.[0];
   const src = photo && !failed ? photoAtWidth(photo, 1200) : null;
   const isSaved = !!findSaved(saved, { kind: "collection", title: collection.title, refId: collection.key });
   const href = `/inspiration?collection=${collection.key}`;
 
   return (
-    <article className="group relative" data-testid="collection-card">
+    <article className="xp-lift group relative rounded-[10px]" data-testid="collection-card">
       <Link href={href} className="block overflow-hidden rounded-[10px] bg-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">
         <div className="relative aspect-[1.95/1] w-full" aria-busy={loading || undefined}>
           {src ? (
             // eslint-disable-next-line @next/next/no-img-element -- proxied Places photo
-            <img src={src} alt={place?.name ?? collection.destination} onError={() => setFailed(true)} loading="lazy" className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 motion-safe:group-hover:scale-[1.03]" />
+            <img src={src} alt={place?.name ?? collection.destination} onError={() => setFailed(true)} onLoad={() => setLoaded(true)} data-loaded={loaded ? "true" : undefined} loading="lazy" className="xp-photo absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-[var(--xp-ease)] motion-safe:group-hover:scale-[1.04]" />
           ) : !loading ? (
             <PlaceImage queries={collection.queries} alt={collection.destination} className="absolute inset-0 rounded-none" />
           ) : null}

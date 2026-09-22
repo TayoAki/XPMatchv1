@@ -44,12 +44,14 @@ export function MatchBadge({ match, size = "md", className }: { match: MatchResu
         aria-expanded={open}
         aria-label={`${match.score}% match, ${match.label}. Why this score`}
         title="Why this score"
-        className={clsx("inline-flex items-center gap-1 rounded-full border font-semibold", size === "sm" ? "h-6 px-2 text-[11px]" : "h-7 px-2.5 text-[12px]", TONE[match.label])}
+        className={clsx("inline-flex items-center gap-1 whitespace-nowrap rounded-full border font-semibold transition-transform duration-200 hover:scale-105 active:scale-95", size === "sm" ? "h-6 px-2 text-[11px]" : "h-7 px-2.5 text-[12px]", TONE[match.label])}
       >
-        <Sparkles className={size === "sm" ? "h-3 w-3" : "h-3.5 w-3.5"} /> {match.score}% match
+        <Sparkles className={size === "sm" ? "h-3 w-3" : "h-3.5 w-3.5"} />
+        {/* The label leads; the number is the detail. */}
+        {match.label} · {match.score}%
       </button>
       {open ? (
-        <div role="dialog" aria-label="Why this score" className="absolute left-0 top-8 z-30 w-[280px] rounded-2xl border border-border bg-white p-3 text-left shadow-xl">
+        <div role="dialog" aria-label="Why this score" className="xp-pop absolute left-0 top-8 z-30 w-[280px] rounded-2xl border border-border bg-white p-3 text-left shadow-floating">
           <div className="flex items-center justify-between">
             <div className="text-[13px] font-semibold">
               {match.score}% · {match.label}

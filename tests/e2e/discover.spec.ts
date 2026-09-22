@@ -17,7 +17,8 @@ test("discover: hero photo and attribution, planner fields, create a trip, colle
     await expect(hero.getByTestId("photo-credit")).toContainText("A Google user");
     await expect(page.getByTestId("hero-caption")).toContainText(/Austell/);
     await expect(page.getByRole("link", { name: "XPMatch home" })).toBeVisible();
-    await expect(page.getByRole("navigation").getByRole("link", { name: "Discover" })).toHaveAttribute("aria-current", "page");
+    await expect(page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Discover" })).toHaveAttribute("aria-current", "page");
+    await expect(page.getByTestId("side-rail")).toHaveCount(0);
   });
 
   await test.step("planner fields apply and cancel, and the dates must be in order", async () => {
@@ -101,18 +102,43 @@ test("discover: hero photo and attribution, planner fields, create a trip, colle
     await expect(page.getByTestId("concierge-launcher")).toHaveCount(0);
   });
 
-  await test.step("the launcher opens the concierge from a content page, scoped to the trip on a trip page", async () => {
+  await test.step("content pages carry the side rail; Discover keeps the launcher; the planner chips sit under the composer", async () => {
     await page.goto("/trips");
+    const rail = page.getByTestId("side-rail");
+    await expect(rail).toBeVisible();
+    await expect(page.getByTestId("concierge-launcher")).toHaveCount(0);
+    await expect(rail.getByRole("link", { name: "Trips" })).toHaveAttribute("aria-current", "page");
+    await rail.getByRole("button", { name: "Collapse navigation" }).click();
+    await expect(rail).toHaveAttribute("data-collapsed", "true");
+    await rail.getByRole("button", { name: "Expand navigation" }).click();
+    await expect(rail).not.toHaveAttribute("data-collapsed", "true");
+    await rail.getByRole("link", { name: "Chats" }).click();
+    await page.waitForURL((u) => u.pathname === "/chat");
+    await expect(page.getByPlaceholder("Ask your concierge")).toBeVisible();
+    const chips = page.getByTestId("planner-chips");
+    await expect(chips).toContainText("Rome, Italy");
+    await expect(chips).toContainText("3 travelers");
+    await chips.getByRole("button", { name: /Budget/ }).click();
+    await expect(page.getByRole("dialog", { name: "Create a trip" })).toBeVisible();
+    await page.getByRole("dialog", { name: "Create a trip" }).getByRole("button", { name: "Close" }).click();
+    await page.goto("/");
     const launcher = page.getByRole("link", { name: "Your AI concierge" });
     await expect(launcher).toBeVisible();
     await launcher.click();
     await page.waitForURL((u) => u.pathname === "/chat");
-    await expect(page.getByPlaceholder("Ask your concierge")).toBeVisible();
-    await page.getByRole("banner").getByRole("button", { name: "Create a trip" }).click();
-    await page.getByRole("button", { name: "Create trip", exact: true }).click();
-    await page.waitForURL(/\/trips\/[0-9a-f-]{36}/, { timeout: 20_000 });
-    const tripId = page.url().match(/trips\/([0-9a-f-]{36})/)![1];
-    await expect(page.getByTestId("concierge-launcher")).toHaveAttribute("href", `/chat?trip=${tripId}`);
+  });
+
+  await test.step("picks come as carousel rows, best first, with the reasons on the card", async () => {
+    await page.goto("/");
+    const things = page.getByTestId("home-row-things");
+    await things.scrollIntoViewIfNeeded();
+    await expect(things.getByTestId("home-pick").first()).toBeVisible({ timeout: 60_000 });
+    const scores = await things.getByTestId("match-badge").evaluateAll((els) => els.map((el) => Number(el.getAttribute("data-score"))));
+    expect(scores.length).toBeGreaterThanOrEqual(3);
+    expect([...scores].sort((a, b) => b - a)).toEqual(scores);
+    await expect(things.getByTestId("match-badge").first()).toContainText(/match|Worth a look|Probably not you/);
+    await expect(things.getByTestId("pick-reasons").first()).toContainText(/Rated|budget|Free|\$/);
+    await expect(things.getByRole("region", { name: /Things to do in/ })).toBeVisible();
   });
 
   await test.step("old chat links redirect to the concierge", async () => {

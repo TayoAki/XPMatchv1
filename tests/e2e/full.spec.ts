@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { PASSWORD, sendChat, signup, uniqueEmail } from "./helpers";
+import { PASSWORD, openChatHistory, sendChat, signup, uniqueEmail } from "./helpers";
 
 test.describe.configure({ mode: "serial" });
 
@@ -39,12 +39,11 @@ test("accounts, chat cards, saving, trips and sessions", async ({ page, browser 
   await test.step("reload keeps profile, saved item and chat", async () => {
     await page.goto("/chat");
     await expect(page.getByRole("heading", { name: /Where to today, Tayo\?/ })).toBeVisible({ timeout: 20_000 });
-    await page.getByRole("navigation").getByRole("link", { name: "Saved", exact: true }).click();
+    await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Saved", exact: true }).click();
     await expect(page.getByText("Hotel de Russie").first()).toBeVisible();
-    await page.goto("/chat");
-    await page.getByTestId("chat-menu-button").click();
+    // The side rail lists the conversation on every content page.
+    await openChatHistory(page);
     await expect(page.getByTestId("chat-nav-list").getByRole("link", { name: /Find hotels in Rome|Exploring Rome/ }).first()).toBeVisible();
-    await page.keyboard.press("Escape");
   });
 
   await test.step("logout then login works", async () => {

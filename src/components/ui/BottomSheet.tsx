@@ -105,7 +105,7 @@ export function BottomSheet({
         aria-label="Close"
         tabIndex={-1}
         onClick={onClose}
-        className={clsx("absolute inset-0 bg-black/30 transition-opacity", snap === "peek" && !stacked ? "pointer-events-none opacity-0" : "pointer-events-auto opacity-100")}
+        className={clsx("absolute inset-0 bg-black/30 transition-opacity duration-300", snap === "peek" && !stacked ? "pointer-events-none opacity-0" : "xp-backdrop-in pointer-events-auto opacity-100")}
       />
       <div
         role="dialog"
@@ -115,7 +115,7 @@ export function BottomSheet({
         data-testid={testId}
         data-snap={snap}
         style={{ height: SNAP_HEIGHT[snap], transform: offset ? `translateY(${offset}px)` : undefined, transition: drag ? "none" : "height 220ms ease, transform 220ms ease" }}
-        className={clsx("pointer-events-auto relative flex max-h-[100dvh] w-full flex-col rounded-t-3xl bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.18)] pb-[env(safe-area-inset-bottom)]", className)}
+        className={clsx("xp-sheet-in pointer-events-auto relative flex max-h-[100dvh] w-full flex-col rounded-t-3xl bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.18)] pb-[env(safe-area-inset-bottom)]", className)}
       >
         <div
           onPointerDown={onPointerDown}

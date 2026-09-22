@@ -132,7 +132,7 @@ export function SiteHeader() {
             <ChevronDown className={clsx("h-4 w-4 text-muted transition-transform", menuOpen && "rotate-180")} aria-hidden="true" />
           </button>
           {menuOpen ? (
-            <div className="absolute right-0 top-12 z-50 w-64 rounded-2xl border border-border bg-white p-1.5 shadow-floating" aria-label="Account" data-testid="account-menu">
+            <div className="xp-pop xp-pop--right absolute right-0 top-12 z-50 w-64 rounded-2xl border border-border bg-white p-1.5 shadow-floating" aria-label="Account" data-testid="account-menu">
               <div className="flex items-center gap-3 px-3 pb-2 pt-2">
                 <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-[14px] font-semibold text-white">{initial}</span>
                 <span className="min-w-0">

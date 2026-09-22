@@ -179,7 +179,7 @@ export async function homePicks(destinationQuery: string, inputs: MatchInputs): 
         scored.push({ place, match: scoreMatch(candidateFromPlace(place), inputs) });
       }
     }
-    rows.push({ key, title: ROW_TITLE[key](destination.name), basedOn: uniq(rowQueries.map((q) => q.basedOn ?? "").filter(Boolean)), items: pickTop(scored) });
+    rows.push({ key, title: ROW_TITLE[key](destination.name), basedOn: uniq(rowQueries.map((q) => q.basedOn ?? "").filter(Boolean)), items: pickTop(scored, 6) });
   }
   return { destination, rows, provider, generatedAt: new Date().toISOString() };
 }

@@ -152,11 +152,15 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   photograph of the destination the traveler is headed to (next trip, dream destination, planner,
   home city) with its author attribution. Below it: three themed collections (By the water, Close
   to nature, Immersed in culture, each a real destination's photo, saveable, linking to Inspiration),
-  "For you in {city}", "Jump back in" and the newest community guides. The conversation lives at
-  `/chat` under a slim strip (chat title with the **Recent** menu, planner chips, New chat) with the
-  discovery feed or the live map beside it; a floating **Your AI concierge** pill opens it from
-  every other page (scoped to the trip whose page is open). Old `/?thread=` and `/?prompt=` links
-  redirect.
+  "For you in {city}" (carousel rows of six picks each, best first, with the two strongest reasons
+  on every card and a Top pick mark), "Jump back in" and the newest community guides. The
+  conversation lives at `/chat` with the discovery feed or the live map beside it and the planner
+  values as chips under the composer (Charleston · When · 2 travelers · Budget). Every page but
+  Discover has a collapsible side rail (New chat, Chats with the conversation history, Trips,
+  Explore, Saved, Updates, Inspiration, Create, Admin); on Discover a floating **Your AI concierge**
+  pill opens the chat. Motion is part of the design: sections lift in as they scroll into view,
+  photos fade in, menus, sheets and dialogs pop, cards lift, the rail folds, every route fades in,
+  all switched off for reduced-motion users. Old `/?thread=` and `/?prompt=` links redirect.
 - **A chat-first phone app** — below tablet width a bottom tab bar (Discover, Trips, Saved,
   Concierge, More) carries navigation; the More sheet holds Explore, Inspiration, Updates (with the
   unread badge), Create, Admin, Update my assistant, Report a bug and Log out. The first run is three
@@ -314,7 +318,8 @@ src/server/packages.ts + src/app/api/packages/*   Package builder (variants, alt
 src/server/package-learning.ts               Calibration from package events and the admin package numbers
 src/components/chat/cards/PackageCard.tsx    The package opener card: variants, swap, lock, narrowing, Turn into a trip
 src/components/map/PinStrip.tsx              Mini cards under the map, in step with the pins
-src/components/shell/*                       Site header, chat strip, phone tab bar, concierge launcher, app shell
+src/components/shell/*                       Site header, side rail, planner chips, phone tab bar, concierge launcher, app shell
+src/components/ui/Carousel.tsx, Reveal.tsx   Snap-scrolling rows with arrows; reveal-on-scroll and staggered entrances
 ```
 
 Chat transcripts, the chat list, profile, learned preferences, trips, saved items and notifications

@@ -67,9 +67,9 @@ export function MobileTabBar() {
                 key={tab.href}
                 href={tab.href}
                 aria-current={active ? "page" : undefined}
-                className={clsx("flex min-h-14 flex-col items-center justify-center gap-1 text-[11px] font-medium", active ? "text-brand" : "text-muted")}
+                className={clsx("flex min-h-14 flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors duration-200", active ? "text-brand" : "text-muted")}
               >
-                <Icon className="h-[22px] w-[22px]" strokeWidth={active ? 2.2 : 1.8} aria-hidden="true" />
+                <Icon className={clsx("h-[22px] w-[22px] transition-transform duration-300 ease-[var(--xp-ease)]", active && "-translate-y-0.5 scale-110")} strokeWidth={active ? 2.2 : 1.8} aria-hidden="true" />
                 {tab.label}
               </Link>
             );

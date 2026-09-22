@@ -93,18 +93,163 @@ body {
   font-size: 15px;
 }
 
-@keyframes xp-pulse {
-  0%,
-  100% {
-    opacity: 1;
+/* Loading placeholders: a soft shimmer sweeping across the warm surface. */
+@keyframes xp-shimmer {
+  0% {
+    background-position: 200% 0;
   }
-  50% {
-    opacity: 0.45;
+  100% {
+    background-position: -200% 0;
   }
 }
 .xp-skeleton {
-  animation: xp-pulse 1.6s ease-in-out infinite;
-  background: var(--xp-surface);
+  background: linear-gradient(100deg, var(--xp-surface) 40%, #ffffff 50%, var(--xp-surface) 60%);
+  background-size: 200% 100%;
+  animation: xp-shimmer 1.8s ease-in-out infinite;
+}
+
+/* Motion: one easing for everything that moves, reveals on scroll, pops for menus and sheets. */
+:root {
+  --xp-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --xp-delay: 0ms;
+}
+@keyframes xp-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes xp-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes xp-scale-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes xp-modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes xp-slide-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes xp-settle {
+  from {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+/* Applied by <Reveal>: hidden until it scrolls into view, then lifts in (staggered with --xp-delay). */
+/* No will-change and `transform: none` once shown: a lingering transform would trap fixed sheets and popovers inside the wrapper. */
+.xp-reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 560ms var(--xp-ease) var(--xp-delay),
+    transform 560ms var(--xp-ease) var(--xp-delay);
+}
+.xp-reveal.is-shown {
+  opacity: 1;
+  transform: none;
+}
+/* Entrances fill backwards only, so the element's own transforms (a dragged sheet) apply again once the entrance ends. */
+.xp-pop {
+  animation: xp-scale-in 180ms var(--xp-ease) backwards;
+  transform-origin: top;
+}
+.xp-pop--right {
+  transform-origin: top right;
+}
+.xp-modal-in {
+  animation: xp-modal-in 220ms var(--xp-ease) backwards;
+}
+.xp-backdrop-in {
+  animation: xp-fade-in 200ms ease-out backwards;
+}
+.xp-sheet-in {
+  animation: xp-slide-up 260ms var(--xp-ease) backwards;
+}
+/* Opacity only: a transform on <main> would make every fixed sheet inside a page position against it. */
+.xp-page-in {
+  animation: xp-fade-in 260ms ease-out;
+}
+/* Photos fade in once loaded (data-loaded is set by onLoad); the hero settles from a slight zoom. */
+.xp-photo {
+  opacity: 0;
+  transition: opacity 500ms ease-out;
+}
+.xp-photo[data-loaded="true"] {
+  opacity: 1;
+}
+.xp-photo--settle[data-loaded="true"] {
+  animation: xp-settle 1200ms var(--xp-ease) both;
+}
+/* Cards lift on hover where a pointer exists. */
+@media (hover: hover) {
+  .xp-lift {
+    transition:
+      transform 220ms var(--xp-ease),
+      box-shadow 220ms var(--xp-ease),
+      border-color 220ms var(--xp-ease);
+  }
+  .xp-lift:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 28px rgb(8 19 22 / 10%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .xp-reveal,
+  .xp-pop,
+  .xp-modal-in,
+  .xp-backdrop-in,
+  .xp-sheet-in,
+  .xp-page-in,
+  .xp-photo,
+  .xp-photo--settle[data-loaded="true"],
+  .xp-lift,
+  .xp-skeleton {
+    animation: none !important;
+    transition: none !important;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The chat composer's own disclaimer is blanked (the planner chips and our line sit under it). */
+.xp-chat [data-copilotkit] div:empty.cpk\:text-center {
+  display: none;
 }
 
 /* Map markers (rendered inside Google Maps advanced markers) */

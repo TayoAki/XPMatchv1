@@ -448,3 +448,25 @@ above, and why:
   (helpers open `/chat` on demand, the header's Create a trip and Recent menu replace the sidebar
   selectors), captures at 1586, 1440, 1280, 1024, 768, 390 and 320 compared against
   `docs/design/discover-reference.webp`.
+
+### Round 2 (same day): the side rail, the chips, carousels and motion
+
+Feedback after the first deploy: the picks should sit in rows rather than stack, the score's link to
+the picks was invisible, the side navigation was wanted back on every page but Discover, and the
+planner values belonged under the chat bar. Shipped:
+
+- **Side rail** on every page but Discover, under the header: New chat, Chats with the conversation
+  list (the old sidebar's history, newest first, remove on hover, Show all), Trips, Explore, Saved,
+  Updates, Inspiration, Create, Admin; collapsible to icons (remembered per browser). The chat strip
+  is gone, the concierge launcher shows on Discover only, phones keep the tab bar.
+- **Planner chips under the composer** on `/chat` ("Charleston · When · 2 travelers · Budget"), set
+  values bold, each opening the Create a trip dialog on its field; the CopilotKit disclaimer slot is
+  blanked and the line rendered under the chips.
+- **Carousel picks**: each "For you in" row is a snap-scrolling carousel of up to six picks (arrows on
+  pointer devices, edge fades), sorted best first with a Top pick mark, the two strongest score
+  reasons as chips on every card, a notice when a row's picks cannot be told apart, and the badge
+  reading "Great match · 87%" so the label leads.
+- **Motion**: one easing token, reveal-on-scroll sections with staggered entrances in the hero,
+  photos that fade (the hero settles from a slight zoom), pops for menus, popovers and the badge
+  detail, a lift for modals and sheets, a fade for every route change, card lifts on hover, the rail
+  width animating, shimmer skeletons; all disabled under `prefers-reduced-motion`.

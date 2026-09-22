@@ -42,13 +42,14 @@ test("in-depth onboarding drives home picks with match scores and thumbs; itiner
     expect(state.profile.homeAirport).toBe("ATL");
   });
 
-  await test.step("home picks: three rows of three for the dreamed-of destination, each with a match score", async () => {
+  await test.step("home picks: three carousel rows for the dreamed-of destination, each pick with a match score", async () => {
     const picks = page.getByTestId("home-picks");
     await expect(picks).toContainText("Rome", { timeout: 30_000 });
-    for (const key of ["things", "stays", "eat"]) {
+    // Up to six picks per row; the Places stub holds four sights, three hotels and three restaurants in Rome.
+    for (const [key, count] of [["things", 4], ["stays", 3], ["eat", 3]] as const) {
       const row = page.getByTestId(`home-row-${key}`);
-      await expect(row.getByTestId("home-pick")).toHaveCount(3, { timeout: 60_000 });
-      await expect(row.getByTestId("match-badge")).toHaveCount(3);
+      await expect(row.getByTestId("home-pick")).toHaveCount(count, { timeout: 60_000 });
+      await expect(row.getByTestId("match-badge")).toHaveCount(count);
     }
     await expect(page.getByTestId("home-row-things")).toContainText("Because you like Museums & art");
     await expect(page.getByTestId("home-row-stays")).toContainText("Hotel Artemide");
@@ -65,7 +66,9 @@ test("in-depth onboarding drives home picks with match scores and thumbs; itiner
     await first.getByRole("button", { name: `Miss: ${name}` }).click();
     await page.getByRole("dialog", { name: `Why is ${name} a miss?` }).getByRole("button", { name: "Too pricey" }).click();
     await eventually(recsJson, (r) => r.recFeedback.some((f) => f.name === name && f.verdict === "down" && f.reason === "Too pricey" && f.context === "home"));
-    await expect.poll(async () => Number(await first.getByTestId("match-badge").getAttribute("data-score"))).toBeLessThan(before);
+    // Rows sort best first, so the downvoted card may have moved; find it by name.
+    const downvoted = stays.getByTestId("home-pick").filter({ has: page.getByRole("heading", { name, exact: true }) });
+    await expect.poll(async () => Number(await downvoted.getByTestId("match-badge").getAttribute("data-score"))).toBeLessThan(before);
     const thing = page.getByTestId("home-row-things").getByTestId("home-pick").first();
     const thingName = (await thing.getByRole("heading").textContent())?.trim() ?? "";
     await thing.getByRole("button", { name: `Good pick: ${thingName}` }).click();

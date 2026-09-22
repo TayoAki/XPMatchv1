@@ -67,6 +67,13 @@ however you talk. Without `RESEND_API_KEY` the form still answers normally but n
 
 ## 2. Discover (home) and the concierge (`/chat`)
 
+**Shell** — every signed-in page sits under the header (wordmark · Discover, My trips, Saved · the
+Updates bell · the account menu · the teal **Create a trip** pill). Every page but Discover also has
+the side rail on the left (tablet and up): **New chat**, then **Chats** with the conversation list
+under it (newest first, trip labels, remove on hover, Show all, collapsible with the chevron), Trips,
+Explore, Saved, Updates (unread badge), Inspiration, Create and Admin; **Collapse** folds the rail to
+icons and the choice is remembered per browser. Phones keep the tab bar instead.
+
 **Discover** — `/` is the home page, under the header (wordmark · Discover, My trips, Saved · the
 Updates bell · the account menu with Update my assistant, Inspiration, Explore near you, Create a guide,
 Admin, Report a bug, Terms, Privacy, Log out · the teal **Create a trip** pill). Its hero carries the
@@ -83,16 +90,20 @@ destination, the planner's Where, the home city, then Paros) with the motto, a c
 and the photo's author attribution, as the Places policies require. Below the hero: **Find your kind of
 extraordinary** (By the water, Close to nature, Immersed in culture: each a real destination's Places
 photo with a heart that saves the collection and a link to the matching Inspiration rows; "View all
-destinations" opens Explore), **For you in {city}** (the nine picks with match scores and thumbs),
-**Jump back in** (trips, recent chats, saved destinations) and **From the community** (the newest
-published guides). A floating **Your AI concierge** pill (lower right, not on phones) opens the chat
-from Discover and every content page, scoped to the trip whose page is open.
+destinations" opens Explore), **For you in {city}** (three carousel rows of up to six picks each,
+sorted best first, every card showing its match label and score, the two strongest reasons behind it
+as chips, a **Top pick** mark on the leader, thumbs, Save and Add to trip; a row whose picks the
+profile cannot tell apart says so and links to Update my assistant), **Jump back in** (trips, recent
+chats, saved destinations) and **From the community** (the newest published guides). A floating
+**Your AI concierge** pill (lower right, not on phones) opens the chat from Discover; the other pages
+have the side rail.
 
-**The concierge** — `/chat` is the conversation: a slim strip (the chat title opens the **Recent**
-menu listing every conversation newest first with trip labels and a remove button, plus "Start a new
-chat"; the Where / When / Who / Budget chips; **New chat**) above the **active chat** with the **right
-panel** beside it (discovery feed until the conversation is about a place, then the live map). The
-empty state greets by name ("Where to today, Tayo?") with the suggestion chips and the composer.
+**The concierge** — `/chat` is the conversation: the **active chat** with the **right panel** beside
+it (discovery feed until the conversation is about a place, then the live map), the side rail's Chats
+list for history and New chat, and the trip planner values as chips under the composer ("Charleston ·
+When · 2 travelers · Budget": set values bold, unset ones as labels, each opening the Create a trip
+dialog on that field). The empty state greets by name ("Where to today, Tayo?") with the suggestion
+chips and the composer.
 
 On a phone the concierge page is the chat and everything else opens over it in sheets: the greeting,
 suggestion chips and the composer sit at the top of one scrolling page with the picks (as the
@@ -208,17 +219,16 @@ scheduling chip open the itinerary board as a full-height sheet (short map, then
 13. **Follow-ups** — after each answer the assistant proposes 2–3 next steps as chips. While a proposal or
     "Remember this?" card is waiting for a click the chips pause (a suggestions run would otherwise send the
     model an unanswered tool call).
-14. **History** — open the chat title menu ("New chat ⌄") on the concierge strip and click a
-    conversation to reopen it (`/chat?thread=…`), including its cards and map pins, which are rebuilt from
-    the stored transcript; transcripts live in Postgres, so chats survive deploys and restarts. Chats
-    started from a trip show the trip name and keep the trip in context when reopened. Jump back in on
-    Discover lists the three most recent chats too. Links from before the redesign (`/?thread=…`,
-    `/chats`) redirect.
+14. **History** — click a conversation under **Chats** in the side rail to reopen it
+    (`/chat?thread=…`), including its cards and map pins, which are rebuilt from the stored transcript;
+    transcripts live in Postgres, so chats survive deploys and restarts. Chats started from a trip show
+    the trip name and keep the trip in context when reopened. Jump back in on Discover lists the three
+    most recent chats too. Links from before the redesign (`/?thread=…`, `/chats`) redirect.
 
 ## 3. Planner fields and "Create a trip"
 
-The Discover hero's *Where / When / Guests / Budget* fields and the concierge strip's chips edit the
-same planner values (kept in the browser). **Create a trip** (the header pill, the hero button, the
+The Discover hero's *Where / When / Guests / Budget* fields and the chips under the concierge
+composer edit the same planner values (kept in the browser). **Create a trip** (the header pill, the hero button, the
 Trips page) opens the planner dialog prefilled from them. **Start planning** keeps the values and sends
 a planning prompt to the chat; **Create trip** creates the trip on the server right away and opens its
 page.
@@ -406,7 +416,7 @@ users=… trips=… chats=…`), so the Railway deploy log shows them without a 
 | `/login`, `/signup`, `/forgot`, `/reset` (`?token=`) | Account, the "Forgot password?" form, and the page a reset link opens |
 | `/admin` | Bug reports and recommendation quality (admins) |
 | `/` | Discover: hero with the composer and planner fields, collections, picks, Jump back in, community guides |
-| `/chat` (`?thread=`, `?trip=`, `?prompt=`) | The concierge: chat and map, the Recent menu; `/?thread=`, `/?prompt=` and `/chats` redirect here |
+| `/chat` (`?thread=`, `?trip=`, `?prompt=`) | The concierge: chat and map, history in the side rail; `/?thread=`, `/?prompt=` and `/chats` redirect here |
 | `/trips`, `/trips/[id]` (`?view=board`, `?rate=1`) | Trips list and trip page (board view, post-trip rating) |
 | `/explore` | Things near you |
 | `/create` (`?guide=`) | Guide editor / trip form |

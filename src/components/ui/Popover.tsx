@@ -53,7 +53,7 @@ export function Popover({
       id={id}
       role="dialog"
       aria-label={title}
-      className={clsx("absolute top-[calc(100%+8px)] z-40 w-[320px] rounded-2xl border border-border bg-white p-4 shadow-floating", align === "right" ? "right-0" : "left-0", className)}
+      className={clsx("xp-pop absolute top-[calc(100%+8px)] z-40 w-[320px] rounded-2xl border border-border bg-white p-4 shadow-floating", align === "right" ? "xp-pop--right right-0" : "left-0", className)}
     >
       <div className="mb-3 text-[15px] font-semibold">{title}</div>
       {children}

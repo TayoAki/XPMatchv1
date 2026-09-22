@@ -63,19 +63,20 @@ interface JumpItem {
 /** Cover for a "Jump back in" card: the resolved place's Google photo first, the Wikipedia lookup as a fallback. */
 function JumpCover({ item, compact, children }: { item: JumpItem; compact: boolean; children: React.ReactNode }) {
   const [failed, setFailed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const size = compact ? "h-[160px] w-[220px]" : "h-[208px] w-[264px]";
   if (item.photo && !failed) {
     return (
-      <div className={clsx("relative shrink-0 overflow-hidden rounded-2xl bg-neutral-200", size)}>
+      <div className={clsx("xp-lift relative shrink-0 overflow-hidden rounded-2xl bg-surface-2", size)}>
         {/* eslint-disable-next-line @next/next/no-img-element -- proxied Places photo */}
-        <img src={item.photo} alt={item.title} onError={() => setFailed(true)} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
+        <img src={item.photo} alt={item.title} onError={() => setFailed(true)} onLoad={() => setLoaded(true)} data-loaded={loaded ? "true" : undefined} className="xp-photo absolute inset-0 h-full w-full object-cover" loading="lazy" />
         <PhotoCredit credit={item.credit} className="left-3 top-3" asLink={false} />
         {children}
       </div>
     );
   }
   return (
-    <PlaceImage queries={item.queries} alt={item.title} className={clsx("shrink-0 rounded-2xl", size)}>
+    <PlaceImage queries={item.queries} alt={item.title} className={clsx("xp-lift shrink-0 rounded-2xl", size)}>
       {children}
     </PlaceImage>
   );

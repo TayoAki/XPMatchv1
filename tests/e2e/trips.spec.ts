@@ -81,13 +81,14 @@ test("trips: create, members, ideas, itinerary, trip chat, sharing", async ({ pa
     await done.getByRole("link", { name: "Open trip" }).click();
     await page.waitForURL(/\/trips\//, { timeout: 15_000 });
     await expect(page.getByRole("heading", { name: "Trip to Rome" })).toBeVisible();
-    await expect(page.getByRole("link", { name: /Find hotels in Rome/ })).toBeVisible();
+    // The side rail lists the chat too; the trip page has its own recent-chats row.
+    await expect(page.getByTestId("trip-recent-chats").getByRole("link", { name: /Find hotels in Rome/ })).toBeVisible();
     await expect(page.getByRole("button", { name: /^Ideas 2 places/ })).toBeVisible();
     await expect(page.getByText("2 pinned").first()).toBeVisible();
   });
 
   await test.step("the trips list shows the card and the calendar", async () => {
-    await page.getByRole("navigation").getByRole("link", { name: "My trips", exact: true }).click();
+    await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "My trips", exact: true }).click();
     await expect(page.getByRole("link", { name: /Trip to Rome/ })).toBeVisible();
     await page.getByRole("button", { name: "calendar" }).click();
     await page.getByRole("button", { name: "Next month" }).click();

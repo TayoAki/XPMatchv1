@@ -34,7 +34,7 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4"
+      className="xp-backdrop-in fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px]"
       role="dialog"
       aria-modal="true"
       aria-label={title}
@@ -44,7 +44,7 @@ export function Modal({
     >
       <div
         className={clsx(
-          "flex max-h-[90vh] w-full flex-col overflow-hidden rounded-3xl bg-white shadow-2xl",
+          "xp-modal-in flex max-h-[90vh] w-full flex-col overflow-hidden rounded-3xl bg-white shadow-2xl",
           size === "lg" ? "max-w-2xl" : "max-w-lg",
         )}
       >
