@@ -62,8 +62,12 @@
 .xp-flip[data-face="profile"] {
   transform: rotateY(180deg);
 }
+/* Every descendant hides its own back too: an overlay with its own compositing layer (a photo
+   credit, a blurred chip) would otherwise show through the turned face, mirrored. */
 .xp-flip__front,
-.xp-flip__back {
+.xp-flip__back,
+.xp-flip__front *,
+.xp-flip__back * {
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
 }

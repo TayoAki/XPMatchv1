@@ -142,11 +142,15 @@ scheduling chip open the itinerary board as a full-height sheet (short map, then
 3. **Recommendations** — the assistant renders cards for destinations, hotels, flights, restaurants and
    things to do, each set as one **row** that scrolls sideways (snapping card by card, arrows on
    pointer devices, a swipe on phones) rather than a grid to scroll down through. A hotel, restaurant
-   or attraction card keeps to one main action, **Add to trip**, with **Rate** in its bottom-right
-   corner, **Compare** across from the category line and the **Save** heart on the photo; tapping the
-   photo opens the place panel, where the live inventory links live (Check rates on Booking.com and
-   Google Hotels for a stay, Reserve on OpenTable for a restaurant, Tickets & tours on GetYourGuide for
-   an attraction, plus the website and Google Maps). Flight cards link to Google Flights. Hotels,
+   or attraction card runs twice as wide from tablet width up, with the photo as a column on the left
+   so the details fit on a few lines (on phones the photo sits on top and the row swipes); a long name
+   is cut to one line with an ellipsis, and the full name is its tooltip and the panel's title. The
+   card keeps to one main action, **Add to trip**, with **Rate** in its bottom-right corner,
+   **Compare** across from the category line and the **Save** heart on the photo; tapping the photo
+   opens the place panel, whose **Rate**, **Save** and **Add to trip** sit in a bar at its very bottom
+   and whose Overview holds the live inventory links (Check rates on Booking.com and Google Hotels for
+   a stay, Reserve on OpenTable for a restaurant, Tickets & tours on GetYourGuide for an attraction,
+   plus the website and Google Maps). Flight cards link to Google Flights. Hotels,
    restaurants and attractions are resolved through Google Places and pinned on the map; hovering a
    card highlights its pin and vice versa. A pick's honest downsides for this traveler ("Busy street,
    ask for a courtyard room", "Well over $250/night") fold into one amber **heads-ups** chip at the end

@@ -32,6 +32,7 @@ export function HotelCards({ args, status, toolCallId }: { args: Streaming<ShowH
       />
       <CardRow
         kind="hotel"
+        wide
         label={title}
         items={items.map((h, i) => ({ id: `${h.name}-${i}`, name: h.name, node: <HotelCard hotel={h} index={i} args={args} dest={dest} toolCallId={toolCallId} /> }))}
       />
@@ -57,8 +58,15 @@ function HotelCard({
   const query = `${h.name} ${dest}`.trim();
   if (reaction.current?.verdict === "disliked" && h.name) return <HiddenPlaceCard name={h.name} feedbackId={reaction.current.id} />;
   return (
-            <CardShell highlighted={pin.isSelected} onMouseEnter={() => pin.hover(true)} onMouseLeave={() => pin.hover(false)}>
-              <CardPhoto place={pin.place} queries={[h.area ? `${h.area}, ${dest}` : "", dest]} alt={h.name ?? "Hotel"} className="aspect-[16/9]" onOpen={pin.place ? pin.open : undefined}>
+            <CardShell highlighted={pin.isSelected} onMouseEnter={() => pin.hover(true)} onMouseLeave={() => pin.hover(false)} className="sm:flex-row">
+              {/* From tablet width the card runs twice as wide with the photo as a column on the left, so the details fit on fewer lines. */}
+              <CardPhoto
+                place={pin.place}
+                queries={[h.area ? `${h.area}, ${dest}` : "", dest]}
+                alt={h.name ?? "Hotel"}
+                className="aspect-[16/9] sm:aspect-auto sm:w-[240px] sm:shrink-0 sm:self-stretch"
+                onOpen={pin.place ? pin.open : undefined}
+              >
                 <SaveButton
                   place={pin.place}
                   kind="hotel"
@@ -72,9 +80,13 @@ function HotelCard({
                   <span className="absolute left-3 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[12px] font-semibold">{h.priceTier}</span>
                 ) : null}
               </CardPhoto>
+              <div className="flex min-w-0 flex-1 flex-col">
               <Body>
                 <div className="flex items-start justify-between gap-2">
-                  <div className="text-[15px] font-semibold">{h.name}</div>
+                  {/* One line: a long name is cut with an ellipsis; the full name is the tooltip and the panel's title. */}
+                  <div className="min-w-0 truncate text-[15px] font-semibold" title={h.name}>
+                    {h.name}
+                  </div>
                   <Stars rating={h.rating} />
                 </div>
                 {/* Where and what it is, with Compare across from it. */}
@@ -131,6 +143,7 @@ function HotelCard({
                 <AddToTripButton place={pin.place} primary />
                 <ReactionControl name={h.name} kind="hotel" place={pin.place} destination={dest} source="card" size="sm" />
               </CardActions>
+              </div>
             </CardShell>
   );
 }

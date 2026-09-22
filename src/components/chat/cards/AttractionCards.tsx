@@ -27,6 +27,7 @@ export function AttractionCards({ args, status, toolCallId }: { args: Streaming<
       <SectionHeader title={title} status={status} />
       <CardRow
         kind="attraction"
+        wide
         label={title}
         items={items.map((a, i) => ({ id: `${a.name}-${i}`, name: a.name, node: <AttractionCard attraction={a} index={i} dest={dest} toolCallId={toolCallId} /> }))}
       />
@@ -50,13 +51,24 @@ function AttractionCard({
   const query = `${a.name} ${dest}`.trim();
   if (reaction.current?.verdict === "disliked" && a.name) return <HiddenPlaceCard name={a.name} feedbackId={reaction.current.id} />;
   return (
-            <CardShell highlighted={pin.isSelected} onMouseEnter={() => pin.hover(true)} onMouseLeave={() => pin.hover(false)}>
-              <CardPhoto place={pin.place} queries={[a.name ?? "", dest]} alt={a.name ?? "Attraction"} className="aspect-[16/9]" onOpen={pin.place ? pin.open : undefined}>
+            <CardShell highlighted={pin.isSelected} onMouseEnter={() => pin.hover(true)} onMouseLeave={() => pin.hover(false)} className="sm:flex-row">
+              {/* From tablet width the card runs twice as wide with the photo as a column on the left, so the details fit on fewer lines. */}
+              <CardPhoto
+                place={pin.place}
+                queries={[a.name ?? "", dest]}
+                alt={a.name ?? "Attraction"}
+                className="aspect-[16/9] sm:aspect-auto sm:w-[240px] sm:shrink-0 sm:self-stretch"
+                onOpen={pin.place ? pin.open : undefined}
+              >
                 <SaveButton place={pin.place} kind="attraction" title={a.name} subtitle={[a.category, dest].filter(Boolean).join(" · ")} destination={dest} url={googleMapsSearchUrl(query)} className="absolute right-2 top-2" />
                 {a.category ? <span className="absolute left-3 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[12px] font-semibold">{a.category}</span> : null}
               </CardPhoto>
+              <div className="flex min-w-0 flex-1 flex-col">
               <Body>
-                <div className="text-[15px] font-semibold">{a.name}</div>
+                {/* One line: a long name is cut with an ellipsis; the full name is the tooltip and the panel's title. */}
+                <div className="min-w-0 truncate text-[15px] font-semibold" title={a.name}>
+                  {a.name}
+                </div>
                 {/* The area, with Compare across from it. */}
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0 truncate text-[13px] text-muted">
@@ -109,6 +121,7 @@ function AttractionCard({
                 <AddToTripButton place={pin.place} primary />
                 <ReactionControl name={a.name} kind="attraction" place={pin.place} destination={dest} source="card" size="sm" />
               </CardActions>
+              </div>
             </CardShell>
   );
 }

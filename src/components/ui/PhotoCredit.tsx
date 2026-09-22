@@ -17,8 +17,10 @@ export function photoCreditTitle(credit?: Credit): string | undefined {
 export function PhotoCredit({ credit, className, asLink = true }: { credit?: Credit; className?: string; asLink?: boolean }) {
   if (!credit) return null;
   const text = `Photo: ${credit.name}`;
+  // No backdrop blur: it puts the chip on its own compositing layer, which can show through the
+  // back of a flipped card (the destination card) as mirrored text.
   const base = clsx(
-    "pointer-events-auto absolute z-[1] max-w-[70%] truncate rounded-md bg-black/45 px-1.5 py-0.5 text-[10px] leading-4 text-white/95 backdrop-blur-sm",
+    "pointer-events-auto absolute z-[1] max-w-[70%] truncate rounded-md bg-black/50 px-1.5 py-0.5 text-[10px] leading-4 text-white/95",
     className ?? "bottom-1.5 left-1.5",
   );
   if (asLink && credit.uri) {

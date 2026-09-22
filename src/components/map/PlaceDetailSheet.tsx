@@ -128,8 +128,9 @@ export function PlaceDetailSheet({
       ? { label: "Things to do nearby", prompt: `What are the best things to do near ${place.name}${focusName ? ` in ${focusName}` : ""}?` }
       : { label: "Restaurants nearby", prompt: `Recommend restaurants near ${place.name}${focusName ? ` in ${focusName}` : ""}.` };
 
-  const actions = (
-    <>
+  // Rate, Save and Add to trip sit in a bar at the very bottom of the panel, on desktop and on phones.
+  const actionBar = (
+    <div className={clsx("flex shrink-0 items-center gap-2 border-t border-border bg-white", compact ? "px-4 py-3" : "px-5 py-3")} data-testid="place-actions">
       <ReactionControl name={place.name} kind={place.kind} place={data} destination={focusName ?? (isDestination ? undefined : data.locality)} source="sheet" size="lg" />
       <button
         type="button"
@@ -139,16 +140,10 @@ export function PlaceDetailSheet({
       >
         <Heart className={clsx("h-4 w-4", isSaved && "fill-red-500 text-red-500")} /> {isSaved ? "Saved" : "Save"}
       </button>
-      <button type="button" onClick={addToTrip} className="flex h-11 items-center gap-2 rounded-full border border-border bg-white px-4 text-[14px] font-semibold hover:bg-surface">
+      <button type="button" onClick={addToTrip} className="flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-full bg-brand px-4 text-[14px] font-semibold text-white hover:bg-brand-hover">
         <Plus className="h-4 w-4" /> Add to trip
       </button>
-      {compact ? null : (
-        // The phone sheet keeps this on the Location tab.
-        <a href={mapsUrl} target="_blank" rel="noreferrer noopener" aria-label="Open in Google Maps" className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-white hover:bg-surface">
-          <ExternalLink className="h-4 w-4" />
-        </a>
-      )}
-    </>
+    </div>
   );
 
   return (
@@ -163,7 +158,10 @@ export function PlaceDetailSheet({
               <PanelLeftClose className="h-5 w-5" />
             </button>
           </div>
-          <div className="flex items-center gap-2">{actions}</div>
+          {/* The phone sheet keeps this on the Location tab. */}
+          <a href={mapsUrl} target="_blank" rel="noreferrer noopener" aria-label="Open in Google Maps" className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-white hover:bg-surface">
+            <ExternalLink className="h-4 w-4" />
+          </a>
         </div>
       )}
 
@@ -225,7 +223,6 @@ export function PlaceDetailSheet({
           </>
         )}
 
-        {compact ? <div className="mt-4 flex flex-wrap gap-2">{actions}</div> : null}
 
         {/* Tabs */}
         <div className={clsx("flex border-b border-border", compact ? "mt-5 gap-4 text-[14px]" : "mt-6 gap-6 text-[16px]")}>
@@ -348,10 +345,13 @@ export function PlaceDetailSheet({
         </div>
       </div>
 
+      {actionBar}
+
+      {/* The next-question pill floats just above the action bar; outlined, so Add to trip stays the one filled action. */}
       <button
         type="button"
         onClick={() => send(suggestion.prompt)}
-        className={clsx("absolute flex h-12 items-center gap-2 rounded-full bg-brand px-5 text-[15px] font-semibold text-white shadow-xl hover:bg-brand-hover", compact ? "bottom-4 right-4" : "bottom-6 right-6")}
+        className={clsx("absolute flex h-11 items-center gap-2 rounded-full border border-border bg-white px-4 text-[14px] font-semibold text-brand shadow-lg hover:bg-surface", compact ? "bottom-[84px] right-4" : "bottom-[84px] right-6")}
       >
         <Sparkles className="h-4 w-4" /> {suggestion.label}
       </button>

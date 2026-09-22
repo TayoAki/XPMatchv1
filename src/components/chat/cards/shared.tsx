@@ -30,7 +30,20 @@ export interface CardRowItem {
  * passed cards last and dimmed — and each move glides rather than jumps. Sets without a place
  * kind (flights) keep the model's order.
  */
-export function CardRow({ items, kind, label, className }: { items: CardRowItem[]; kind?: PlaceKind; label: string; className?: string }) {
+export function CardRow({
+  items,
+  kind,
+  label,
+  className,
+  wide = false,
+}: {
+  items: CardRowItem[];
+  kind?: PlaceKind;
+  label: string;
+  className?: string;
+  /** Twice the width from tablet up (capped at the row), for cards that lay the photo beside the details. */
+  wide?: boolean;
+}) {
   const { recFeedback } = useTravelStore();
   const ordered = useMemo(
     () =>
@@ -45,7 +58,7 @@ export function CardRow({ items, kind, label, className }: { items: CardRowItem[
   return (
     <Carousel label={label} className={clsx("mt-2", className)} itemGap="gap-3" bleed={false} testId="card-row" flipKey={ordered.map((o) => o.item.id).join("|")}>
       {ordered.map(({ item, verdict }) => (
-        <div key={item.id} data-flip-key={item.id} data-verdict={verdict ?? ""} className="flex w-[300px] shrink-0 snap-start sm:w-[340px]">
+        <div key={item.id} data-flip-key={item.id} data-verdict={verdict ?? ""} className={clsx("flex w-[300px] shrink-0 snap-start", wide ? "sm:w-[min(680px,100%)]" : "sm:w-[340px]")}>
           <div className={clsx("flex w-full transition-[opacity,filter] duration-500 [&>*]:w-full", verdict === "down" && "opacity-55 saturate-50")}>{item.node}</div>
         </div>
       ))}

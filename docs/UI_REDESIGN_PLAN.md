@@ -531,3 +531,11 @@ overruled).
   scan): the downsides fold into one "2 heads-ups" chip at the end of the tag row; the list opens as
   a tooltip on hover or keyboard focus, and a tap pins it open on phones (`Tradeoffs` in
   `src/components/chat/cards/shared.tsx`, `Floating` with `role="tooltip"`).
+- **Wide cards, actions at the bottom of the panel** (feedback: the data did not fit, and Rate /
+  Save / Add to trip belong at the very bottom of the map side): hotel, restaurant and attraction
+  rows use `CardRow wide` (twice the width from `sm` up, capped at the row) with the photo as a
+  240 px column on the left and the details beside it; names are one line with an ellipsis and the
+  full name as the tooltip. The place panel's Rate, Save and Add to trip moved from its header to a
+  bar at its very bottom (`place-actions`), on desktop and in the phone sheet; the next-question pill
+  floats above the bar, outlined. The flipped destination card no longer shows the photo credit
+  mirrored: every descendant of a face hides its back, and the credit chip lost its backdrop blur.

@@ -26,6 +26,7 @@ export function RestaurantCards({ args, status, toolCallId }: { args: Streaming<
       <SectionHeader title={title} status={status} />
       <CardRow
         kind="restaurant"
+        wide
         label={title}
         items={items.map((r, i) => ({ id: `${r.name}-${i}`, name: r.name, node: <RestaurantCard restaurant={r} index={i} dest={dest} toolCallId={toolCallId} /> }))}
       />
@@ -49,35 +50,41 @@ function RestaurantCard({
   const query = `${r.name} ${dest}`.trim();
   if (reaction.current?.verdict === "disliked" && r.name) return <HiddenPlaceCard name={r.name} feedbackId={reaction.current.id} />;
   return (
-            <CardShell highlighted={pin.isSelected} onMouseEnter={() => pin.hover(true)} onMouseLeave={() => pin.hover(false)}>
-              <div className="flex gap-3 p-3">
-                <CardPhoto place={pin.place} queries={[r.neighborhood ? `${r.neighborhood}, ${dest}` : "", dest]} alt={r.name ?? "Restaurant"} className="h-24 w-24 shrink-0 rounded-xl" onOpen={pin.place ? pin.open : undefined} />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="text-[15px] font-semibold">{r.name}</div>
-                    <SaveButton place={pin.place} kind="restaurant" title={r.name} subtitle={[r.cuisine, dest].filter(Boolean).join(" · ")} destination={dest} url={googleMapsSearchUrl(query)} className="bg-surface shadow-none" />
-                  </div>
-                  {/* Cuisine, area and price, with Compare across from it. */}
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-0 truncate text-[13px] text-muted">
-                      <Text value={[r.cuisine, r.neighborhood, r.priceTier].filter(Boolean).join(" · ")} />
-                    </div>
-                    <CompareToggle
-                      pinKey={placeKey(toolCallId, index)}
-                      name={r.name}
-                      kind="restaurant"
-                      facts={[r.cuisine, r.neighborhood, r.priceTier].filter(Boolean).join(", ")}
-                      place={pin.place}
-                      size="sm"
-                    />
-                  </div>
-                  <div className="mt-1 text-[13px]">
-                    <span className="font-medium">Must try: </span>
-                    <Text value={r.mustTry} />
-                  </div>
-                </div>
-              </div>
+            <CardShell highlighted={pin.isSelected} onMouseEnter={() => pin.hover(true)} onMouseLeave={() => pin.hover(false)} className="sm:flex-row">
+              {/* Same shape as the hotel card: the photo on top on phones, a column on the left from tablet width. */}
+              <CardPhoto
+                place={pin.place}
+                queries={[r.neighborhood ? `${r.neighborhood}, ${dest}` : "", dest]}
+                alt={r.name ?? "Restaurant"}
+                className="aspect-[16/9] sm:aspect-auto sm:w-[240px] sm:shrink-0 sm:self-stretch"
+                onOpen={pin.place ? pin.open : undefined}
+              >
+                <SaveButton place={pin.place} kind="restaurant" title={r.name} subtitle={[r.cuisine, dest].filter(Boolean).join(" · ")} destination={dest} url={googleMapsSearchUrl(query)} className="absolute right-2 top-2" />
+              </CardPhoto>
+              <div className="flex min-w-0 flex-1 flex-col">
               <Body>
+                {/* One line: a long name is cut with an ellipsis; the full name is the tooltip and the panel's title. */}
+                <div className="min-w-0 truncate text-[15px] font-semibold" title={r.name}>
+                  {r.name}
+                </div>
+                {/* Cuisine, area and price, with Compare across from it. */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0 truncate text-[13px] text-muted">
+                    <Text value={[r.cuisine, r.neighborhood, r.priceTier].filter(Boolean).join(" · ")} />
+                  </div>
+                  <CompareToggle
+                    pinKey={placeKey(toolCallId, index)}
+                    name={r.name}
+                    kind="restaurant"
+                    facts={[r.cuisine, r.neighborhood, r.priceTier].filter(Boolean).join(", ")}
+                    place={pin.place}
+                    size="sm"
+                  />
+                </div>
+                <div className="text-[13px]">
+                  <span className="font-medium">Must try: </span>
+                  <Text value={r.mustTry} />
+                </div>
                 <p className="text-[13px] text-neutral-700">
                   <Text value={r.whyItFits} lines={2} />
                 </p>
@@ -107,6 +114,7 @@ function RestaurantCard({
                 <AddToTripButton place={pin.place} primary />
                 <ReactionControl name={r.name} kind="restaurant" place={pin.place} destination={dest} source="card" size="sm" />
               </CardActions>
+              </div>
             </CardShell>
   );
 }
