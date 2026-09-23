@@ -57,10 +57,12 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   and dinner near each day's stops (the local food nudged up), times by their day rhythm, a match
   score per stop and for the plan. Every trip request answers with these cards: a country with three
   or four cities, a city by name with its own card. The photo face says "4-day itinerary · stay at
-  Josun Palace"; hover turns it over as a preview, and a click opens it in full next to the chat
-  (from 1280 px): the card on top with its plan, "Your match" and Itinerary / Stays / Activities /
-  Dining tabs, a map of its places below that follows the tab, the rest of the chat faded. On phones
-  the card turns over instead. Every card ends in **Make itinerary** and Save: one click saves the
+  Josun Palace"; from 1280 px a click opens the **plan workspace**: the plan in the center and the
+  chat in a column on the right, with "Where you'll stay" and a card per day whose **Map** opens that
+  day's own map (one at a time) above its stops, numbered like the pins. Every place can be swapped
+  for one of three ready alternates, marked Not a fit (it swaps out on the spot) or opened in full
+  over the plan with Back to {city}. On smaller screens the card turns over instead (hover on a
+  desktop, the Itinerary control on phones). Every card ends in **Make itinerary** and Save: one click saves the
   plan as a trip ("4 days in Seoul") and turns into Open itinerary; a trip tray on the map keeps the
   trip in view. Cards, pins and stops show short place names ("Josun Palace", the full listing name
   as the tooltip).
@@ -79,6 +81,13 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   card: your priorities as rows with strong / ok / weak / unknown verdicts, Price, Rating (Google's
   numbers when the option is pinned), Location, Strengths, Compromises and Couldn't verify, with Map,
   Save, Add to trip and Pick this one per column.
+- **Traveler reviews with proof** — a place's panel shows what travelers on XPMatch say before
+  Google's reviews: "I'm here: check in" proves a visit from one location reading checked on the
+  server (only the result is kept), an imported booking whose date has come counts too, and reviews
+  (loved / fine / not for me and a few words, shared as "Tayo A." unless kept private) carry a Checked
+  in or Booked badge and "Travels like you" when the reviewer's profile overlaps yours ("Loved by 2
+  verified travelers like you"). See `docs/REVIEWS_PLAN.md` for what comes next (reviews moving match
+  scores).
 - **Questions answered from reviews** — "Is it noisy at night?" on a place sheet or in chat
   (`ask_about_place`) is answered from Google's reviews, review summary and attributes with verbatim
   quotes picked by index (never retyped by the model), a confidence label and topic filters on the
@@ -337,6 +346,10 @@ src/server/package-learning.ts               Calibration from package events and
 src/components/chat/cards/PackageCard.tsx    The package card (on request): variants, swap, lock, narrowing, Make itinerary
 src/server/itineraries.ts + src/app/api/itineraries   Itinerary builder: a day-by-day plan per destination for this traveler
 src/components/chat/cards/ItineraryPlan.tsx  The plan on a destination card and the Make itinerary button
+src/components/chat/cards/ItineraryWorkspace.tsx   The plan in the workspace: day cards with their own maps, Swap, Not a fit
+src/components/panel/RightPanel.tsx          Map / discovery column, or the plan workspace when a card is opened
+src/server/reviews.ts + src/app/api/places/[id]/{reviews,checkin}   Traveler reviews, check-ins, proof, travelers like you
+src/components/place/TravelerReviews.tsx     Reviews line and tab on a place's panel (check in, write, read)
 src/components/map/PinStrip.tsx              Mini cards under the map, in step with the pins
 src/components/shell/*                       Site header, side rail, planner chips, phone tab bar, concierge launcher, app shell
 src/components/ui/Carousel.tsx, Reveal.tsx   Snap-scrolling rows with arrows; reveal-on-scroll and staggered entrances

@@ -18,6 +18,8 @@ export interface RecThumbsProps {
   /** The score the traveler saw, stored with the judgment for calibration. */
   match?: MatchResult | null;
   size?: "sm" | "md";
+  /** Spelled out ("Good fit" / "Not a fit") where there is room, as in a place's own panel. */
+  labeled?: boolean;
   className?: string;
 }
 
@@ -29,7 +31,7 @@ export interface RecThumbsProps {
  * stored per place and teach the match model which factors to trust for this
  * traveler.
  */
-export function RecThumbs({ name, kind, place, destination, context, match, size = "md", className }: RecThumbsProps) {
+export function RecThumbs({ name, kind, place, destination, context, match, size = "md", labeled = false, className }: RecThumbsProps) {
   const { recFeedback, recordRecFeedback, removeRecFeedback } = useTravelStore();
   // While the "What is off?" panel is open the thumbs-down is pending, not yet recorded.
   const [askWhy, setAskWhy] = useState(false);
@@ -90,32 +92,38 @@ export function RecThumbs({ name, kind, place, destination, context, match, size
   const btn = (which: "up" | "down") => {
     const Icon = which === "up" ? ThumbsUp : ThumbsDown;
     const active = verdict === which || (which === "down" && askWhy);
+    const text = which === "up" ? "Good fit" : "Not a fit";
     return (
       <button
         type="button"
         aria-pressed={active}
-        aria-label={which === "up" ? `Good pick: ${name}` : `Miss: ${name}`}
-        title={which === "up" ? "Good pick" : "Not for me"}
+        aria-label={labeled ? `${text}: ${name}` : which === "up" ? `Good pick: ${name}` : `Miss: ${name}`}
+        title={labeled ? undefined : which === "up" ? "Good pick" : "Not for me"}
         onClick={() => judge(which)}
         className={clsx(
           "inline-flex items-center justify-center rounded-full border transition-[background-color,border-color,color,transform] duration-200 active:scale-90",
-          // Touch screens get a 36px target either way.
-          size === "sm" ? "h-6 w-6 pointer-coarse:h-9 pointer-coarse:w-9" : "h-7 w-7 pointer-coarse:h-9 pointer-coarse:w-9",
+          labeled
+            ? "h-8 gap-1.5 px-3 text-[13px] font-semibold pointer-coarse:h-10"
+            : // Touch screens get a 36px target either way.
+              size === "sm"
+              ? "h-6 w-6 pointer-coarse:h-9 pointer-coarse:w-9"
+              : "h-7 w-7 pointer-coarse:h-9 pointer-coarse:w-9",
           active ? (which === "up" ? "border-emerald-300 bg-emerald-50 text-emerald-700" : "border-rose-300 bg-rose-50 text-rose-700") : "border-border bg-white text-neutral-500 hover:bg-surface hover:text-foreground",
         )}
       >
-        <Icon className={size === "sm" ? "h-3 w-3" : "h-3.5 w-3.5"} />
+        <Icon className={size === "sm" && !labeled ? "h-3 w-3" : "h-3.5 w-3.5"} />
+        {labeled ? text : null}
       </button>
     );
   };
 
   return (
-    <div ref={rootRef} className={clsx("relative inline-flex items-center gap-1", className)} data-testid="rec-thumbs" data-verdict={verdict ?? ""}>
-      {size === "md" ? <span className="mr-0.5 text-[11px] text-muted">Right for you?</span> : null}
+    <div ref={rootRef} className={clsx("relative inline-flex items-center gap-1", labeled && "gap-1.5", className)} data-testid="rec-thumbs" data-verdict={verdict ?? ""}>
+      {size === "md" && !labeled ? <span className="mr-0.5 text-[11px] text-muted">Right for you?</span> : null}
       {btn("up")}
       {btn("down")}
       {verdict === "down" && current?.reason && !askWhy ? <span className="ml-0.5 text-[11px] text-muted">{current.reason}</span> : null}
-      <Floating anchor={rootRef} open={askWhy} onClose={dismiss} label={`Why is ${name} a miss?`} width={260}>
+      <Floating anchor={rootRef} open={askWhy} onClose={dismiss} label={labeled ? `Why isn't ${name} a fit?` : `Why is ${name} a miss?`} width={260}>
         <div className="flex items-center justify-between">
           <div className="text-[13px] font-semibold">What is off?</div>
           <button type="button" onClick={dismiss} aria-label="Close" className="rounded-full p-1 text-neutral-500 hover:bg-surface">

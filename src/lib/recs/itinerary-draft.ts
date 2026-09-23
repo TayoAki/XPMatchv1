@@ -6,7 +6,7 @@ import { newStopId } from "@/lib/itinerary";
 import { labelFor, type MatchReason, type MatchResult } from "@/lib/match";
 import { shortPlaceName } from "@/lib/places/names";
 import type { ItineraryDay, Trip, TravelerProfile, TripPlanner } from "@/lib/types";
-import type { ItineraryDraft } from "@/server/itineraries";
+import type { DraftPick, ItineraryDraft } from "@/server/itineraries";
 
 /**
  * A card's itinerary: the complete plan the server builds for this traveler (see
@@ -16,14 +16,18 @@ import type { ItineraryDraft } from "@/server/itineraries";
 
 const cache = new Map<string, Promise<ItineraryDraft>>();
 
-export function loadItineraryDraft(destination: string, days: number, options: { fresh?: boolean; only?: string[] } = {}): Promise<ItineraryDraft> {
+export function loadItineraryDraft(destination: string, days: number, options: { fresh?: boolean; only?: string[]; exclude?: string[] } = {}): Promise<ItineraryDraft> {
   const only = options.only?.length ? [...options.only].sort() : undefined;
-  const key = `${destination.trim().toLowerCase()}|${days}|${only?.join(",") ?? ""}`;
+  const exclude = options.exclude?.length ? [...new Set(options.exclude)].sort() : undefined;
+  const key = `${destination.trim().toLowerCase()}|${days}|${only?.join(",") ?? ""}|${exclude?.join(",") ?? ""}`;
   if (!options.fresh) {
     const hit = cache.get(key);
     if (hit) return hit;
   }
-  const request = api<{ itinerary: ItineraryDraft }>("/api/itineraries", { method: "POST", json: { destination: destination.trim(), days, ...(only ? { only } : {}) } })
+  const request = api<{ itinerary: ItineraryDraft }>("/api/itineraries", {
+    method: "POST",
+    json: { destination: destination.trim(), days, ...(only ? { only } : {}), ...(exclude ? { exclude } : {}) },
+  })
     .then((res) => res.itinerary)
     .catch((err: unknown) => {
       cache.delete(key);
@@ -60,6 +64,54 @@ export function useItineraryDraft(destination: string | null, days: number) {
 
   const ready = !!key && state?.key === key;
   return { draft: ready ? state.draft : null, error: ready ? state.error : null, loading: !!key && !ready, retry };
+}
+
+/**
+ * The plan with swaps applied (`swaps`: the id of a place in the plan as built → the id of one of
+ * its alternates): the swapped pick takes the alternate's place, match and reason and keeps its
+ * time, meal and length; its own alternates become the place it replaced plus the others. Day
+ * titles and the plan's score follow.
+ */
+export function applySwaps(draft: ItineraryDraft, swaps: Record<string, string>): ItineraryDraft {
+  if (!Object.keys(swaps).length) return draft;
+  const swap = <T extends DraftPick>(p: T): T => {
+    const to = swaps[p.place.id];
+    const alt = to && to !== p.place.id ? p.alternates?.find((a) => a.place.id === to) : undefined;
+    if (!alt) return p;
+    const replaced: DraftPick = { place: p.place, match: p.match, why: p.why };
+    return { ...p, place: alt.place, match: alt.match, why: alt.why, swappedFrom: p.place.id, alternates: [replaced, ...(p.alternates ?? []).filter((a) => a.place.id !== to)] };
+  };
+  const stay = draft.stay ? swap(draft.stay) : null;
+  const days = draft.days.map((d) => {
+    const stops = d.stops.map(swap);
+    if (stops.every((s, i) => s === d.stops[i])) return d;
+    const title = stops
+      .filter((s) => s.kind === "attraction")
+      .slice(0, 2)
+      .map((s) => shortPlaceName(s.place.name))
+      .join(" · ");
+    return { ...d, stops, title: title || d.title };
+  });
+  if (stay === draft.stay && days.every((d, i) => d === draft.days[i])) return draft;
+  const scores = [...(stay ? [stay.match.score] : []), ...days.flatMap((d) => d.stops.map((s) => s.match.score))];
+  const score = scores.length ? Math.max(5, Math.min(99, Math.round(scores.reduce((a, b) => a + b, 0) / scores.length))) : draft.score;
+  return { ...draft, stay, days, score };
+}
+
+/**
+ * Swaps for the places the traveler marked not a fit: each such pick of the plan as built (or
+ * the alternate swapped in for it) gives way to its first alternate that is not a miss too.
+ */
+export function swapsForMisses(draft: ItineraryDraft, swaps: Record<string, string>, missed: ReadonlySet<string>): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!missed.size) return out;
+  for (const p of draftPicks(draft)) {
+    const current = swaps[p.place.id] ?? p.place.id;
+    if (!missed.has(current)) continue;
+    const next = [p.place.id, ...(p.alternates ?? []).map((a) => a.place.id)].find((id) => !missed.has(id));
+    if (next) out[p.place.id] = next;
+  }
+  return out;
 }
 
 /** Every place the itinerary uses, the stay first. */

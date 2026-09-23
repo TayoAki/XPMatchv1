@@ -33,8 +33,9 @@ export interface ThreadMapState {
   filter: MapFilter;
   /** The trip this conversation adds to: its scope, or the one chosen in Add to trip. */
   tripId: string | null;
-  /** The destination card open in full in the side panel (its card key), over a smaller map. */
+  /** The destination card open in full as the plan workspace (its card key), and its city's name. */
   detail: string | null;
+  detailName: string | null;
 }
 
 interface MapStoreState {
@@ -59,6 +60,7 @@ const EMPTY_THREAD: ThreadMapState = {
   filter: "all",
   tripId: null,
   detail: null,
+  detailName: null,
 };
 
 let state: MapStoreState = { activeThreadId: null, threads: {}, hoveredKey: null };
@@ -131,11 +133,10 @@ export const mapActions = {
       if (!nextPlaces[p.key]) order.push(p.key);
       nextPlaces[p.key] = p;
     }
-    // A new answer's pins mean the conversation moved on: a selected city no longer owns the map,
-    // and the card open in the side panel gives the map back.
-    const movedOn = places.some((p) => !p.scope);
-    const activeDestination = movedOn ? null : t.activeDestination;
-    patchThread(threadId, { places: nextPlaces, order, collapsed: false, activeDestination, filter: activeDestination ? t.filter : "all", detail: movedOn ? null : t.detail });
+    // A new answer's pins mean the conversation moved on: a selected city no longer owns the map.
+    // A plan open in the workspace stays open (the chat beside it is how the traveler works on it).
+    const activeDestination = places.some((p) => !p.scope) ? null : t.activeDestination;
+    patchThread(threadId, { places: nextPlaces, order, collapsed: false, activeDestination, filter: activeDestination ? t.filter : "all" });
   },
   /** Replaces every pin a tool call put on the map (a package that was swapped or rebuilt), keeping the order of pins that stay. */
   replacePlaces(threadId: string, toolCallId: string, places: MapPlace[]) {
@@ -187,15 +188,15 @@ export const mapActions = {
     const selectedKey = selected && filter !== "all" && selected.kind !== filter ? null : t.selectedKey;
     patchThread(threadId, { filter, selectedKey });
   },
-  /** Opens a destination card in full in the side panel (the map moves under it). */
-  openDetail(threadId: string, key: string) {
+  /** Opens a destination card in full as the plan workspace (the chat moves beside it). */
+  openDetail(threadId: string, key: string, name: string) {
     const t = threadOf(threadId);
     if (t.detail === key) return;
-    patchThread(threadId, { detail: key, selectedKey: null, collapsed: false });
+    patchThread(threadId, { detail: key, detailName: name, selectedKey: null, collapsed: false });
   },
   closeDetail(threadId: string) {
     if (!threadOf(threadId).detail) return;
-    patchThread(threadId, { detail: null, selectedKey: null });
+    patchThread(threadId, { detail: null, detailName: null, selectedKey: null });
   },
   setThreadTrip(threadId: string, tripId: string | null) {
     patchThread(threadId, { tripId });

@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_PROFILE, type TravelerProfile } from "@/lib/types";
 import type { ResolvedPlace } from "@/lib/places/types";
 import { candidateFromPlace, scoreMatch } from "@/lib/match";
-import { daysFromStay, localCuisine, planItinerary, visitMinutes, type ScoredPools } from "@/server/itineraries";
+import { daysFromStay, localCuisine, planItinerary, visitMinutes, type ItineraryDraft, type ScoredPools } from "@/server/itineraries";
+import { applySwaps, draftPicks, swapsForMisses } from "@/lib/recs/itinerary-draft";
 
 const profile: TravelerProfile = { ...DEFAULT_PROFILE, pace: "balanced", dayRhythm: "balanced", walking: "moderate" };
 const destination: ResolvedPlace = { id: "city", name: "Rome", kind: "destination", lat: 41.9, lng: 12.5, photos: [], source: "google" };
@@ -115,6 +116,63 @@ describe("planItinerary", () => {
     const plan = planItinerary({ hotel: [], attraction: [], restaurant: [] }, destination, profile, 3);
     expect(plan.days).toEqual([]);
     expect(plan.stay).toBeNull();
+  });
+});
+
+describe("swaps", () => {
+  /** A one-day plan with a spare hotel, as the client gets it. */
+  function draft(): ItineraryDraft {
+    const p = pools();
+    p.hotel.push(scored("hotel", 60, 41.9, 12.5));
+    return { ...planItinerary(p, destination, profile, 1), destination, basedOn: [], provider: "google", generatedAt: "2026-09-01T00:00:00Z" };
+  }
+
+  it("gives the stay and every stop ready alternates the plan does not use, one photo each", () => {
+    const plan = draft();
+    const picks = draftPicks(plan);
+    const used = new Set(picks.map((p) => p.place.id));
+    expect(plan.stay?.alternates?.map((a) => a.place.kind)).toEqual(["hotel", "hotel"]);
+    for (const pick of picks) {
+      expect(pick.alternates?.length).toBeGreaterThan(0);
+      expect(pick.alternates!.length).toBeLessThanOrEqual(3);
+      for (const alt of pick.alternates!) {
+        expect(used.has(alt.place.id)).toBe(false);
+        expect(alt.place.kind).toBe(pick.place.kind);
+        expect(alt.place.photos.length).toBeLessThanOrEqual(1);
+      }
+    }
+  });
+
+  it("puts a swapped-in place where the pick was and keeps the one it replaced as an alternate", () => {
+    const plan = draft();
+    const stop = plan.days[0].stops.find((s) => s.kind === "attraction")!;
+    const to = stop.alternates![0];
+    const swapped = applySwaps(plan, { [stop.place.id]: to.place.id });
+    const now = swapped.days[0].stops.find((s) => s.startTime === stop.startTime)!;
+    expect(now.place.id).toBe(to.place.id);
+    expect(now.swappedFrom).toBe(stop.place.id);
+    expect(now.durationMin).toBe(stop.durationMin);
+    expect(now.alternates?.[0].place.id).toBe(stop.place.id);
+    expect(now.alternates?.some((a) => a.place.id === to.place.id)).toBe(false);
+    // The rest of the plan is untouched, and swapping back is the plan as built.
+    expect(swapped.stay).toBe(plan.stay);
+    expect(applySwaps(plan, { [stop.place.id]: stop.place.id })).toBe(plan);
+    expect(applySwaps(plan, {})).toBe(plan);
+    // An id that is not one of its alternates changes nothing.
+    expect(applySwaps(plan, { [stop.place.id]: "elsewhere" }).days[0].stops.find((s) => s.startTime === stop.startTime)?.place.id).toBe(stop.place.id);
+  });
+
+  it("swaps a place marked not a fit for its first alternate that is not one too", () => {
+    const plan = draft();
+    const stay = plan.stay!;
+    const [first, second] = stay.alternates!;
+    expect(swapsForMisses(plan, {}, new Set())).toEqual({});
+    expect(swapsForMisses(plan, {}, new Set([stay.place.id]))).toEqual({ [stay.place.id]: first.place.id });
+    expect(swapsForMisses(plan, {}, new Set([stay.place.id, first.place.id]))).toEqual({ [stay.place.id]: second.place.id });
+    // A miss on the place swapped in goes back to the one it replaced.
+    expect(swapsForMisses(plan, { [stay.place.id]: first.place.id }, new Set([first.place.id]))).toEqual({ [stay.place.id]: stay.place.id });
+    // With every option a miss, the plan keeps what it has.
+    expect(swapsForMisses(plan, {}, new Set([stay.place.id, ...stay.alternates!.map((a) => a.place.id)]))).toEqual({});
   });
 });
 

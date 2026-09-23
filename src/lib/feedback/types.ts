@@ -6,7 +6,7 @@ export type FeedbackVerdict = "loved" | "fine" | "disliked";
 export const VERDICTS: FeedbackVerdict[] = ["loved", "fine", "disliked"];
 export const VERDICT_LABEL: Record<FeedbackVerdict, string> = { loved: "Loved it", fine: "It was fine", disliked: "Not for me" };
 
-export type FeedbackSource = "card" | "sheet" | "trip" | "post_trip" | "hide" | "chat";
+export type FeedbackSource = "card" | "sheet" | "trip" | "post_trip" | "hide" | "chat" | "review";
 
 /** One traveler's reaction to one place. */
 export interface PlaceFeedback {

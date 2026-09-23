@@ -335,4 +335,25 @@ export const MIGRATIONS: Migration[] = [
       `CREATE INDEX IF NOT EXISTS package_events_user_idx ON package_events(user_id, created_at DESC)`,
     ],
   },
+  {
+    id: "0009_reviews",
+    statements: [
+      // A review is a reaction with words: the text, whether other travelers may read it, and when it was written.
+      `ALTER TABLE place_feedback ADD COLUMN IF NOT EXISTS review text NOT NULL DEFAULT ''`,
+      `ALTER TABLE place_feedback ADD COLUMN IF NOT EXISTS shared boolean NOT NULL DEFAULT false`,
+      `ALTER TABLE place_feedback ADD COLUMN IF NOT EXISTS reviewed_at timestamptz`,
+      `CREATE INDEX IF NOT EXISTS place_feedback_place_idx ON place_feedback(place_id, reviewed_at DESC)`,
+      // Proof of a visit: a check-in on the spot. Only that it happened (and how far off the reading was) is kept, never the location.
+      `CREATE TABLE IF NOT EXISTS place_visits (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        place_id text NOT NULL,
+        proof text NOT NULL DEFAULT 'checked_in',
+        distance_m int,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )`,
+      `CREATE INDEX IF NOT EXISTS place_visits_user_place_idx ON place_visits(user_id, place_id)`,
+      `CREATE INDEX IF NOT EXISTS place_visits_place_idx ON place_visits(place_id)`,
+    ],
+  },
 ];

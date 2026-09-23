@@ -13,10 +13,10 @@ import type { MapPlace, PlaceKind, ResolvedPlace } from "@/lib/places/types";
 import { photoAtWidth } from "@/lib/places/destination-photo";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { useDestinationPicks, type DestinationPicks, type PickRowKey } from "@/lib/recs/destination-picks";
-import { draftMatch, draftPicks, loadItineraryDraft, useItineraryDraft } from "@/lib/recs/itinerary-draft";
+import { applySwaps, draftMatch, draftPicks, loadItineraryDraft, swapsForMisses, useItineraryDraft } from "@/lib/recs/itinerary-draft";
 import { MAX_ITINERARY_DAYS, daysBetween, daysFromStay } from "@/lib/itinerary";
 import { shortPlaceName } from "@/lib/places/names";
-import type { ItineraryDraft } from "@/server/itineraries";
+import type { DraftPick, ItineraryDraft } from "@/server/itineraries";
 import type { MatchCandidate, MatchResult } from "@/lib/match";
 import { useCardThreadId, usePlacePin, useRegisterPlaces } from "@/components/map/useRegisterPlaces";
 import { useDetailCard, useDetailSlot, useHasSidePanel } from "@/components/map/detailSlot";
@@ -28,6 +28,7 @@ import { RecThumbs } from "@/components/recs/RecThumbs";
 import { photoCreditTitle } from "@/components/ui/PhotoCredit";
 import { CardPhoto, CardRow, SectionHeader, Text } from "./shared";
 import { ItineraryPlan, MakeItineraryButton } from "./ItineraryPlan";
+import { ItineraryWorkspace } from "./ItineraryWorkspace";
 
 type DestinationArgs = Streaming<ShowDestinationsArgs>["destinations"] extends (infer U)[] | undefined ? U : never;
 type Tab = "itinerary" | "stays" | "activities" | "dining";
@@ -126,7 +127,7 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
   const pin = usePlacePin(toolCallId, index);
   const threadId = useCardThreadId();
   const view = useMapView(threadId);
-  const { saved, toggleSaved, planner } = useTravelStore();
+  const { saved, toggleSaved, planner, recFeedback } = useTravelStore();
   const send = useSendMessage();
   const reaction = useReaction({ name: d.name, kind: "destination", place: pin.place, destination: d.name });
   const finePointer = useMediaQuery("(hover: hover) and (pointer: fine)", false);
@@ -186,7 +187,12 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
   const seen = useSeen(articleRef);
   const days = Math.min(MAX_ITINERARY_DAYS, daysBetween(planner.startDate, planner.endDate) ?? daysFromStay(d.suggestedStay));
   const plan = useItineraryDraft(seen && place && name ? label : null, days);
-  const planMatch = useMemo(() => (plan.draft?.days.length ? draftMatch(plan.draft) : null), [plan.draft]);
+  // The plan as the traveler shaped it: their swaps, and a place marked not a fit (in its own
+  // panel, a row, anywhere) giving way to its first alternate that is not a miss too.
+  const [swaps, setSwaps] = useState<Record<string, string>>({});
+  const missed = useMemo(() => new Set(recFeedback.filter((f) => f.verdict === "down").map((f) => f.placeId)), [recFeedback]);
+  const shown = useMemo(() => (plan.draft ? applySwaps(plan.draft, { ...swaps, ...swapsForMisses(plan.draft, swaps, missed) }) : null), [plan.draft, swaps, missed]);
+  const planMatch = useMemo(() => (shown?.days.length ? draftMatch(shown) : null), [shown]);
   const shownMatch = planMatch ?? match;
 
   // The other tabs' recommendation sets load when one is chosen, never on a passing hover, and
@@ -197,9 +203,9 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
   // While this city is selected, the tab on show is its pins: the itinerary, or a category's picks.
   useEffect(() => {
     if (!isActive || !threadId) return;
-    if (tab === "itinerary" && plan.draft?.days.length) mapActions.setScopedPlaces(threadId, scopeId, itineraryToPins(plan.draft, scopeId, toolCallId));
+    if (tab === "itinerary" && shown?.days.length) mapActions.setScopedPlaces(threadId, scopeId, itineraryToPins(shown, scopeId, toolCallId));
     else if (tab !== "itinerary" && picks) mapActions.setScopedPlaces(threadId, scopeId, picksToPins(picks, scopeId, toolCallId));
-  }, [isActive, threadId, tab, plan.draft, picks, scopeId, toolCallId]);
+  }, [isActive, threadId, tab, shown, picks, scopeId, toolCallId]);
 
   const clearTimers = useCallback(() => {
     if (inTimer.current) window.clearTimeout(inTimer.current);
@@ -226,7 +232,7 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
     if (detailOpen) return;
     // A city already selected keeps its filter, so the full view opens on the tab the map shows.
     if (!isActive) activate();
-    mapActions.openDetail(threadId, detailKey);
+    mapActions.openDetail(threadId, detailKey, name);
   };
 
   const closeDetail = () => {
@@ -260,7 +266,8 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
   };
 
   const onFacePointerEnter = () => {
-    if (!finePointer || !armed.current || detailOpen) return;
+    // With the side panel a click opens the card there; hover leaves it be.
+    if (!finePointer || !armed.current || sidePanel) return;
     if (outTimer.current) {
       window.clearTimeout(outTimer.current);
       outTimer.current = null;
@@ -343,7 +350,7 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
   const getDraft = () => {
     clearTimers();
     if (revealRef.current === "hover") setReveal("pinned");
-    return plan.draft ? Promise.resolve(plan.draft) : loadItineraryDraft(label, days);
+    return shown ? Promise.resolve(shown) : loadItineraryDraft(label, days);
   };
 
   // A card judged a miss folds away, and its full view with it.
@@ -362,18 +369,28 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
     { label: "Best season", value: d.bestTime },
   ].filter((f): f is { label: string; value: string } => !!f.value);
   const rowsFor = (t: Exclude<Tab, "itinerary">) => picks?.rows.find((r) => r.key === TAB_ROW[t])?.items ?? [];
-  const planDays = plan.draft?.days.length ?? 0;
+  const planDays = shown?.days.length ?? 0;
   const planLine = planDays
-    ? [`${planDays}-day itinerary`, plan.draft?.stay ? `stay at ${shortPlaceName(plan.draft.stay.place.name)}` : ""].filter(Boolean).join(" · ")
+    ? [`${planDays}-day itinerary`, shown?.stay ? `stay at ${shortPlaceName(shown.stay.place.name)}` : ""].filter(Boolean).join(" · ")
     : plan.loading
       ? "Building your itinerary…"
       : "";
+  /** A swap picked in the plan: the place as built gets the chosen alternate (or itself back). */
+  const swapIn = (pick: DraftPick, to: DraftPick) => {
+    const original = pick.swappedFrom ?? pick.place.id;
+    setSwaps((prev) => {
+      const next = { ...prev };
+      if (to.place.id === original) delete next[original];
+      else next[original] = to.place.id;
+      return next;
+    });
+  };
   const showingPhoto = face === "photo";
   // The place picked on the map, when it is one of this city's.
   const pickedPrefix = `reco:${scopeId}:`;
   const pickedId = view.selectedKey?.startsWith(pickedPrefix) ? view.selectedKey.slice(pickedPrefix.length) : null;
   const planTheDays = `Plan the days for ${label} yourself: a ${days}-day itinerary.`;
-  const hint = detailOpen ? "Open next to the chat" : sidePanel ? "Click to open it with the map" : finePointer ? "Hover for your itinerary" : "Tap Itinerary for your days and picks";
+  const hint = detailOpen ? "Open next to the chat" : sidePanel ? "Click to open your itinerary" : finePointer ? "Hover for your itinerary" : "Tap Itinerary for your days and picks";
 
   // The tab's content, the same on the back of the card and in its full view.
   const tabBody = (full: boolean) =>
@@ -404,16 +421,28 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
                 ))}
             </ul>
           </div>
+        ) : full ? (
+          <ItineraryWorkspace
+            draft={shown}
+            loading={plan.loading || (!place && !!name)}
+            error={plan.error}
+            scope={scopeId}
+            destination={name}
+            selectedKey={view.selectedKey}
+            onRetry={plan.retry}
+            onAsk={() => ask(planTheDays)}
+            onOpen={(item, kind) => showOnMap(item, kind)}
+            onSwap={swapIn}
+          />
         ) : (
           <ItineraryPlan
-            draft={plan.draft}
+            draft={shown}
             loading={plan.loading || (!place && !!name)}
             error={plan.error}
             onRetry={plan.retry}
             onAsk={() => ask(planTheDays)}
             onShow={(item, kind) => showOnMap(item, kind)}
             selectedId={pickedId}
-            followSelection={full}
           />
         )}
       </div>
@@ -702,7 +731,7 @@ function DestinationDetail({
   return (
     <section className="xp-detail flex h-full flex-col bg-surface-warm" data-testid="card-detail" aria-labelledby={headingId}>
       <div className="xp-scroll min-h-0 flex-1 overflow-y-auto">
-        <CardPhoto place={place} queries={[name, label]} alt={label} className="h-[172px] shrink-0 [@media(max-height:860px)]:h-[136px]">
+        <CardPhoto place={place} queries={[name, label]} alt={label} className="h-[210px] shrink-0 [@media(max-height:860px)]:h-[160px]">
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-black/10" />
           {curated ? (
             <span className="absolute left-4 top-4 rounded-full border border-white/70 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-white backdrop-blur-sm">Curated for you</span>
@@ -716,8 +745,8 @@ function DestinationDetail({
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
-          <div className="absolute inset-x-0 bottom-0 px-5 pb-8 text-white drop-shadow">
-            <h2 id={headingId} className="font-serif text-[34px] leading-[1.05]">
+          <div className="absolute inset-x-0 bottom-0 mx-auto w-full max-w-[860px] px-6 pb-8 text-white drop-shadow">
+            <h2 id={headingId} className="font-serif text-[40px] leading-[1.05]">
               {name}
             </h2>
             {country ? (
@@ -728,7 +757,7 @@ function DestinationDetail({
             {tagline ? <p className="mt-1.5 max-w-[48ch] text-[14px] leading-snug text-white/90">{tagline}</p> : null}
           </div>
         </CardPhoto>
-        <div className="min-w-0 px-5 pb-5 pt-4">
+        <div className="mx-auto w-full min-w-0 max-w-[860px] px-6 pb-8 pt-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Built for you</span>
             {planLine ? (
@@ -750,9 +779,11 @@ function DestinationDetail({
           ) : null}
         </div>
       </div>
-      <footer className="flex shrink-0 items-center gap-3 border-t border-border bg-white px-5 py-3">
-        {makeItinerary}
-        {saveButton}
+      <footer className="shrink-0 border-t border-border bg-white">
+        <div className="mx-auto flex w-full max-w-[860px] items-center gap-3 px-6 py-3">
+          {makeItinerary}
+          {saveButton}
+        </div>
       </footer>
     </section>
   );

@@ -197,9 +197,11 @@ scheduling chip open the itinerary board as a full-height sheet (short map, then
    known for, best season); the back scrolls inside the card. The **Itinerary** tab is the plan: where
    they'll stay, then Day 1…N, each stop with its time, photo, short name, category, a one-line why and
    its match score, lunch and dinner near that day's stops. The other tabs list this traveler's scored
-   picks for the city (three rows, then Show all). On a desktop the back appears after a moment's hover
-   and hides again on leaving, unless a click, a tab, a row or keyboard focus pinned it; on a phone the
-   **Itinerary** and **Photo** controls flip it.
+   picks for the city (three rows, then Show all). Below 1280 px wide, on a desktop the back appears
+   after a moment's hover and hides again on leaving, unless a click, a tab, a row or keyboard focus
+   pinned it; on a phone the **Itinerary** and **Photo** controls flip it. From 1280 px up the card
+   does not turn on hover: it says "Click to open your itinerary" and a click opens the plan workspace
+   (below).
    The **itinerary builder** (`POST /api/itineraries`, one lookup from the daily budget, built when the
    card scrolls into view and kept for the session) works from the place catalog, seeding a city it
    has never seen. It scores every stay, thing to do and place to eat with the match model (profile,
@@ -210,20 +212,53 @@ scheduling chip open the itinerary board as a full-height sheet (short map, then
    and sets times by the day rhythm (early days start 08:30, late ones 10:30). The days are the
    planner's dates when set, otherwise the card's suggested stay, at most a week; the card's score is
    the plan's average.
-   **Opened in full next to the chat** (from 1280 px wide, where the map column is): clicking a card
-   (its photo, name or Itinerary) opens it in the side panel, which widens: the card on top (a wide
-   photo with the name and tagline, the plan in a line, Your match, the tabs with every row, quick
-   facts, Make itinerary and Save) and a smaller map of its places below, following the tab (the
-   plan's places on Itinerary, the stays on Stays). The card in the chat gets a teal outline and "Open
-   next to the chat"; the rest of the conversation fades until the traveler types, and hovering it
-   brings it halfway back. A row (a stop, a stay) shows its place on the map, highlighted in the list,
-   with a small bar (photo, name, category, rating, **Details**); a pin picked on the map highlights
-   and scrolls to its row. Details opens the place over the whole panel (with Save and Add to trip);
-   closing it returns to the card. Escape closes the place, then the card; so do the card's close
-   button and a press anywhere in the chat except the composer, the planner chips and another card
-   (which opens instead). The next answer's cards (hotels, restaurants) give the panel back to the
-   map. Hover still turns a card over as a preview. Below 1280 px there is no side panel: the
-   Itinerary control turns the card over in place, as before.
+   **The plan workspace** (from 1280 px wide): clicking a card (its photo, name or Itinerary) puts its
+   plan in the center of the screen and moves the chat into a column on the right, where it stays
+   readable and keeps working (typing there, or the next answer's cards, leave the plan open). The
+   workspace has a wide photo with the name, tagline and "Curated for you", the plan in a line, Your
+   match, the tabs, quick facts, then **Make itinerary** and **Save**; the card in the chat gets a teal
+   outline and "Open next to the chat". On the **Itinerary** tab come "Where you'll stay" and then a
+   card per day ("Day 2 · Vatican Museums · St. Peter's Basilica", its number of stops, **Map**).
+   A day's Map opens that day's own map on top of its stops: the stay and the day's stops numbered like
+   the list, with the walk between them. One day's map is open at a time (Day 1 to begin with), so the
+   plan loads one map, not one per day. Every place in the plan shows its time, photo, short name,
+   category, rating, why it fits and its match score, with three things to do:
+   - **Swap**: three ready alternates of the same kind that the plan does not use yet (near that stop,
+     each with its photo, category, reason and score); **Use this** puts one in that slot, at the same
+     time, and the place it replaced becomes an alternate, so a swap can be undone.
+   - **Good pick / Miss** thumbs: a miss (Not a fit) swaps the place for its first alternate that is
+     not a miss too, on the spot, without rebuilding the rest of the days.
+   - **Details & reviews** (or a click on its name, or its pin on the day's map) opens the place over
+     the plan: photos, rating, its match score with **Good fit / Not a fit**, the overview with the
+     traveler reviews line, the Reviews and Location tabs, Save and Add to trip. **Back to {city}**
+     returns to the plan as it was (same tab, same swaps); a place marked Not a fit here leaves the plan
+     and its panel closes on the plan with its replacement.
+   The plan line ("stay at …"), the day titles, the score, the card in the chat and Make itinerary all
+   follow the swaps. The Stays, Activities and Dining tabs list the traveler's scored picks for the city;
+   a row opens its place the same way. Escape goes back from a place, then closes the plan (not while
+   typing in the chat); so does the close button, which gives the chat its full width back. Below
+   1280 px there is no workspace: the Itinerary control turns the card over in place.
+   **Traveler reviews.** Every real place's panel (in the workspace, over the map or in a phone sheet)
+   carries what travelers on XPMatch say about it. The overview has one line: "3 traveler reviews · 2
+   verified", "Loved by 2 verified travelers like you" and **Read reviews**, or "No traveler reviews
+   yet." with **Leave the first review**. The **Reviews** tab has "From travelers on XPMatch" first,
+   then the reviews "From Google":
+   - **Proof.** "I'm here: check in" takes one location reading, compares it with the place on the
+     server and drops it; only when and how far off it was are kept. It has to be within 150 m of a
+     hotel, 120 m of a restaurant, 250 m of an attraction or 600 m of a park, market or square, plus the
+     reading's own uncertainty up to 100 m; a reading rougher than 200 m, a place too far ("You're about
+     1.2 km from Hotel Artemide. Check in when you're there."), or a check-in that would mean flying
+     faster than a plane since the last one is refused; 20 a day at most. A booking of theirs for that
+     place (imported from a confirmation) whose date has come counts as proof too. Proof shows as a
+     **Checked in** or **Booked** badge on their review.
+   - **Writing.** How was it (Loved it / It was fine / Not for me), a few words (up to 1,200
+     characters) and "Share with other travelers (as your first name and last initial)", on by
+     default; **Post review**, later **Update review**. The verdict is also their reaction to the place,
+     so the taste profile and the match scores learn from it. **Delete** takes the words down and keeps
+     the reaction; an unshared review reads "Only you can see this" and nobody else gets it.
+   - **Reading.** Their own review first ("You"), then verified reviews, then those by travelers who
+     **travel like them** (at least one interest, cuisine, kind of stay or travel style in common, and
+     enough overall with budget, company and pace), newest first. Reviewers show as "Tayo A.".
    Selecting a card makes it the active city: once it is closed, the map header reads
    "Explore {city}" with its recommended places behind one **All / Stays / Dining / Experiences**
    filter that the card's tabs mirror (a card opens on the tab the filter shows); a row shows that

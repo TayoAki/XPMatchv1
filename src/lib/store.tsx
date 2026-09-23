@@ -474,6 +474,11 @@ export const travelActions = {
     return run;
   },
 
+  /** A reaction written elsewhere (a review) replaces the local copy, with the taste profile it produced. */
+  applyFeedback(row: PlaceFeedback, taste?: TasteProfile | null) {
+    set((s) => ({ feedback: [row, ...s.feedback.filter((f) => f.placeId !== row.placeId)], ...(taste ? { taste } : {}) }));
+  },
+
   removeFeedback(id: string) {
     const prev = readSnapshot();
     const item = prev.feedback.find((f) => f.id === id);

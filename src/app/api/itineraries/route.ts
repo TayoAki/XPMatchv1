@@ -14,6 +14,8 @@ const bodySchema = z.object({
   days: z.number().int().min(1).max(MAX_DAYS).optional(),
   /** Place ids to plan with and nothing else (a package's places). */
   only: z.array(z.string().max(200)).max(40).optional(),
+  /** Place ids to leave out (ones the traveler just said are not a fit). */
+  exclude: z.array(z.string().max(200)).max(100).optional(),
 });
 
 /** A complete itinerary for a destination, built for this traveler from the place catalog. Nothing is saved. */
@@ -29,7 +31,7 @@ export const POST = route(async (request) => {
     loadRecFeedback(user.id),
     loadPackageCalibration(user.id),
   ]);
-  const itinerary = await buildItineraryDraft(body.destination, { profile, taste, preferences, recFeedback, packageCalibration }, body.days ?? 3, body.only);
+  const itinerary = await buildItineraryDraft(body.destination, { profile, taste, preferences, recFeedback, packageCalibration }, body.days ?? 3, body.only, body.exclude);
   if (!itinerary) throw new HttpError(404, `Couldn't place "${body.destination}" on the map`);
   return json({ itinerary });
 });

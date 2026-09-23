@@ -25,6 +25,7 @@ export function MatchLine({
   text,
   tradeoffs,
   size = "md",
+  labeled = false,
   className,
 }: {
   name?: string;
@@ -39,6 +40,8 @@ export function MatchLine({
   text?: string;
   tradeoffs?: (string | undefined)[];
   size?: "sm" | "md";
+  /** Spells out Good fit / Not a fit. */
+  labeled?: boolean;
   className?: string;
 }) {
   const candidate = useMemo<MatchCandidate | null>(() => {
@@ -59,7 +62,7 @@ export function MatchLine({
   return (
     <div className={clsx("flex flex-wrap items-center gap-2", className)} data-testid="match-line">
       <MatchBadge match={match} size={size} />
-      <RecThumbs name={name} kind={kind} place={place} destination={destination} context={context} match={match} size={size} />
+      <RecThumbs name={name} kind={kind} place={place} destination={destination} context={context} match={match} size={size} labeled={labeled} />
     </div>
   );
 }

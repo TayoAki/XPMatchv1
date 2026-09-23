@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import clsx from "clsx";
-import { ExternalLink, Heart, PanelLeftClose, Plus, Sparkles, Star, X } from "lucide-react";
+import { ArrowLeft, ExternalLink, Heart, PanelLeftClose, Plus, Sparkles, Star, X } from "lucide-react";
 import { findSaved, useTravelStore } from "@/lib/store";
 import { fetchPlaceDetails } from "@/lib/places/client";
 import { bookingSearchUrl, getYourGuideSearchUrl, googleHotelsUrl, googleMapsSearchUrl, openTableSearchUrl, wikipediaSummaryUrl } from "@/lib/travel/links";
@@ -17,6 +17,8 @@ import { DestinationTab, type DestinationTabKind } from "./DestinationTab";
 import { AskAboutPlace } from "@/components/place/AskAboutPlace";
 import { TopicChips } from "@/components/place/TopicChips";
 import { ReactionControl } from "@/components/feedback/ReactionControl";
+import { MatchLine } from "@/components/recs/MatchLine";
+import { ReviewsTeaser, TravelerReviews } from "@/components/place/TravelerReviews";
 import { reviewsOnTopic } from "@/lib/places/evidence";
 import type { EvidenceTopic } from "@/lib/places/facts";
 
@@ -60,11 +62,14 @@ export function PlaceDetailSheet({
   focusName,
   onClose,
   onCollapse,
+  backLabel,
   compact = false,
 }: {
   place: ResolvedPlace;
   focusName?: string;
   onClose: () => void;
+  /** Opened from a card in the side panel: the close button reads "Back to {city}" and returns there. */
+  backLabel?: string;
   /** Hides the whole map; without it (a card open above the map) there is no Hide map button. */
   onCollapse?: () => void;
   /** Inside a phone bottom sheet: fills its parent, the sheet owns the close button, actions wrap under the title. */
@@ -77,6 +82,10 @@ export function PlaceDetailSheet({
   const [detailsState, setDetailsState] = useState<{ id: string; data: PlaceDetails | null } | null>(null);
   const [wikiState, setWikiState] = useState<{ id: string; text: string } | null>(null);
   const [tab, setTab] = useState<Tab>("overview");
+  // Smaller photos and type in a phone sheet and in the side panel's card area.
+  const small = compact || !!backLabel;
+  // "Leave the first review" in the overview opens the Reviews tab with the form out.
+  const [writeReview, setWriteReview] = useState(false);
   const [topic, setTopic] = useState<EvidenceTopic | null>(null);
   const details = detailsState?.id === place.id ? detailsState.data : null;
   const detailsPending = place.source === "google" && detailsState?.id !== place.id;
@@ -152,9 +161,15 @@ export function PlaceDetailSheet({
       {compact ? null : (
         <div className="flex items-center justify-between px-5 pt-4">
           <div className="flex items-center gap-2">
-            <button type="button" onClick={onClose} aria-label="Close" className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-white hover:bg-surface">
-              <X className="h-5 w-5" />
-            </button>
+            {backLabel ? (
+              <button type="button" onClick={onClose} className="flex h-11 items-center gap-2 rounded-full border border-border bg-white px-4 text-[14px] font-semibold hover:bg-surface">
+                <ArrowLeft className="h-4 w-4" aria-hidden="true" /> {backLabel}
+              </button>
+            ) : (
+              <button type="button" onClick={onClose} aria-label="Close" className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-white hover:bg-surface">
+                <X className="h-5 w-5" />
+              </button>
+            )}
             {onCollapse ? (
               <button type="button" onClick={onCollapse} aria-label="Hide map" className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-white hover:bg-surface">
                 <PanelLeftClose className="h-5 w-5" />
@@ -168,7 +183,7 @@ export function PlaceDetailSheet({
         </div>
       )}
 
-      <div className={clsx("xp-scroll relative flex-1 overflow-y-auto", compact ? "px-4 pb-24 pt-1" : "px-5 pb-28 pt-6")}>
+      <div className={clsx("xp-scroll relative flex-1 overflow-y-auto", compact ? "px-4 pb-24 pt-1" : small ? "px-5 pb-28 pt-4" : "px-5 pb-28 pt-6")}>
         {isDestination ? (
           <div className={clsx("relative mb-5", compact ? "-mx-4 -mt-1 h-[220px]" : "-mx-5 -mt-6 h-[360px]")}>
             {photos[0] ? (
@@ -185,7 +200,7 @@ export function PlaceDetailSheet({
           </div>
         ) : (
           <>
-            <h2 className={clsx("font-semibold leading-tight tracking-tight", compact ? "text-[24px]" : "text-[32px]")}>{place.name}</h2>
+            <h2 className={clsx("font-semibold leading-tight tracking-tight", small ? "text-[24px]" : "text-[32px]")}>{place.name}</h2>
             <div className="mt-2 flex flex-wrap items-center gap-x-2 text-[15px] text-neutral-700">
               {data.rating ? (
                 <span className="inline-flex items-center gap-1 font-semibold text-foreground">
@@ -201,14 +216,16 @@ export function PlaceDetailSheet({
               {data.priceLevel ? <span className="text-muted">· {data.priceLevel}</span> : null}
               {place.source === "estimate" ? <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[12px] text-amber-700">Approximate location</span> : null}
             </div>
+            {/* How well it fits this traveler, and their say: Good fit / Not a fit (a miss leaves itineraries). */}
+            <MatchLine name={place.name} kind={place.kind} place={data} destination={focusName ?? data.locality} context="sheet" labeled className="mt-3" />
 
             {photos.length === 1 ? (
-              <div className={clsx("relative mt-5 overflow-hidden rounded-2xl", compact ? "h-[200px]" : "h-[300px]")}>
+              <div className={clsx("relative mt-5 overflow-hidden rounded-2xl", small ? "h-[200px]" : "h-[300px]")}>
                 <Photo src={photos[0]} alt={place.name} />
                 <PhotoCredit credit={data.photoCredits?.[0]} />
               </div>
             ) : photos.length ? (
-              <div className={clsx("mt-5 grid grid-cols-4 grid-rows-2 gap-2 overflow-hidden rounded-2xl", compact ? "h-[200px]" : "h-[300px]")}>
+              <div className={clsx("mt-5 grid grid-cols-4 grid-rows-2 gap-2 overflow-hidden rounded-2xl", small ? "h-[200px]" : "h-[300px]")}>
                 <div className="relative col-span-2 row-span-2">
                   <Photo src={photos[0]} alt={place.name} />
                   <PhotoCredit credit={data.photoCredits?.[0]} />
@@ -228,7 +245,7 @@ export function PlaceDetailSheet({
 
 
         {/* Tabs */}
-        <div className={clsx("flex border-b border-border", compact ? "mt-5 gap-4 text-[14px]" : "mt-6 gap-6 text-[16px]")}>
+        <div className={clsx("flex border-b border-border", small ? "mt-5 gap-4 text-[14px]" : "mt-6 gap-6 text-[16px]")}>
           {isDestination ? (
             <>
               <TabButton active={tab === "overview"} onClick={() => setTab("overview")}>Overview</TabButton>
@@ -250,6 +267,16 @@ export function PlaceDetailSheet({
           {tab === "overview" ? (
             <>
               <p>{data.summary ?? wiki ?? (place.source === "estimate" ? "Location is estimated from the assistant's recommendation. Open in Google Maps to confirm details." : "No description available yet.")}</p>
+              {!isDestination ? (
+                <ReviewsTeaser
+                  place={data}
+                  onRead={() => setTab("reviews")}
+                  onWrite={() => {
+                    setWriteReview(true);
+                    setTab("reviews");
+                  }}
+                />
+              ) : null}
               {details?.openingHours?.length ? (
                 <div className="mt-5">
                   <div className="text-[14px] font-semibold">Hours</div>
@@ -300,11 +327,13 @@ export function PlaceDetailSheet({
             <DestinationTab kind={tab} destination={data} />
           ) : null}
 
+          {tab === "reviews" ? <TravelerReviews place={data} destination={focusName ?? data.locality} startWriting={writeReview} /> : null}
+          {tab === "reviews" ? <h3 className="mb-3 mt-8 text-[16px] font-semibold">From Google</h3> : null}
           {tab === "reviews" ? (
             detailsPending ? (
               <p className="text-muted">Loading reviews…</p>
             ) : details?.reviews?.length ? (
-              <ul className="grid gap-5">
+              <ul className="grid gap-5" data-testid="google-reviews">
                 <li>
                   <TopicChips reviews={details.reviews} active={topic} onSelect={setTopic} />
                 </li>

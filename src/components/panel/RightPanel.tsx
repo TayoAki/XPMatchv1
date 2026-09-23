@@ -1,18 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 import { mapActions, useMapView } from "@/lib/map-store";
 import { DiscoveryPanel } from "@/components/panel/DiscoveryPanel";
 import { MapPanel } from "@/components/map/MapPanel";
 import { PlaceDetailSheet } from "@/components/map/PlaceDetailSheet";
 import { setDetailSlot, useDetailCardMounted, useSidePanelMounted } from "@/components/map/detailSlot";
 
-/** Discovery feed until the chat is about a place; then the live map, like Mindtrip; a card opened in full sits above the map. */
+/** Discovery feed until the chat is about a place; then the live map, like Mindtrip; with a card opened in full, the plan workspace. */
 export function RightPanel() {
   useSidePanelMounted();
   const view = useMapView();
   const cardOnScreen = useDetailCardMounted(view.detail);
-  if (view.detail && view.threadId && cardOnScreen) return <CardDetailPanel threadId={view.threadId} />;
+  if (view.detail && view.threadId && cardOnScreen) return <PlanWorkspace threadId={view.threadId} />;
   const showMap = view.hasContent && !view.collapsed;
   if (showMap) return <MapPanel />;
   return (
@@ -26,36 +26,42 @@ export function RightPanel() {
 }
 
 /**
- * A destination card open in full: the card (which renders itself into the top area) over a
- * smaller map of its places. A place picked on either side shows on the map with a Details
- * button; Details opens the place over the whole panel. Escape closes the place, then the card.
+ * The plan workspace (a destination card opened in full, in the center): the card renders itself
+ * into it; a place picked in the plan or on a day's map opens its own details over the plan
+ * (photos, match, Good fit / Not a fit, traveler reviews, booking links) and "Back to {city}"
+ * returns. Escape goes back from the place first, then closes the plan; typing in the chat is
+ * left alone.
  */
-function CardDetailPanel({ threadId }: { threadId: string }) {
+function PlanWorkspace({ threadId }: { threadId: string }) {
   const view = useMapView(threadId);
-  const [placeKey, setPlaceKey] = useState<string | null>(null);
   const selected = view.selected;
-  const placeOpen = !!placeKey && placeKey === view.selectedKey && !!selected;
+  const placeOpen = !!view.selectedKey && !!selected;
+  const cityName = view.detailName ?? view.activeDestination?.name;
+  const back = useCallback(() => mapActions.selectPlace(threadId, null), [threadId]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape" || e.defaultPrevented) return;
       // An open dialog, popover or floating panel takes this Escape itself (they listen on window, after us).
       if (document.querySelector('[aria-modal="true"], .xp-pop')) return;
-      if (placeOpen) setPlaceKey(null);
+      if ((e.target as HTMLElement | null)?.closest?.('[data-testid="chat-column"]')) return;
+      if (placeOpen) back();
       else mapActions.closeDetail(threadId);
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [placeOpen, threadId]);
+  }, [placeOpen, threadId, back]);
 
   return (
-    <div className="relative flex h-full w-full flex-col" data-testid="card-detail-panel">
-      <div ref={setDetailSlot} className="relative min-h-0 flex-[1.7] overflow-hidden" />
-      <div className="relative min-h-[240px] flex-1 border-t border-border/60">
-        <MapPanel compact onOpenPlace={() => setPlaceKey(view.selectedKey)} />
-      </div>
+    <div className="relative h-full w-full bg-surface-warm" data-testid="card-detail-panel">
+      {/* The card stays mounted under a place (its plan, swaps and tab are kept for Back). */}
+      <div ref={setDetailSlot} className="absolute inset-0" inert={placeOpen} aria-hidden={placeOpen || undefined} />
       {placeOpen && selected ? (
-        <PlaceDetailSheet key={placeKey} place={selected} focusName={view.focus?.name} onClose={() => setPlaceKey(null)} />
+        <div className="absolute inset-0 z-10 flex justify-center bg-surface-warm">
+          <div className="relative h-full w-full max-w-[880px] border-x border-border/60 bg-white">
+            <PlaceDetailSheet key={view.selectedKey ?? "none"} place={selected} focusName={view.focus?.name} onClose={back} backLabel={cityName ? `Back to ${cityName}` : "Back"} />
+          </div>
+        </div>
       ) : null}
     </div>
   );

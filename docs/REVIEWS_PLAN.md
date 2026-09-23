@@ -3,6 +3,32 @@
 Goal: travelers review the places they actually went, with proof they were there, and those reviews
 make everyone's match scores and itineraries better ("Loved by 3 verified travelers like you").
 
+## Status: v1 is live (reviews, check-ins, booking proof, travelers like you)
+
+What travelers can do now, on every real place's panel (see `docs/USER_FLOWS.md`, Traveler reviews):
+
+- **Check in** ("I'm here: check in"): one location reading, compared with the place on the server
+  (`POST /api/places/{id}/checkin`) and dropped; `place_visits` keeps only who, which place, when and
+  how far off. Radius by kind: hotel 150 m, restaurant 120 m, attraction 250 m, park / market / square
+  600 m, plus the reading's own uncertainty up to 100 m; readings rougher than 200 m are refused, as is
+  a check-in that would mean flying faster than 900 km/h since the last one; 20 a day.
+- **Booked** proof: a reservation of theirs for that place (imported into a trip they own or belong
+  to) whose start date has come.
+- **Review**: loved / fine / not for me, up to 1,200 characters, shared with other travelers by default
+  (a checkbox; first name and last initial). It is the same row as their reaction
+  (`place_feedback.review`, `shared`, `reviewed_at`), so the taste profile learns from it. Delete takes
+  the words down and keeps the reaction. 30 reviews an hour at most.
+- **Read**: `GET /api/places/{id}/reviews` returns the shared reviews (and the viewer's own) with each
+  reviewer's proof, whether they travel like the viewer and what they have in common, ranked own →
+  verified → like you → newest, plus the summary line ("Loved by 2 verified travelers like you").
+  "Travels like you" is profile overlap for now: at least one interest, cuisine, stay type or style in
+  common, weighted with budget, company and pace (`travelerSimilarity`, threshold 0.4).
+
+Not built yet, in order: the **match factor** (reviews by travelers like you moving scores and the
+itinerary builder, step 4 below), **I'm here on trip stops** in the phone day view, proof badges and a
+line of text in "How was {city}?", a **report** button with an admin queue, the admin numbers, then
+photo and receipt proof.
+
 ## What already exists
 
 - **Reactions per place** (`place_feedback`): loved / fine / not for me, reasons, a note, the trip,
@@ -52,8 +78,8 @@ and a line of text in each review.
 ## Trust and privacy
 
 - One review per traveler per place. Editing a review keeps its proof.
-- Review text is used for matching without names. It is shown to others only if the reviewer ticks
-  **Share with the community**, and then only as first name, last initial and the proof badge.
+- Review text is used for matching without names. It is shown to others unless the reviewer unticks
+  **Share with other travelers**, and then only as first name, last initial and the proof badge.
 - Never reward only good reviews or hide bad ones. The FTC's 2024 rule on reviews bans fake
   reviews, incentives that depend on a review being positive, and hiding negative reviews while
   presenting the rest as complete.
@@ -74,10 +100,15 @@ and a line of text in each review.
 
 Photo and receipt proof can follow as v2, reusing the screenshot reader.
 
-## Decisions needed
+Done so far: step 1 (as `place_visits` plus review columns on `place_feedback`; proof is worked out
+when reviews are read, so a later check-in or booking upgrades an older review), step 2 on the place
+panel, the Booked half of step 3, the similarity half of step 4, step 5 without the report button and
+queue, and step 6's tests (`tests/unit/reviews.test.ts`, `tests/e2e/reviews.spec.ts`).
 
-1. **Which proof counts for v1?** Recommended: check-ins and bookings as "verified", plus
-   self-reported at a lower weight. Alternatives: add photo and receipt proof now (more coverage for
-   people who forget to check in, but more work and weaker proof), or self-reported only for now.
-2. **Show review text to other travelers?** Recommended: use reviews for matching from day one and
-   show the text only when the reviewer opts in, as described above.
+## Decisions made
+
+1. **Which proof counts for v1?** Check-ins and bookings count as verified; a review without proof
+   is shown without a badge and ranks after the verified ones. Photo and receipt proof wait for v2.
+2. **Show review text to other travelers?** Yes, so travelers can read each other's reviews: sharing
+   is on by default, with the checkbox in the form to keep a review private (then only its author
+   sees it). Flip the default in `TravelerReviews.tsx` if opt-in fits better.

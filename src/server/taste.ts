@@ -68,6 +68,12 @@ export async function loadFeedback(userId: string): Promise<PlaceFeedback[]> {
   return rows.map(mapFeedback);
 }
 
+/** The traveler's reaction to one place, when they have one. */
+export async function loadFeedbackFor(userId: string, placeId: string): Promise<PlaceFeedback | null> {
+  const row = await queryOne<FeedbackRow>(`${SELECT} WHERE user_id = $1 AND place_id = $2`, [userId, placeId]);
+  return row ? mapFeedback(row) : null;
+}
+
 export interface FeedbackInput {
   placeId?: string;
   name: string;

@@ -4,9 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Layers, MapPin, PanelLeftClose, Search, Sun, X } from "lucide-react";
 import { FOCUS_KEY, mapActions, useMapView } from "@/lib/map-store";
 import { fetchWeather, resolvePlaces, type CurrentWeather } from "@/lib/places/client";
-import { photoAtWidth } from "@/lib/places/destination-photo";
-import { shortPlaceName } from "@/lib/places/names";
-import type { MapPlace, ResolvedPlace } from "@/lib/places/types";
+import type { MapPlace } from "@/lib/places/types";
 import { useTripScope } from "@/components/trips/TripScope";
 import { GoogleMap, type MapStatus } from "./GoogleMap";
 import { MapFilters } from "./MapFilters";
@@ -17,11 +15,9 @@ import { TripTray } from "./TripTray";
 /**
  * Chat companion map: "Explore {city}" with the shared category filter, the pins from the
  * conversation (or the selected city's recommendation set), a destination chip, search,
- * weather, the trip so far, and the place sheet. `compact` is the map under a card open in
- * full: the card's tabs are the filter, so there is no header, strip or tray, and a picked place
- * shows as a small bar whose Details calls `onOpenPlace`.
+ * weather, the trip so far, and the place sheet.
  */
-export function MapPanel({ compact = false, onOpenPlace }: { compact?: boolean; onOpenPlace?: () => void } = {}) {
+export function MapPanel() {
   const view = useMapView();
   const { threadId, focus, visiblePlaces, scopedCount, activeDestination, filter, selectedKey, hoveredKey, selected } = view;
   const tripScope = useTripScope();
@@ -73,31 +69,28 @@ export function MapPanel({ compact = false, onOpenPlace }: { compact?: boolean; 
     : visiblePlaces.length
       ? "Places from our conversation"
       : "Places we talk about show up here";
-  const stripVisible = !compact && visiblePlaces.length > 0 && !selected;
-  const chipsBottom = compact ? (selected ? "bottom-[88px]" : "bottom-6") : stripVisible ? "bottom-[104px]" : "bottom-6";
+  const stripVisible = visiblePlaces.length > 0 && !selected;
 
   return (
-    <div className="flex h-full w-full flex-col" data-testid="map-panel" data-compact={compact || undefined}>
-      {compact ? null : (
-        <div className="shrink-0 border-b border-border/60 bg-white px-4 pb-3 pt-4" data-testid="map-header">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h2 className="truncate font-serif text-[22px] leading-tight">{cityName ? `Explore ${cityName}` : "Map"}</h2>
-              <p className="text-[13px] text-muted">{subtitle}</p>
-            </div>
-            {activeDestination && threadId ? (
-              <button
-                type="button"
-                onClick={() => mapActions.setActiveDestination(threadId, null)}
-                className="shrink-0 rounded-full border border-border bg-white px-3 py-1.5 text-[12px] font-semibold transition-colors hover:bg-surface"
-              >
-                All places
-              </button>
-            ) : null}
+    <div className="flex h-full w-full flex-col" data-testid="map-panel">
+      <div className="shrink-0 border-b border-border/60 bg-white px-4 pb-3 pt-4" data-testid="map-header">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="truncate font-serif text-[22px] leading-tight">{cityName ? `Explore ${cityName}` : "Map"}</h2>
+            <p className="text-[13px] text-muted">{subtitle}</p>
           </div>
-          {threadId ? <MapFilters value={filter} onChange={(next) => mapActions.setFilter(threadId, next)} className="mt-3" /> : null}
+          {activeDestination && threadId ? (
+            <button
+              type="button"
+              onClick={() => mapActions.setActiveDestination(threadId, null)}
+              className="shrink-0 rounded-full border border-border bg-white px-3 py-1.5 text-[12px] font-semibold transition-colors hover:bg-surface"
+            >
+              All places
+            </button>
+          ) : null}
         </div>
-      )}
+        {threadId ? <MapFilters value={filter} onChange={(next) => mapActions.setFilter(threadId, next)} className="mt-3" /> : null}
+      </div>
 
       <div className="relative min-h-0 flex-1">
         <GoogleMap
@@ -112,11 +105,9 @@ export function MapPanel({ compact = false, onOpenPlace }: { compact?: boolean; 
         >
           {/* Top-left controls */}
           <div className="absolute left-4 top-4 flex items-center gap-2">
-            {compact ? null : (
-              <button type="button" onClick={collapse} aria-label="Hide map" title="Hide map" className="flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-md hover:bg-neutral-50">
-                <PanelLeftClose className="h-5 w-5" />
-              </button>
-            )}
+            <button type="button" onClick={collapse} aria-label="Hide map" title="Hide map" className="flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-md hover:bg-neutral-50">
+              <PanelLeftClose className="h-5 w-5" />
+            </button>
             <button type="button" onClick={() => setSearchOpen((v) => !v)} aria-label="Search the map" className="flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-md hover:bg-neutral-50">
               {searchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
             </button>
@@ -165,7 +156,7 @@ export function MapPanel({ compact = false, onOpenPlace }: { compact?: boolean; 
           ) : null}
 
           {weather ? (
-            <div className={`absolute left-4 flex h-9 items-center gap-1.5 rounded-full bg-white/95 px-3 text-[13px] font-medium shadow-md ${chipsBottom}`}>
+            <div className={`absolute left-4 flex h-9 items-center gap-1.5 rounded-full bg-white/95 px-3 text-[13px] font-medium shadow-md ${stripVisible ? "bottom-[104px]" : "bottom-6"}`}>
               <Sun className="h-4 w-4 text-amber-500" />
               <span>{weather.tempF}°F</span>
               <span className="text-muted">{weather.summary}</span>
@@ -173,7 +164,7 @@ export function MapPanel({ compact = false, onOpenPlace }: { compact?: boolean; 
           ) : null}
 
           {/* The trip so far, while no place panel is open. */}
-          {!compact && !selected && tripId ? <TripTray tripId={tripId} className={`absolute right-4 w-[min(300px,calc(100%-32px))] ${chipsBottom}`} /> : null}
+          {!selected && tripId ? <TripTray tripId={tripId} className={`absolute right-4 w-[min(300px,calc(100%-32px))] ${stripVisible ? "bottom-[104px]" : "bottom-6"}`} /> : null}
 
           {/* Mini cards under the map: scan every pin without opening anything; a tap opens the full sheet. */}
           {stripVisible ? (
@@ -182,9 +173,7 @@ export function MapPanel({ compact = false, onOpenPlace }: { compact?: boolean; 
             </div>
           ) : null}
 
-          {selected && compact ? (
-            <SelectedPlaceBar place={selected} onDetails={() => onOpenPlace?.()} onClear={() => threadId && mapActions.selectPlace(threadId, null)} />
-          ) : selected ? (
+          {selected ? (
             <PlaceDetailSheet
               key={selectedKey ?? "none"}
               place={selected}
@@ -195,36 +184,6 @@ export function MapPanel({ compact = false, onOpenPlace }: { compact?: boolean; 
           ) : null}
         </GoogleMap>
       </div>
-    </div>
-  );
-}
-
-/** The place picked on the smaller map: enough to recognize it, and Details for everything else. */
-function SelectedPlaceBar({ place, onDetails, onClear }: { place: MapPlace | ResolvedPlace; onDetails: () => void; onClear: () => void }) {
-  const photo = place.photos?.[0];
-  const meta = [place.category, place.rating ? `★ ${place.rating.toFixed(1)}` : "", place.locality?.split(",")[0]].filter(Boolean).join(" · ");
-  return (
-    <div className="absolute inset-x-3 bottom-3 z-[6] flex items-center gap-3 rounded-2xl border border-border bg-white p-2.5 shadow-floating" data-testid="selected-place">
-      {photo ? (
-        // eslint-disable-next-line @next/next/no-img-element -- proxied Places photo
-        <img src={photoAtWidth(photo, 160)} alt="" className="h-12 w-12 shrink-0 rounded-xl object-cover" />
-      ) : (
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-surface text-neutral-500">
-          <MapPin className="h-4 w-4" aria-hidden="true" />
-        </span>
-      )}
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-[14px] font-semibold" title={place.name}>
-          {shortPlaceName(place.name)}
-        </div>
-        {meta ? <div className="truncate text-[12px] text-muted">{meta}</div> : null}
-      </div>
-      <button type="button" onClick={onDetails} aria-label={`Details for ${place.name}`} className="h-9 shrink-0 rounded-full bg-brand px-3.5 text-[13px] font-semibold text-white hover:bg-brand-hover">
-        Details
-      </button>
-      <button type="button" onClick={onClear} aria-label="Clear the selection" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-neutral-500 hover:bg-surface">
-        <X className="h-4 w-4" aria-hidden="true" />
-      </button>
     </div>
   );
 }

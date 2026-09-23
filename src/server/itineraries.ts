@@ -21,6 +21,10 @@ export interface DraftPick {
   match: MatchResult;
   /** One line on why it fits, from the match reasons. */
   why: string;
+  /** Ready swaps: the next best places of its kind that are not in the plan, nearest first (the stay and every stop have them). */
+  alternates?: DraftPick[];
+  /** Set on the client when the traveler swapped this pick in: the id of the place it replaced in the plan as built. */
+  swappedFrom?: string;
 }
 
 export interface DraftStop extends DraftPick {
@@ -55,6 +59,8 @@ const DINNER_MIN: Record<TravelerProfile["dayRhythm"], number> = { early: 18 * 6
 const LUNCH_MIN = 12 * 60 + 30;
 const MEAL_MIN = 75;
 const TRAVEL_MIN = 20;
+/** Ready swaps per pick. */
+const ALTERNATES = 3;
 
 const hhmm = (min: number) => `${String(Math.floor(min / 60) % 24).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
 const lower = (s: string | undefined) => (s ?? "").toLowerCase();
@@ -254,16 +260,44 @@ export function planItinerary(scored: ScoredPools, destination: ResolvedPlace, p
     return { day: index + 1, title, stops };
   });
 
+  // Ready swaps for every pick: the best of its kind that are not in the plan (nor a branch of a
+  // place that is), a stop's nearest to where it sits. Lighter places: one photo each.
+  const taken = new Set([...(stay ? [stay.place] : []), ...days.flatMap((d) => d.stops.map((s) => s.place))].flatMap((p) => [p.id, `name:${sameName(p)}`]));
+  const light = (s: Scored): DraftPick => ({ ...pick(s), place: { ...s.place, photos: s.place.photos?.slice(0, 1) ?? [], photoCredits: s.place.photoCredits?.slice(0, 1) } });
+  const alternatesFor = (pool: Scored[], value: (s: Scored) => number): DraftPick[] => {
+    const out: DraftPick[] = [];
+    const names = new Set<string>();
+    for (const s of [...pool].sort((a, b) => value(b) - value(a))) {
+      if (out.length >= ALTERNATES) break;
+      const name = sameName(s.place);
+      if (taken.has(s.place.id) || taken.has(`name:${name}`) || names.has(name)) continue;
+      names.add(name);
+      out.push(light(s));
+    }
+    return out;
+  };
+  const near = (at: LatLng) => (s: Scored) => s.match.score - 3 * Math.max(0, distanceKm(at, s.place) - 1);
+  const withSwaps = days.map((d) => ({
+    ...d,
+    stops: d.stops.map((stop) => ({
+      ...stop,
+      alternates:
+        stop.kind === "attraction"
+          ? alternatesFor(scored.attraction, (s) => near(stop.place)(s) + timeFit(profile, s.place))
+          : alternatesFor(eats, (s) => near(stop.place)(s) + (local && `${lower(s.place.category)} ${lower(s.place.name)}`.includes(local) ? LOCAL_FOOD_BONUS : 0)),
+    })),
+  }));
+
   const all = [...(stay ? [stay.match.score] : []), ...days.flatMap((d) => d.stops.map((s) => s.match.score))];
   const score = all.length ? Math.max(5, Math.min(99, Math.round(all.reduce((a, b) => a + b, 0) / all.length))) : 0;
-  return { stay: stay ? pick(stay) : null, days, score };
+  return { stay: stay ? { ...pick(stay), alternates: alternatesFor(scored.hotel, stayValue) } : null, days: withSwaps, score };
 }
 
 /**
  * Builds the draft for a destination from the catalog (seeding a thin city first, as packages do).
  * With `only`, the plan uses just those places (a package the traveler already shaped).
  */
-export async function buildItineraryDraft(query: string, inputs: MatchInputs, days: number, only?: string[]): Promise<ItineraryDraft | null> {
+export async function buildItineraryDraft(query: string, inputs: MatchInputs, days: number, only?: string[], exclude?: string[]): Promise<ItineraryDraft | null> {
   const destination = await resolveDestination(query);
   if (!destination) return null;
   const pools = await loadPools(destination, inputs.profile);
@@ -271,11 +305,13 @@ export async function buildItineraryDraft(query: string, inputs: MatchInputs, da
     const keep = new Set(only);
     for (const kind of ["hotel", "attraction", "restaurant"] as const) pools[kind] = pools[kind].filter((p) => keep.has(p.id));
   }
-  const none = new Set<string>();
+  // Places the traveler passed on are left out: the ones named here (just marked not a fit, maybe
+  // before the judgment reached the server) and, inside scorePool, every recorded miss.
+  const excluded = new Set(exclude ?? []);
   const scored: ScoredPools = {
-    hotel: scorePool(pools.hotel, inputs, none, []),
-    attraction: scorePool(pools.attraction, inputs, none, []),
-    restaurant: scorePool(pools.restaurant, inputs, none, []),
+    hotel: scorePool(pools.hotel, inputs, excluded, []),
+    attraction: scorePool(pools.attraction, inputs, excluded, []),
+    restaurant: scorePool(pools.restaurant, inputs, excluded, []),
   };
   return {
     destination,
