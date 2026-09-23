@@ -215,7 +215,8 @@ working documents: `docs/COMPETITOR_LANDSCAPE.md`, `docs/REVENUE_MODEL.md` and
 `docs/OPERATING_SYSTEM.md`. `docs/EVENT_SOURCES.md` lists event and experience sources and flags
 what Google's terms allow us to store; `docs/PLACE_DATA.md` shows how other travel apps source, store
 and use place data, and Google's approved routes; `docs/PLACE_DATA_REDESIGN.md` is the plan for
-the compliant version.
+the compliant version; `docs/TERMS_RESEARCH.md` is the checklist of every outside service's terms
+and the laws we still need to check.
 
 ## Getting started
 
