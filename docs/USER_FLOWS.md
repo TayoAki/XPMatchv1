@@ -130,11 +130,14 @@ scheduling chip open the itinerary board as a full-height sheet (short map, then
    on when the traveler writes in it again. The latest message wins over all of it: "plan me a trip
    to Korea" plans Korea whatever the planner or an upcoming trip says. The assistant answers with cards, not questions: what is missing
    (dates, length, who is going) it assumes from the planner and the profile, then says so in one
-   sentence under the cards ("Assuming about a week for two with flexible dates"). A country or a
-   large region comes back as three or four city cards at once (Seoul, Busan, Jeju), and the city the
-   traveler picks gets the package.
-2a. **The package** — with the destination clear, the assistant's first card is one personalized
-   package (`show_package`): the app, not the model, picks the best stay, things to do (two, three or
+   sentence under the cards ("Assuming about a week for two with flexible dates"). Every trip request
+   answers with the same **Curated for you** destination cards, each a complete itinerary (below): a
+   country or a large region comes back as three or four city cards at once (Seoul, Busan, Jeju), and
+   a city asked for by name ("plan me a trip to Dallas", "4 days in Lisbon") as that one city's card.
+   The assistant writes the days itself (`create_trip`, a proposal to confirm) only when the traveler
+   asks it to write or change them, or when a card could not build an itinerary.
+2a. **The package** — asked for by name ("build me a package for Rome"), the assistant shows one
+   personalized package (`show_package`): the app, not the model, picks the best stay, things to do (two, three or
    four by pace) and three places to eat from its own place catalog, scored by the match model with a
    walkable-from-the-stay bonus, one category per slot, a spread of prices and the traveler's day
    rhythm. Three tabs hold the variants (**Your match**, the second interest leading such as "More
@@ -207,9 +210,23 @@ scheduling chip open the itinerary board as a full-height sheet (short map, then
    and sets times by the day rhythm (early days start 08:30, late ones 10:30). The days are the
    planner's dates when set, otherwise the card's suggested stay, at most a week; the card's score is
    the plan's average.
-   Selecting a card (its photo, name or Itinerary) makes it the active city: the map header reads
+   **Opened in full next to the chat** (from 1280 px wide, where the map column is): clicking a card
+   (its photo, name or Itinerary) opens it in the side panel, which widens: the card on top (a wide
+   photo with the name and tagline, the plan in a line, Your match, the tabs with every row, quick
+   facts, Make itinerary and Save) and a smaller map of its places below, following the tab (the
+   plan's places on Itinerary, the stays on Stays). The card in the chat gets a teal outline and "Open
+   next to the chat"; the rest of the conversation fades until the traveler types, and hovering it
+   brings it halfway back. A row (a stop, a stay) shows its place on the map, highlighted in the list,
+   with a small bar (photo, name, category, rating, **Details**); a pin picked on the map highlights
+   and scrolls to its row. Details opens the place over the whole panel (with Save and Add to trip);
+   closing it returns to the card. Escape closes the place, then the card; so do the card's close
+   button and a press anywhere in the chat except the composer, the planner chips and another card
+   (which opens instead). The next answer's cards (hotels, restaurants) give the panel back to the
+   map. Hover still turns a card over as a preview. Below 1280 px there is no side panel: the
+   Itinerary control turns the card over in place, as before.
+   Selecting a card makes it the active city: once it is closed, the map header reads
    "Explore {city}" with its recommended places behind one **All / Stays / Dining / Experiences**
-   filter that the card's tabs mirror (the Itinerary tab pins the plan's places); a row shows that
+   filter that the card's tabs mirror (a card opens on the tab the filter shows); a row shows that
    exact place on the map and opens its panel (with its own Save and Add to trip); "All places" returns
    to the whole conversation. Every card ends in the same two actions: **Make itinerary** (filled) and
    **Save** (outlined). Make itinerary saves the plan as a trip, "{n} days in {city}", in one click (no

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
 import { CalendarPlus, Check, Loader2, MapPin, Sparkles } from "lucide-react";
@@ -19,12 +19,14 @@ import { photoCreditTitle } from "@/components/ui/PhotoCredit";
  * "Make itinerary": saves the card's complete itinerary as a trip in one click (no picker, no
  * confirmation), puts it in the chat's trip tray, then turns into "Open itinerary". With no plan
  * to save (a place the catalog cannot fill yet), it asks the concierge to plan the days instead.
+ * Two buttons for the same plan (the card and its full view) share `tripId` so both turn.
  */
 export function MakeItineraryButton({
   name,
   label,
   getDraft,
   fallbackPrompt,
+  tripId,
   onSaved,
   className,
 }: {
@@ -32,6 +34,8 @@ export function MakeItineraryButton({
   label: string;
   getDraft: () => Promise<ItineraryDraft | null>;
   fallbackPrompt: string;
+  /** The trip this plan was already saved as, when the parent keeps it. */
+  tripId?: string | null;
   onSaved?: (tripId: string) => void;
   className?: string;
 }) {
@@ -39,10 +43,11 @@ export function MakeItineraryButton({
   const threadId = useCardThreadId();
   const send = useSendMessage();
   const [state, setState] = useState<{ phase: "idle" | "working" | "failed" } | { phase: "saved"; tripId: string }>({ phase: "idle" });
+  const savedId = tripId ?? (state.phase === "saved" ? state.tripId : null);
 
-  if (state.phase === "saved") {
+  if (savedId) {
     return (
-      <Link href={`/trips/${state.tripId}`} aria-label={`Open ${name} itinerary`} className={className}>
+      <Link href={`/trips/${savedId}`} aria-label={`Open ${name} itinerary`} className={className}>
         <Check className="h-4 w-4" aria-hidden="true" /> Open itinerary
       </Link>
     );
@@ -76,16 +81,44 @@ export function MakeItineraryButton({
   );
 }
 
-function PlanRow({ pick, kind, time, meal, onShow }: { pick: DraftPick; kind: PlaceKind; time?: string; meal?: "lunch" | "dinner"; onShow: (place: ResolvedPlace, kind: PlaceKind) => void }) {
+function PlanRow({
+  pick,
+  kind,
+  time,
+  meal,
+  selected,
+  followSelection,
+  onShow,
+}: {
+  pick: DraftPick;
+  kind: PlaceKind;
+  time?: string;
+  meal?: "lunch" | "dinner";
+  selected: boolean;
+  followSelection: boolean;
+  onShow: (place: ResolvedPlace, kind: PlaceKind) => void;
+}) {
   const photo = pick.place.photos?.[0];
   const meta = meal ? `${meal === "lunch" ? "Lunch" : "Dinner"} · ${pick.place.category ?? "Restaurant"}` : pick.place.category;
+  const ref = useRef<HTMLLIElement>(null);
+  // A place picked on the map brings its row into view (in the full view, not in the chat).
+  useEffect(() => {
+    if (selected && followSelection) ref.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [selected, followSelection]);
   return (
-    <li className="rounded-[10px] border border-border bg-white" data-testid="itinerary-stop" data-kind={kind}>
+    <li
+      ref={ref}
+      className={clsx("rounded-[10px] border transition-colors", selected ? "border-brand bg-brand-soft/60" : "border-border bg-white")}
+      data-testid="itinerary-stop"
+      data-kind={kind}
+      data-selected={selected || undefined}
+    >
       <button
         type="button"
         onClick={() => onShow(pick.place, kind)}
         aria-label={`Show ${pick.place.name} on map`}
-        className="flex w-full items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left transition-colors hover:bg-surface"
+        aria-current={selected || undefined}
+        className={clsx("flex w-full items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left transition-colors", !selected && "hover:bg-surface")}
       >
         {time ? <span className="w-10 shrink-0 text-[12px] font-semibold tabular-nums text-neutral-600">{time}</span> : null}
         {photo ? (
@@ -121,6 +154,8 @@ export function ItineraryPlan({
   onRetry,
   onAsk,
   onShow,
+  selectedId = null,
+  followSelection = false,
   className,
 }: {
   draft: ItineraryDraft | null;
@@ -129,6 +164,10 @@ export function ItineraryPlan({
   onRetry: () => void;
   onAsk: () => void;
   onShow: (place: ResolvedPlace, kind: PlaceKind) => void;
+  /** The place picked on the map, highlighted here. */
+  selectedId?: string | null;
+  /** Scroll a newly picked place's row into view. */
+  followSelection?: boolean;
   className?: string;
 }) {
   if (!draft && loading) {
@@ -166,7 +205,7 @@ export function ItineraryPlan({
         <div>
           <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Where you&apos;ll stay</div>
           <ul className="mt-1.5 grid grid-cols-[minmax(0,1fr)] gap-1.5">
-            <PlanRow pick={draft.stay} kind="hotel" onShow={onShow} />
+            <PlanRow pick={draft.stay} kind="hotel" selected={draft.stay.place.id === selectedId} followSelection={followSelection} onShow={onShow} />
           </ul>
         </div>
       ) : null}
@@ -177,7 +216,16 @@ export function ItineraryPlan({
           </h4>
           <ul className="mt-1.5 grid grid-cols-[minmax(0,1fr)] gap-1.5">
             {d.stops.map((s) => (
-              <PlanRow key={`${s.place.id}-${s.startTime}`} pick={s} kind={s.kind} time={s.startTime} meal={s.meal} onShow={onShow} />
+              <PlanRow
+                key={`${s.place.id}-${s.startTime}`}
+                pick={s}
+                kind={s.kind}
+                time={s.startTime}
+                meal={s.meal}
+                selected={s.place.id === selectedId}
+                followSelection={followSelection}
+                onShow={onShow}
+              />
             ))}
           </ul>
         </section>

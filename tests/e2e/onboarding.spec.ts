@@ -77,7 +77,7 @@ test("in-depth onboarding drives home picks with match scores and thumbs; itiner
   });
 
   await test.step("a trip proposal resolves its stops with photos, ratings and match scores before saving", async () => {
-    await sendChat(page, "Plan a trip to Rome for two of us in October");
+    await sendChat(page, "Write me a day-by-day plan for Rome for two of us in October");
     const proposal = page.getByTestId("trip-proposal");
     await expect(proposal).toBeVisible({ timeout: 40_000 });
     await expect(proposal.getByTestId("proposal-stop")).toHaveCount(5, { timeout: 40_000 });

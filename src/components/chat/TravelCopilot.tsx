@@ -369,7 +369,7 @@ export function TravelCopilot() {
     {
       name: "show_package",
       description:
-        "Open a destination with ONE personalized package card: the best stay, things to do and places to eat for this traveler, chosen by the app from its own place catalog and scored against the profile, with swap and lock controls, three variants and a Make itinerary button that saves it as a trip with its days. Call it first (after focus_map) whenever a destination is clear and the traveler has not asked for one specific kind of place. You name the destination and may add one or two sentences; the app picks the places.",
+        "Show ONE personalized package card for a destination: the best stay, things to do and places to eat for this traveler, chosen by the app from its own place catalog and scored against the profile, with swap and lock controls, three variants and a Make itinerary button that saves it as a trip with its days. Only when the traveler asks for a package or a bundle to tweak; a trip request gets show_destinations. You name the destination and may add one or two sentences; the app picks the places.",
       parameters: showPackageSchema,
       followUp: true,
       handler: async ({ destination }) =>
@@ -383,7 +383,7 @@ export function TravelCopilot() {
     {
       name: "show_destinations",
       description:
-        "Show destination cards (where to go). Each card becomes a complete itinerary the app builds for this traveler (stay, day-by-day stops, a match score) with a Make itinerary button. Use whenever suggesting places to travel; include 3-5 options with why each fits this traveler and a suggestedStay, whose length sets the days.",
+        "Show destination cards: the answer to every trip request. Each card is a complete itinerary the app builds for this traveler (stay, day-by-day stops, a match score) with a Make itinerary button, and opens in full next to the chat. A country or region: 3-4 cities or areas in it. A city or small area the traveler named: that one place as the only card. No destination yet: 3-4 that fit the profile. Give each why it fits this traveler and a suggestedStay, whose length sets the days.",
       parameters: showDestinationsSchema,
       followUp: true,
       handler: async () => CARDS_DONE,
@@ -467,7 +467,7 @@ export function TravelCopilot() {
     {
       name: "create_trip",
       description:
-        "Propose a complete trip (title, destination, dates if known, travelers, budget tier, summary and a day-by-day itinerary) for the traveler to confirm. The traveler saves or declines it in the UI; wait for that response.",
+        "Propose a complete trip with a day-by-day itinerary you write (title, destination, dates if known, travelers, budget tier, summary, the days) for the traveler to confirm. Only when the traveler asks you to write or change the days yourself; a trip request gets show_destinations. The traveler saves or declines it in the UI; wait for that response.",
       parameters: createTripSchema,
       followUp: true,
       render: TripRenderer,

@@ -7,7 +7,8 @@ import type { MapPlace, PlaceKind, ResolvedPlace } from "@/lib/places/types";
  * Per-thread map state: the destination in focus, the places pinned from the
  * assistant's cards, the selected place, the city a destination card selected
  * (whose recommendations then own the map), the shared category filter, the
- * trip the conversation adds to, and whether the map is collapsed.
+ * trip the conversation adds to, the card open in full next to the chat, and
+ * whether the map is collapsed.
  * Session-only (rebuilt from the thread's messages when a chat is reopened).
  */
 
@@ -32,6 +33,8 @@ export interface ThreadMapState {
   filter: MapFilter;
   /** The trip this conversation adds to: its scope, or the one chosen in Add to trip. */
   tripId: string | null;
+  /** The destination card open in full in the side panel (its card key), over a smaller map. */
+  detail: string | null;
 }
 
 interface MapStoreState {
@@ -55,6 +58,7 @@ const EMPTY_THREAD: ThreadMapState = {
   activeDestination: null,
   filter: "all",
   tripId: null,
+  detail: null,
 };
 
 let state: MapStoreState = { activeThreadId: null, threads: {}, hoveredKey: null };
@@ -127,9 +131,11 @@ export const mapActions = {
       if (!nextPlaces[p.key]) order.push(p.key);
       nextPlaces[p.key] = p;
     }
-    // A new answer's pins mean the conversation moved on: a selected city no longer owns the map.
-    const activeDestination = places.some((p) => !p.scope) ? null : t.activeDestination;
-    patchThread(threadId, { places: nextPlaces, order, collapsed: false, activeDestination, filter: activeDestination ? t.filter : "all" });
+    // A new answer's pins mean the conversation moved on: a selected city no longer owns the map,
+    // and the card open in the side panel gives the map back.
+    const movedOn = places.some((p) => !p.scope);
+    const activeDestination = movedOn ? null : t.activeDestination;
+    patchThread(threadId, { places: nextPlaces, order, collapsed: false, activeDestination, filter: activeDestination ? t.filter : "all", detail: movedOn ? null : t.detail });
   },
   /** Replaces every pin a tool call put on the map (a package that was swapped or rebuilt), keeping the order of pins that stay. */
   replacePlaces(threadId: string, toolCallId: string, places: MapPlace[]) {
@@ -180,6 +186,16 @@ export const mapActions = {
     const selected = t.selectedKey && t.selectedKey !== FOCUS_KEY ? t.places[t.selectedKey] : null;
     const selectedKey = selected && filter !== "all" && selected.kind !== filter ? null : t.selectedKey;
     patchThread(threadId, { filter, selectedKey });
+  },
+  /** Opens a destination card in full in the side panel (the map moves under it). */
+  openDetail(threadId: string, key: string) {
+    const t = threadOf(threadId);
+    if (t.detail === key) return;
+    patchThread(threadId, { detail: key, selectedKey: null, collapsed: false });
+  },
+  closeDetail(threadId: string) {
+    if (!threadOf(threadId).detail) return;
+    patchThread(threadId, { detail: null, selectedKey: null });
   },
   setThreadTrip(threadId: string, tripId: string | null) {
     patchThread(threadId, { tripId });

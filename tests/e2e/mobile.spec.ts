@@ -143,7 +143,7 @@ test("phone: quiz in the Discover hero, picks, tab bar, card rows, proposal, she
 
   await test.step("a trip proposal fits the screen and the map opens over the chat", async () => {
     const input = page.getByPlaceholder("Ask your concierge");
-    await input.fill("Plan a trip to Rome for two of us in October");
+    await input.fill("Write me a day-by-day plan for Rome for two of us in October");
     await page.locator('[data-testid="copilot-send-button"]:not([disabled])').waitFor({ timeout: 30_000 });
     await input.press("Enter");
     const proposal = page.getByTestId("trip-proposal");

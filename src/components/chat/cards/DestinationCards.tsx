@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type RefObject } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from "react";
+import { createPortal } from "react-dom";
 import clsx from "clsx";
-import { ArrowLeft, ArrowRight, CalendarDays, Heart, MapPin, RefreshCw, Search, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarDays, Heart, MapPin, PanelRightOpen, RefreshCw, Search, Sparkles, X } from "lucide-react";
 import { ToolCallStatus } from "@copilotkit/core";
 import type { ShowDestinationsArgs, Streaming } from "@/lib/travel/schemas";
 import { googleMapsSearchUrl } from "@/lib/travel/links";
@@ -18,6 +19,7 @@ import { shortPlaceName } from "@/lib/places/names";
 import type { ItineraryDraft } from "@/server/itineraries";
 import type { MatchCandidate, MatchResult } from "@/lib/match";
 import { useCardThreadId, usePlacePin, useRegisterPlaces } from "@/components/map/useRegisterPlaces";
+import { useDetailCard, useDetailSlot, useHasSidePanel } from "@/components/map/detailSlot";
 import { useSendMessage } from "@/components/chat/useSendMessage";
 import { draftMessage } from "@/components/chat/draft";
 import { HiddenPlaceCard, useReaction } from "@/components/feedback/ReactionControl";
@@ -112,11 +114,12 @@ function picksToPins(picks: DestinationPicks, scope: string, toolCallId: string)
 
 /**
  * One destination as a complete itinerary built for this traveler: a photo face with the plan's
- * length, stay and match, that flips to the itinerary (quick facts, the match, the days with
- * their stops, and tabs with more stays, activities and dining), over a footer with the two
- * actions that never move: Make itinerary (saves the whole plan as a trip in one click) and Save.
- * Fine pointers reveal the back on hover; everyone gets the Itinerary control; selecting the card
- * or a row puts the city's places on the map.
+ * length, stay and match, that turns over to the itinerary (the match, the days with their stops,
+ * tabs with more stays, activities and dining, quick facts), over a footer with the two actions
+ * that never move: Make itinerary (saves the whole plan as a trip in one click) and Save.
+ * With the side panel on screen (wide screens) a click opens the card in full there, above a
+ * smaller map of its places, while the conversation steps back; hover still turns it over as a
+ * preview. Without the panel the Itinerary control turns it over in place.
  */
 function DestinationCard({ destination: d, index, toolCallId }: { destination: DestinationArgs; index: number; toolCallId: string }) {
   const name = d.name ?? "";
@@ -130,6 +133,15 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
   const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)", false);
   const headingId = useId();
   const tabsId = useId();
+
+  // The card in full, in the side panel.
+  const detailKey = `${toolCallId}:${index}`;
+  useDetailCard(detailKey);
+  const sidePanel = useHasSidePanel();
+  const slot = useDetailSlot();
+  const detailOpen = sidePanel && view.detail === detailKey;
+  // Shared by the card's Make itinerary and the full view's, so saving in one turns both.
+  const [savedTripId, setSavedTripId] = useState<string | null>(null);
 
   const [face, setFace] = useState<Face>("photo");
   const [reveal, setReveal] = useState<Reveal>("closed");
@@ -205,12 +217,33 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
     if (place) mapActions.setFocus(threadId, place);
   }, [threadId, name, scopeId, place]);
 
+  /** Opens the card in full in the side panel; the card itself shows its photo meanwhile. */
+  const openDetail = () => {
+    if (!threadId || !name) return;
+    clearTimers();
+    setFace("photo");
+    setReveal("closed");
+    if (detailOpen) return;
+    // A city already selected keeps its filter, so the full view opens on the tab the map shows.
+    if (!isActive) activate();
+    mapActions.openDetail(threadId, detailKey);
+  };
+
+  const closeDetail = () => {
+    if (threadId) mapActions.closeDetail(threadId);
+    focusLater(profileControl);
+  };
+
   /** Keeps a hovered profile from closing by itself once the traveler has acted in it. */
   const pinIfHover = () => {
     if (revealRef.current === "hover") setReveal("pinned");
   };
 
   const openProfile = () => {
+    if (sidePanel) {
+      openDetail();
+      return;
+    }
     clearTimers();
     setFace("profile");
     setReveal("pinned");
@@ -227,7 +260,7 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
   };
 
   const onFacePointerEnter = () => {
-    if (!finePointer || !armed.current) return;
+    if (!finePointer || !armed.current || detailOpen) return;
     if (outTimer.current) {
       window.clearTimeout(outTimer.current);
       outTimer.current = null;
@@ -257,29 +290,41 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
     }, HOVER_OUT_MS);
   };
 
+  /** Brings the card to where the traveler acts in it: its full view with a side panel, else its pinned back. */
+  const engage = () => {
+    if (sidePanel) {
+      const opening = !detailOpen;
+      openDetail();
+      // Opening from the back keeps the tab it was showing.
+      if (opening && threadId && tab !== "itinerary") mapActions.setFilter(threadId, TAB_FILTER[tab]);
+      return;
+    }
+    setReveal("pinned");
+    if (!isActive) activate();
+  };
+
   const selectTab = (next: Tab) => {
     clearTimers();
-    setReveal("pinned");
     setLocalTab(next);
     setShowAll(false);
-    if (!isActive) activate();
+    engage();
     if (threadId) mapActions.setFilter(threadId, TAB_FILTER[next]);
   };
 
-  const onTabKey = (e: KeyboardEvent<HTMLDivElement>) => {
+  const onTabKey = (e: KeyboardEvent<HTMLDivElement>, idPrefix: string) => {
     if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
     e.preventDefault();
     const current = TABS.indexOf(tab);
     const next = TABS[(current + (e.key === "ArrowRight" ? 1 : TABS.length - 1)) % TABS.length];
-    document.getElementById(`${tabsId}-${next}`)?.focus();
+    document.getElementById(`${idPrefix}-${next}`)?.focus();
   };
 
   const showOnMap = (item: ResolvedPlace, kind: PlaceKind) => {
     if (!threadId) return;
     clearTimers();
-    setReveal("pinned");
-    if (!isActive) activate();
-    if (view.filter !== "all" && view.filter !== kind) mapActions.setFilter(threadId, kind as MapFilter);
+    const shownFilter = sidePanel && !detailOpen ? TAB_FILTER[tab] : view.filter;
+    engage();
+    if (shownFilter !== "all" && shownFilter !== kind) mapActions.setFilter(threadId, kind as MapFilter);
     const key = `reco:${scopeId}:${item.id}`;
     mapActions.addPlaces(threadId, [{ ...item, kind, key, toolCallId: `reco:${toolCallId}`, scope: scopeId }]);
     mapActions.selectPlace(threadId, key);
@@ -301,7 +346,13 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
     return plan.draft ? Promise.resolve(plan.draft) : loadItineraryDraft(label, days);
   };
 
-  if (reaction.current?.verdict === "disliked" && name) return <HiddenPlaceCard name={name} feedbackId={reaction.current.id} />;
+  // A card judged a miss folds away, and its full view with it.
+  const hidden = reaction.current?.verdict === "disliked" && !!name;
+  useEffect(() => {
+    if (hidden && detailOpen && threadId) mapActions.closeDetail(threadId);
+  }, [hidden, detailOpen, threadId]);
+
+  if (hidden && reaction.current) return <HiddenPlaceCard name={name} feedbackId={reaction.current.id} />;
 
   const tagline = d.tagline && d.tagline.length > TAGLINE_MAX ? `${d.tagline.slice(0, TAGLINE_MAX - 1).trimEnd()}…` : d.tagline;
   const facts = [
@@ -318,6 +369,145 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
       ? "Building your itinerary…"
       : "";
   const showingPhoto = face === "photo";
+  // The place picked on the map, when it is one of this city's.
+  const pickedPrefix = `reco:${scopeId}:`;
+  const pickedId = view.selectedKey?.startsWith(pickedPrefix) ? view.selectedKey.slice(pickedPrefix.length) : null;
+  const planTheDays = `Plan the days for ${label} yourself: a ${days}-day itinerary.`;
+  const hint = detailOpen ? "Open next to the chat" : sidePanel ? "Click to open it with the map" : finePointer ? "Hover for your itinerary" : "Tap Itinerary for your days and picks";
+
+  // The tab's content, the same on the back of the card and in its full view.
+  const tabBody = (full: boolean) =>
+    tab === "itinerary" ? (
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
+        <p className={clsx("leading-snug text-neutral-800", full ? "text-[15px]" : "text-[14px]")}>
+          <Text value={d.whyItFits} lines={2} />
+        </p>
+        {!plan.loading && !plan.error && !planDays && (d.highlights ?? []).filter(Boolean).length ? (
+          <div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Three to explore</div>
+            <ul className="mt-1.5 grid gap-1.5">
+              {(d.highlights ?? [])
+                .filter((h): h is string => !!h)
+                .slice(0, 3)
+                .map((h) => (
+                  <li key={h}>
+                    <button
+                      type="button"
+                      onClick={() => ask(`Find ${h} in ${name} for me.`)}
+                      className="flex w-full items-center gap-2.5 rounded-[10px] border border-border bg-white px-2.5 py-2 text-left text-[13px] transition-colors hover:bg-surface"
+                    >
+                      <Search className="h-3.5 w-3.5 shrink-0 text-neutral-500" aria-hidden="true" />
+                      <span className="min-w-0 flex-1 truncate">{h}</span>
+                      <span className="shrink-0 text-[11px] font-semibold text-brand">Find options</span>
+                    </button>
+                  </li>
+                ))}
+            </ul>
+          </div>
+        ) : (
+          <ItineraryPlan
+            draft={plan.draft}
+            loading={plan.loading || (!place && !!name)}
+            error={plan.error}
+            onRetry={plan.retry}
+            onAsk={() => ask(planTheDays)}
+            onShow={(item, kind) => showOnMap(item, kind)}
+            selectedId={pickedId}
+            followSelection={full}
+          />
+        )}
+      </div>
+    ) : (
+      <CategoryRows
+        tab={tab}
+        items={rowsFor(tab)}
+        loading={loading}
+        error={error}
+        showAll={full || showAll}
+        onShowAll={() => setShowAll(true)}
+        onRetry={retry}
+        onAsk={() => ask(`Recommend ${TAB_LABEL[tab].toLowerCase()} in ${name} that fit me.`)}
+        onShow={(item) => showOnMap(item, ROW_KIND[TAB_ROW[tab]])}
+        selectedId={pickedId}
+        followSelection={full}
+      />
+    );
+
+  const tabBar = (idPrefix: string) => (
+    <div role="tablist" aria-label={`${name} recommendations`} className="mt-3 flex gap-1 border-b border-border" onKeyDown={(e) => onTabKey(e, idPrefix)}>
+      {TABS.map((t) => (
+        <button
+          key={t}
+          id={`${idPrefix}-${t}`}
+          type="button"
+          role="tab"
+          aria-selected={tab === t}
+          aria-controls={`${idPrefix}-panel`}
+          tabIndex={tab === t ? 0 : -1}
+          onClick={() => selectTab(t)}
+          className={clsx("-mb-px border-b-2 px-2.5 pb-2 pt-1 text-[13px] font-semibold transition-colors", tab === t ? "border-brand text-brand" : "border-transparent text-muted hover:text-foreground")}
+        >
+          {TAB_LABEL[t]}
+        </button>
+      ))}
+    </div>
+  );
+
+  const matchBox = (
+    <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl bg-brand-soft/70 px-3 py-2" data-testid="your-match">
+      <Sparkles className="h-3.5 w-3.5 text-brand" aria-hidden="true" />
+      <span className="text-[12px] font-semibold text-brand">Your match</span>
+      {shownMatch ? (
+        <>
+          <MatchBadge match={shownMatch} size="sm" />
+          <RecThumbs name={name} kind="destination" place={place} destination={name} context="chat" match={match} size="sm" />
+          {topReason(shownMatch) ? <span className="w-full text-[12px] text-neutral-700">{topReason(shownMatch)}</span> : null}
+        </>
+      ) : (
+        <Text value={undefined} className="h-4 w-24" />
+      )}
+    </div>
+  );
+
+  const quickFacts = (columns: string) =>
+    facts.length ? (
+      <dl className={clsx("mt-4 grid gap-x-4 gap-y-3 border-t border-border pt-3", columns)} data-testid="quick-facts">
+        {facts.map((f) => (
+          <div key={f.label} className="min-w-0">
+            <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">{f.label}</dt>
+            <dd className="mt-0.5 text-[15px] font-medium leading-snug">{f.value}</dd>
+          </div>
+        ))}
+      </dl>
+    ) : null;
+
+  const makeItinerary = (className: string) =>
+    place ? (
+      <MakeItineraryButton name={name} label={label} getDraft={getDraft} fallbackPrompt={planTheDays} tripId={savedTripId} onSaved={setSavedTripId} className={className} />
+    ) : (
+      <button
+        type="button"
+        disabled
+        aria-label={`Make ${name} itinerary`}
+        title="Finding it on the map…"
+        className={clsx(className, "cursor-wait bg-brand/50 hover:bg-brand/50")}
+      >
+        <CalendarDays className="h-4 w-4" aria-hidden="true" /> Make itinerary
+      </button>
+    );
+
+  const saveButton = (
+    <button
+      type="button"
+      onClick={save}
+      aria-pressed={isSaved}
+      aria-label={isSaved ? `Remove ${name} from saved` : `Save ${name}`}
+      className="flex h-12 min-w-[104px] flex-1 items-center justify-center gap-2 rounded-xl border border-brand bg-white px-4 text-[15px] font-semibold text-brand transition-colors hover:bg-brand-soft"
+    >
+      <Heart className={clsx("h-4 w-4", isSaved && "fill-current")} aria-hidden="true" /> {isSaved ? "Saved" : "Save"}
+    </button>
+  );
+  const primaryAction = "flex h-12 min-w-0 flex-[2] items-center justify-center gap-2 rounded-xl bg-brand px-4 text-[15px] font-semibold text-white transition-colors hover:bg-brand-hover disabled:cursor-wait disabled:bg-brand/60";
 
   return (
     <article
@@ -327,8 +517,12 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
       data-face={face}
       data-reveal={reveal}
       data-active={isActive || undefined}
+      data-detail={detailOpen ? "open" : undefined}
       onPointerLeave={onCardPointerLeave}
-      className="flex h-[560px] w-full flex-col overflow-hidden rounded-[18px] border border-border bg-white shadow-card"
+      className={clsx(
+        "flex h-[560px] w-full flex-col overflow-hidden rounded-[18px] border bg-white shadow-card transition-[border-color,box-shadow] duration-200",
+        detailOpen ? "border-brand ring-2 ring-brand/30" : "border-border",
+      )}
     >
       <div className="relative min-h-0 flex-1 [perspective:1000px]" onPointerEnter={onFacePointerEnter}>
         <div className={clsx("xp-flip", reducedMotion && "xp-flip--fade")} data-face={face}>
@@ -344,9 +538,10 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
                 type="button"
                 onClick={openProfile}
                 aria-label={`Itinerary for ${name}`}
+                aria-expanded={sidePanel ? detailOpen : undefined}
                 className="absolute right-3 top-3 flex h-9 items-center gap-1.5 rounded-full border border-white/70 bg-black/25 px-3 text-[13px] font-semibold text-white backdrop-blur transition-colors hover:bg-black/45"
               >
-                <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" /> Itinerary
+                {sidePanel ? <PanelRightOpen className="h-3.5 w-3.5" aria-hidden="true" /> : <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />} Itinerary
               </button>
               <div className="absolute inset-x-0 bottom-0 px-4 pb-9 text-white drop-shadow">
                 <h3 id={headingId} className="font-serif text-[36px] leading-[1.05]">
@@ -365,7 +560,7 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
                     <CalendarDays className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /> <span className="truncate">{planLine}</span>
                   </p>
                 ) : null}
-                <p className="mt-1.5 text-[12px] text-white/75">{finePointer ? "Hover for your itinerary" : "Tap Itinerary for your days and picks"}</p>
+                <p className="mt-1.5 text-[12px] text-white/75">{hint}</p>
               </div>
             </CardPhoto>
             <div className="flex shrink-0 items-center justify-between gap-2 border-t border-border bg-white px-4 py-2.5" data-testid="destination-match">
@@ -398,7 +593,7 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
                 </button>
               </div>
               <h3 className="mt-2 font-serif text-[30px] leading-[1.1]">
-                <button type="button" onClick={activate} className="text-left">
+                <button type="button" onClick={sidePanel ? openDetail : activate} className="text-left">
                   {name}
                 </button>
               </h3>
@@ -408,102 +603,12 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
                 </p>
               ) : null}
 
-              <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl bg-brand-soft/70 px-3 py-2" data-testid="your-match">
-                <Sparkles className="h-3.5 w-3.5 text-brand" aria-hidden="true" />
-                <span className="text-[12px] font-semibold text-brand">Your match</span>
-                {shownMatch ? (
-                  <>
-                    <MatchBadge match={shownMatch} size="sm" />
-                    <RecThumbs name={name} kind="destination" place={place} destination={name} context="chat" match={match} size="sm" />
-                    {topReason(shownMatch) ? <span className="w-full text-[12px] text-neutral-700">{topReason(shownMatch)}</span> : null}
-                  </>
-                ) : (
-                  <Text value={undefined} className="h-4 w-24" />
-                )}
-              </div>
-
-              <div role="tablist" aria-label={`${name} recommendations`} className="mt-3 flex gap-1 border-b border-border" onKeyDown={onTabKey}>
-                {TABS.map((t) => (
-                  <button
-                    key={t}
-                    id={`${tabsId}-${t}`}
-                    type="button"
-                    role="tab"
-                    aria-selected={tab === t}
-                    aria-controls={`${tabsId}-panel`}
-                    tabIndex={tab === t ? 0 : -1}
-                    onClick={() => selectTab(t)}
-                    className={clsx("-mb-px border-b-2 px-2.5 pb-2 pt-1 text-[13px] font-semibold transition-colors", tab === t ? "border-brand text-brand" : "border-transparent text-muted hover:text-foreground")}
-                  >
-                    {TAB_LABEL[t]}
-                  </button>
-                ))}
-              </div>
-
+              {matchBox}
+              {tabBar(tabsId)}
               <div id={`${tabsId}-panel`} role="tabpanel" className="pt-3">
-                {tab === "itinerary" ? (
-                  <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
-                    <p className="text-[14px] leading-snug text-neutral-800">
-                      <Text value={d.whyItFits} lines={2} />
-                    </p>
-                    {!plan.loading && !plan.error && !planDays && (d.highlights ?? []).filter(Boolean).length ? (
-                      <div>
-                        <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Three to explore</div>
-                        <ul className="mt-1.5 grid gap-1.5">
-                          {(d.highlights ?? [])
-                            .filter((h): h is string => !!h)
-                            .slice(0, 3)
-                            .map((h) => (
-                              <li key={h}>
-                                <button
-                                  type="button"
-                                  onClick={() => ask(`Find ${h} in ${name} for me.`)}
-                                  className="flex w-full items-center gap-2.5 rounded-[10px] border border-border bg-white px-2.5 py-2 text-left text-[13px] transition-colors hover:bg-surface"
-                                >
-                                  <Search className="h-3.5 w-3.5 shrink-0 text-neutral-500" aria-hidden="true" />
-                                  <span className="min-w-0 flex-1 truncate">{h}</span>
-                                  <span className="shrink-0 text-[11px] font-semibold text-brand">Find options</span>
-                                </button>
-                              </li>
-                            ))}
-                        </ul>
-                      </div>
-                    ) : (
-                      <ItineraryPlan
-                        draft={plan.draft}
-                        loading={plan.loading || (!place && !!name)}
-                        error={plan.error}
-                        onRetry={plan.retry}
-                        onAsk={() => ask(`Make me a ${days}-day itinerary for ${label}.`)}
-                        onShow={(item, kind) => showOnMap(item, kind)}
-                      />
-                    )}
-                  </div>
-                ) : (
-                  <CategoryRows
-                    tab={tab}
-                    items={rowsFor(tab)}
-                    loading={loading}
-                    error={error}
-                    showAll={showAll}
-                    onShowAll={() => setShowAll(true)}
-                    onRetry={retry}
-                    onAsk={() => ask(`Recommend ${TAB_LABEL[tab].toLowerCase()} in ${name} that fit me.`)}
-                    onShow={(item) => showOnMap(item, ROW_KIND[TAB_ROW[tab]])}
-                  />
-                )}
+                {tabBody(false)}
               </div>
-
-              {facts.length ? (
-                <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border pt-3" data-testid="quick-facts">
-                  {facts.map((f) => (
-                    <div key={f.label} className="min-w-0">
-                      <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">{f.label}</dt>
-                      <dd className="mt-0.5 text-[15px] font-medium leading-snug">{f.value}</dd>
-                    </div>
-                  ))}
-                </dl>
-              ) : null}
+              {quickFacts("grid-cols-2")}
 
               {place ? (
                 <button type="button" onClick={pin.open} className="mt-3 inline-flex items-center gap-1 text-[13px] font-semibold text-brand hover:underline">
@@ -517,36 +622,139 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
 
       {/* The two actions, outside the rotating faces so they never move. */}
       <footer className="flex h-[84px] shrink-0 items-center gap-3 border-t border-border bg-surface-warm px-4">
-        {place ? (
-          <MakeItineraryButton
-            name={name}
-            label={label}
-            getDraft={getDraft}
-            fallbackPrompt={`Make me a ${days}-day itinerary for ${label}.`}
-            className="flex h-12 min-w-0 flex-[2] items-center justify-center gap-2 rounded-xl bg-brand px-4 text-[15px] font-semibold text-white transition-colors hover:bg-brand-hover disabled:cursor-wait disabled:bg-brand/60"
-          />
-        ) : (
-          <button
-            type="button"
-            disabled
-            aria-label={`Make ${name} itinerary`}
-            title="Finding it on the map…"
-            className="flex h-12 min-w-0 flex-[2] cursor-wait items-center justify-center gap-2 rounded-xl bg-brand/50 px-4 text-[15px] font-semibold text-white"
-          >
-            <CalendarDays className="h-4 w-4" aria-hidden="true" /> Make itinerary
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={save}
-          aria-pressed={isSaved}
-          aria-label={isSaved ? `Remove ${name} from saved` : `Save ${name}`}
-          className="flex h-12 min-w-[104px] flex-1 items-center justify-center gap-2 rounded-xl border border-brand bg-white px-4 text-[15px] font-semibold text-brand transition-colors hover:bg-brand-soft"
-        >
-          <Heart className={clsx("h-4 w-4", isSaved && "fill-current")} aria-hidden="true" /> {isSaved ? "Saved" : "Save"}
-        </button>
+        {makeItinerary(primaryAction)}
+        {saveButton}
       </footer>
+
+      {detailOpen && slot
+        ? createPortal(
+            <DestinationDetail
+              name={name}
+              label={label}
+              country={d.country}
+              tagline={d.tagline}
+              curated={!!d.whyItFits}
+              place={place}
+              planLine={planLine}
+              onClose={closeDetail}
+              onCityDetails={place ? pin.open : undefined}
+              matchBox={matchBox}
+              tabBar={tabBar(`${tabsId}-full`)}
+              tabPanelId={`${tabsId}-full-panel`}
+              tabBody={tabBody(true)}
+              quickFacts={quickFacts("grid-cols-2 sm:grid-cols-4")}
+              makeItinerary={makeItinerary(primaryAction)}
+              saveButton={saveButton}
+            />,
+            slot,
+          )
+        : null}
     </article>
+  );
+}
+
+/**
+ * The card in full, in the side panel above its map: a wide photo with the name, the plan in a
+ * line, the match, the tabs with room for every row, the quick facts, and the same two actions.
+ * Rendered by the card itself (through a portal), so it is the same plan, tab and saved state.
+ */
+function DestinationDetail({
+  name,
+  label,
+  country,
+  tagline,
+  curated,
+  place,
+  planLine,
+  onClose,
+  onCityDetails,
+  matchBox,
+  tabBar,
+  tabPanelId,
+  tabBody,
+  quickFacts,
+  makeItinerary,
+  saveButton,
+}: {
+  name: string;
+  label: string;
+  country?: string;
+  tagline?: string;
+  curated: boolean;
+  place?: ResolvedPlace;
+  planLine: string;
+  onClose: () => void;
+  onCityDetails?: () => void;
+  matchBox: ReactNode;
+  tabBar: ReactNode;
+  tabPanelId: string;
+  tabBody: ReactNode;
+  quickFacts: ReactNode;
+  makeItinerary: ReactNode;
+  saveButton: ReactNode;
+}) {
+  const headingId = useId();
+  const closeRef = useRef<HTMLButtonElement>(null);
+  // Focus moves into the full view (the composer lets go, so the conversation steps back).
+  useEffect(() => {
+    closeRef.current?.focus({ preventScroll: true });
+  }, []);
+  return (
+    <section className="xp-detail flex h-full flex-col bg-surface-warm" data-testid="card-detail" aria-labelledby={headingId}>
+      <div className="xp-scroll min-h-0 flex-1 overflow-y-auto">
+        <CardPhoto place={place} queries={[name, label]} alt={label} className="h-[172px] shrink-0 [@media(max-height:860px)]:h-[136px]">
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-black/10" />
+          {curated ? (
+            <span className="absolute left-4 top-4 rounded-full border border-white/70 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-white backdrop-blur-sm">Curated for you</span>
+          ) : null}
+          <button
+            ref={closeRef}
+            type="button"
+            onClick={onClose}
+            aria-label={`Close ${name}`}
+            className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-foreground shadow-md transition-colors hover:bg-white"
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+          <div className="absolute inset-x-0 bottom-0 px-5 pb-8 text-white drop-shadow">
+            <h2 id={headingId} className="font-serif text-[34px] leading-[1.05]">
+              {name}
+            </h2>
+            {country ? (
+              <p className="mt-1 flex items-center gap-1 text-[14px]">
+                <MapPin className="h-3.5 w-3.5" aria-hidden="true" /> {country}
+              </p>
+            ) : null}
+            {tagline ? <p className="mt-1.5 max-w-[48ch] text-[14px] leading-snug text-white/90">{tagline}</p> : null}
+          </div>
+        </CardPhoto>
+        <div className="min-w-0 px-5 pb-5 pt-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Built for you</span>
+            {planLine ? (
+              <span className="flex items-center gap-1.5 text-[13px] font-semibold text-neutral-800" data-testid="itinerary-summary">
+                <CalendarDays className="h-3.5 w-3.5 shrink-0 text-brand" aria-hidden="true" /> {planLine}
+              </span>
+            ) : null}
+          </div>
+          {matchBox}
+          {tabBar}
+          <div id={tabPanelId} role="tabpanel" className="pt-3">
+            {tabBody}
+          </div>
+          {quickFacts}
+          {onCityDetails ? (
+            <button type="button" onClick={onCityDetails} className="mt-3 inline-flex items-center gap-1 text-[13px] font-semibold text-brand hover:underline">
+              Explore city details <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+          ) : null}
+        </div>
+      </div>
+      <footer className="flex shrink-0 items-center gap-3 border-t border-border bg-white px-5 py-3">
+        {makeItinerary}
+        {saveButton}
+      </footer>
+    </section>
   );
 }
 
@@ -570,6 +778,8 @@ function CategoryRows({
   onRetry,
   onAsk,
   onShow,
+  selectedId,
+  followSelection,
 }: {
   tab: Exclude<Tab, "itinerary">;
   items: { place: ResolvedPlace; match: MatchResult }[];
@@ -580,6 +790,8 @@ function CategoryRows({
   onRetry: () => void;
   onAsk: () => void;
   onShow: (place: ResolvedPlace) => void;
+  selectedId: string | null;
+  followSelection: boolean;
 }) {
   if (loading && !items.length) return <SkeletonRows />;
   if (error && !items.length) {
@@ -608,7 +820,7 @@ function CategoryRows({
     <div>
       <ul className="grid gap-2">
         {visible.map(({ place, match }) => (
-          <RecoRow key={place.id} place={place} match={match} kind={kind} onShow={() => onShow(place)} />
+          <RecoRow key={place.id} place={place} match={match} kind={kind} selected={place.id === selectedId} followSelection={followSelection} onShow={() => onShow(place)} />
         ))}
       </ul>
       {!showAll && items.length > visible.length ? (
@@ -621,13 +833,44 @@ function CategoryRows({
 }
 
 /** One recommended place: thumbnail, name, category and area, the reason it fits, and its score; the row shows it on the map. */
-function RecoRow({ place, match, kind, onShow }: { place: ResolvedPlace; match: MatchResult; kind: PlaceKind; onShow: () => void }) {
+function RecoRow({
+  place,
+  match,
+  kind,
+  selected,
+  followSelection,
+  onShow,
+}: {
+  place: ResolvedPlace;
+  match: MatchResult;
+  kind: PlaceKind;
+  selected: boolean;
+  followSelection: boolean;
+  onShow: () => void;
+}) {
   const photo = place.photos?.[0];
   const reason = topReason(match);
   const area = place.locality?.split(",")[0]?.trim();
+  const ref = useRef<HTMLLIElement>(null);
+  // A place picked on the map brings its row into view (in the full view, not in the chat).
+  useEffect(() => {
+    if (selected && followSelection) ref.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [selected, followSelection]);
   return (
-    <li className="rounded-[10px] border border-border bg-white" data-testid="destination-reco-row" data-kind={kind}>
-      <button type="button" onClick={onShow} aria-label={`Show ${place.name} on map`} className="flex w-full items-start gap-3 rounded-[10px] p-2.5 text-left transition-colors hover:bg-surface">
+    <li
+      ref={ref}
+      className={clsx("rounded-[10px] border transition-colors", selected ? "border-brand bg-brand-soft/60" : "border-border bg-white")}
+      data-testid="destination-reco-row"
+      data-kind={kind}
+      data-selected={selected || undefined}
+    >
+      <button
+        type="button"
+        onClick={onShow}
+        aria-label={`Show ${place.name} on map`}
+        aria-current={selected || undefined}
+        className={clsx("flex w-full items-start gap-3 rounded-[10px] p-2.5 text-left transition-colors", !selected && "hover:bg-surface")}
+      >
         {photo ? (
           // eslint-disable-next-line @next/next/no-img-element -- proxied Places photo
           <img src={photoAtWidth(photo, 160)} alt="" title={photoCreditTitle(place.photoCredits?.[0])} loading="lazy" className="h-12 w-12 shrink-0 rounded-lg object-cover" />

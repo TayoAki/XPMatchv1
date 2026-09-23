@@ -119,6 +119,9 @@ const DESTINATIONS = {
   ],
 };
 
+// "Plan me a trip to Rome": a city, so the map focuses on it and its one curated card answers.
+const ROME_TRIP = { title: "Rome, built for you", destinations: [DESTINATIONS.destinations[0]] };
+
 // "Plan me a trip to Korea": a country, so the map focuses on it and city cards follow at once.
 const KOREA = {
   title: "Where to go in South Korea",
@@ -298,6 +301,12 @@ const server = http.createServer((req, res) => {
       if (toolName === "show_destinations" && /korea/.test(text)) {
         return streamReply(res, { text: "Assuming about a week for two with flexible dates. Each card is a full plan built for you; tap Make itinerary to save one." });
       }
+      if (toolName === "focus_map" && /plan me a trip to rome/.test(text) && tools.includes("show_destinations")) {
+        return streamReply(res, { text: "", toolCall: { name: "show_destinations", args: ROME_TRIP } });
+      }
+      if (toolName === "show_destinations" && /plan me a trip to rome/.test(text)) {
+        return streamReply(res, { text: "Assuming a long weekend for two with flexible dates. Open the card for the days and the map, or tap Make itinerary to save it." });
+      }
       if (toolName === "set_search_constraints" && tools.includes("show_hotels")) {
         return streamReply(res, { text: "Here are two stays that fit.", toolCall: { name: "show_hotels", args: HOTELS } });
       }
@@ -318,7 +327,10 @@ const server = http.createServer((req, res) => {
         toolCall: { name: "show_package", args: { destination: "Rome, Italy", intro: "Central stay, the big sights at opening, and the trattorias you would pick yourself." } },
       });
     }
-    if (/plan (?:a|my) trip to rome|itinerary for rome|turn this package into a trip/.test(text) && tools.includes("create_trip")) {
+    if (/plan me a trip to rome/.test(text) && tools.includes("focus_map")) {
+      return streamReply(res, { text: "", toolCall: { name: "focus_map", args: { location: "Rome, Italy", reason: "trip request for a city" } } });
+    }
+    if (/day-by-day plan for rome|plan the days for rome yourself|turn this package into a trip/.test(text) && tools.includes("create_trip")) {
       return streamReply(res, {
         text: "Here is a plan that fits you.",
         toolCall: {

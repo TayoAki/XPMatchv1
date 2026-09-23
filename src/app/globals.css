@@ -156,6 +156,22 @@ body {
   font-size: 15px;
 }
 
+/* A destination card open in full in the side panel: the conversation steps back (every message
+   but the one holding that card fades) and comes forward again while the traveler types. */
+.xp-dimmable :is([data-testid="copilot-assistant-message"], [data-testid="copilot-user-message"], [data-testid="chat-header"]) {
+  transition: opacity 220ms ease;
+}
+.xp-dimmable[data-dimmed] :is([data-testid="copilot-assistant-message"], [data-testid="copilot-user-message"]):not(:has([data-detail="open"])),
+.xp-dimmable[data-dimmed] [data-testid="chat-header"] {
+  opacity: 0.4;
+}
+.xp-dimmable[data-dimmed] :is([data-testid="copilot-assistant-message"], [data-testid="copilot-user-message"]):not(:has([data-detail="open"])):hover {
+  opacity: 0.7;
+}
+.xp-dimmable[data-dimmed]:has([data-testid="copilot-chat-input"]:focus-within) :is([data-testid="copilot-assistant-message"], [data-testid="copilot-user-message"], [data-testid="chat-header"]) {
+  opacity: 1;
+}
+
 /* Loading placeholders: a soft shimmer sweeping across the warm surface. */
 @keyframes xp-shimmer {
   0% {

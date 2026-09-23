@@ -65,7 +65,8 @@ export function PlaceDetailSheet({
   place: ResolvedPlace;
   focusName?: string;
   onClose: () => void;
-  onCollapse: () => void;
+  /** Hides the whole map; without it (a card open above the map) there is no Hide map button. */
+  onCollapse?: () => void;
   /** Inside a phone bottom sheet: fills its parent, the sheet owns the close button, actions wrap under the title. */
   compact?: boolean;
 }) {
@@ -154,9 +155,11 @@ export function PlaceDetailSheet({
             <button type="button" onClick={onClose} aria-label="Close" className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-white hover:bg-surface">
               <X className="h-5 w-5" />
             </button>
-            <button type="button" onClick={onCollapse} aria-label="Hide map" className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-white hover:bg-surface">
-              <PanelLeftClose className="h-5 w-5" />
-            </button>
+            {onCollapse ? (
+              <button type="button" onClick={onCollapse} aria-label="Hide map" className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-white hover:bg-surface">
+                <PanelLeftClose className="h-5 w-5" />
+              </button>
+            ) : null}
           </div>
           {/* The phone sheet keeps this on the Location tab. */}
           <a href={mapsUrl} target="_blank" rel="noreferrer noopener" aria-label="Open in Google Maps" className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-white hover:bg-surface">

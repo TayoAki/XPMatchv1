@@ -30,7 +30,7 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   place is shown. Admins seed a city from `/admin` (19 list searches, about twenty places each), the
   assistant is told which places the catalog already holds for the destination in focus and prefers
   them, and each account gets 400 lookups a day. `docs/COGS.md` has the before and after.
-- **One package to open a destination** — when a destination is clear, `show_package` opens with a
+- **A package on request** — "build me a package for Rome" gets `show_package`: a
   single personalized card built on the server from the catalog: the best stay, things to do and
   places to eat for this traveler (the match model plus coherence around the stay, category
   diversity, a price spread and the day rhythm), in three variants (your match, the second interest
@@ -55,13 +55,15 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   (`src/server/itineraries.ts`, `POST /api/itineraries`) plans the days from the place catalog for
   this traveler: the best-matched stay, things to do grouped by area into days by their pace, lunch
   and dinner near each day's stops (the local food nudged up), times by their day rhythm, a match
-  score per stop and for the plan. The photo face (hover on a desktop, tap on a phone) says "4-day
-  itinerary · stay at Josun Palace" and flips to the plan, "Your match" and Itinerary / Stays /
-  Activities / Dining tabs; selecting a card scopes the map to that city ("Explore Rome") behind one
-  All / Stays / Dining / Experiences filter the card's tabs mirror. Every card ends in **Make
-  itinerary** and Save: one click saves the plan as a trip ("4 days in Seoul") and turns into Open
-  itinerary; a trip tray on the map keeps the trip in view. Cards, pins and stops show short place
-  names ("Josun Palace", the full listing name as the tooltip).
+  score per stop and for the plan. Every trip request answers with these cards: a country with three
+  or four cities, a city by name with its own card. The photo face says "4-day itinerary · stay at
+  Josun Palace"; hover turns it over as a preview, and a click opens it in full next to the chat
+  (from 1280 px): the card on top with its plan, "Your match" and Itinerary / Stays / Activities /
+  Dining tabs, a map of its places below that follows the tab, the rest of the chat faded. On phones
+  the card turns over instead. Every card ends in **Make itinerary** and Save: one click saves the
+  plan as a trip ("4 days in Seoul") and turns into Open itinerary; a trip tray on the map keeps the
+  trip in view. Cards, pins and stops show short place names ("Josun Palace", the full listing name
+  as the tooltip).
 - **Learns tastes with your say-so** — when you mention a lasting preference in chat, a "Remember
   this?" card offers **Always / For this trip / No thanks** (`remember_preference`, human-in-the-loop).
   "Update my assistant" lists everything learned with delete buttons and a "Learn from our chats"
@@ -318,7 +320,8 @@ src/components/chat/cards/*                  Destination, hotel, flight, restaur
                                              trip-proposal, constraint-chip, comparison and remember cards
 src/lib/constraints-store.ts, compare-store.ts, hitl-store.ts   Per-thread chips, compare selection, pending HITL cards
 src/lib/search-parser.ts                     Deterministic Explore query → Places filters + chips
-src/components/panel/RightPanel.tsx          Discovery feed ⇄ map switch
+src/components/panel/RightPanel.tsx          Discovery feed ⇄ map switch, and a destination card open in full above its map
+src/components/map/detailSlot.ts             Where a card renders itself in full (portal target) and whether a side panel is on screen
 src/components/panel/DiscoveryPanel.tsx      Discovery feed (proactive card, Jump back in, picks, Get inspired)
 src/components/discover/*                    Discover home: hero, prompt composer, planner fields and editors,
                                              hero photo, collection cards, community guides row
@@ -331,7 +334,7 @@ src/server/catalog.ts + src/lib/places/names.ts   The place catalog: stored plac
 src/server/seed.ts + src/app/api/admin/seed  List searches that fill a city; the admin Seed city button
 src/server/packages.ts + src/app/api/packages/*   Package builder (variants, alternates, coherence) and the events log
 src/server/package-learning.ts               Calibration from package events and the admin package numbers
-src/components/chat/cards/PackageCard.tsx    The package opener card: variants, swap, lock, narrowing, Make itinerary
+src/components/chat/cards/PackageCard.tsx    The package card (on request): variants, swap, lock, narrowing, Make itinerary
 src/server/itineraries.ts + src/app/api/itineraries   Itinerary builder: a day-by-day plan per destination for this traveler
 src/components/chat/cards/ItineraryPlan.tsx  The plan on a destination card and the Make itinerary button
 src/components/map/PinStrip.tsx              Mini cards under the map, in step with the pins
