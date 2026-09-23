@@ -4,7 +4,12 @@ import { useEffect, useLayoutEffect, useRef, type ReactNode, type RefObject } fr
 import { createPortal } from "react-dom";
 import clsx from "clsx";
 
-/** Puts the panel under the anchor's left edge, or above it when there is no room below, inside the viewport. */
+/**
+ * Puts the panel under the anchor's left edge when it fits there, above it when it fits there,
+ * otherwise on the side with more room, then keeps it inside the viewport. Called again whenever
+ * the panel's size changes, so a panel that grows (a reason list opening under "Not for me") moves
+ * up instead of running off the bottom of the screen.
+ */
 function position(anchor: HTMLElement, panel: HTMLElement) {
   const r = anchor.getBoundingClientRect();
   const margin = 8;
@@ -12,8 +17,11 @@ function position(anchor: HTMLElement, panel: HTMLElement) {
   const w = panel.offsetWidth;
   const h = panel.offsetHeight;
   const left = Math.max(margin, Math.min(r.left, window.innerWidth - w - margin));
-  const up = r.bottom + gap + h > window.innerHeight - margin && r.top - gap - h >= margin;
-  const top = up ? r.top - gap - h : r.bottom + gap;
+  const roomBelow = window.innerHeight - margin - (r.bottom + gap);
+  const roomAbove = r.top - gap - margin;
+  const up = h > roomBelow && (h <= roomAbove || roomAbove > roomBelow);
+  const wanted = up ? r.top - gap - h : r.bottom + gap;
+  const top = Math.max(margin, Math.min(wanted, window.innerHeight - margin - h));
   panel.style.left = `${Math.round(left)}px`;
   panel.style.top = `${Math.round(top)}px`;
   panel.style.transformOrigin = up ? "bottom left" : "top left";
@@ -54,6 +62,19 @@ export function Floating({
     if (a && p) position(a, p);
   }, [open, anchor]);
 
+  // Content that changes size after opening (chips appearing, text wrapping) re-places the panel.
+  useEffect(() => {
+    if (!open || typeof ResizeObserver === "undefined") return;
+    const p = panelRef.current;
+    if (!p) return;
+    const observer = new ResizeObserver(() => {
+      const a = anchor.current;
+      if (a) position(a, p);
+    });
+    observer.observe(p);
+    return () => observer.disconnect();
+  }, [open, anchor]);
+
   useEffect(() => {
     if (!open) return;
     const onMove = () => {
@@ -90,7 +111,10 @@ export function Floating({
       role={role}
       aria-label={label}
       style={{ width }}
-      className={clsx("xp-pop fixed left-0 top-0 z-[90] max-w-[calc(100vw-16px)] rounded-2xl border border-border bg-white p-3 text-left shadow-floating", className)}
+      className={clsx(
+        "xp-pop fixed left-0 top-0 z-[90] max-h-[calc(100dvh-16px)] max-w-[calc(100vw-16px)] overflow-y-auto rounded-2xl border border-border bg-white p-3 text-left shadow-floating",
+        className,
+      )}
     >
       {children}
     </div>,
