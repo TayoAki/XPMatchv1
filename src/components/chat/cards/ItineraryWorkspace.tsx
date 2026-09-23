@@ -2,44 +2,23 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
-import { ArrowLeftRight, Bed, ChevronRight, Map as MapIcon, MapPin, Sparkles } from "lucide-react";
+import { ArrowLeftRight, Bed, ChevronRight, Map as MapIcon } from "lucide-react";
 import type { PlaceKind, ResolvedPlace } from "@/lib/places/types";
-import { photoAtWidth } from "@/lib/places/destination-photo";
 import { shortPlaceName } from "@/lib/places/names";
 import { dayColor } from "@/lib/itinerary";
 import type { DraftDay, DraftPick, ItineraryDraft } from "@/server/itineraries";
 import { GoogleMap, type MapPin as Pin, type MapRoute } from "@/components/map/GoogleMap";
 import { RecThumbs } from "@/components/recs/RecThumbs";
-import { photoCreditTitle } from "@/components/ui/PhotoCredit";
+import { Score, SwapOptions, SwappedTag, Thumb, type PlanSwapProps } from "./PlanParts";
 
 /** The key a plan's place has on the conversation's map, so a pick here and a pin there are the same selection. */
 export const planPinKey = (scope: string, placeId: string) => `reco:${scope}:${placeId}`;
 
-function Thumb({ place, size = 56 }: { place: ResolvedPlace; size?: number }) {
-  const photo = place.photos?.[0];
-  if (!photo) {
-    return (
-      <span className="flex shrink-0 items-center justify-center rounded-xl bg-surface text-neutral-500" style={{ width: size, height: size }}>
-        <MapPin className="h-4 w-4" aria-hidden="true" />
-      </span>
-    );
-  }
-  // eslint-disable-next-line @next/next/no-img-element -- proxied Places photo
-  return <img src={photoAtWidth(photo, size * 3)} alt="" title={photoCreditTitle(place.photoCredits?.[0])} loading="lazy" className="shrink-0 rounded-xl object-cover" style={{ width: size, height: size }} />;
-}
-
-function Score({ pick }: { pick: DraftPick }) {
-  return (
-    <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-brand-soft px-2 py-0.5 text-[12px] font-semibold text-brand" title={`${pick.match.label} · ${pick.match.score}%`}>
-      <Sparkles className="h-3 w-3" aria-hidden="true" /> {pick.match.score}%
-    </span>
-  );
-}
-
 /**
  * One place of the plan: its time, photo, name and why it fits, then what the traveler can do with
- * it: open its details (reviews, photos, booking links), swap it for one of the ready alternates, or
- * say it is a good fit or not a fit (not a fit swaps it out on the spot).
+ * it: open its details (reviews, photos, booking links), swap it for one of the ready alternates or
+ * any other place of its kind, or say it is a good fit or not a fit (not a fit swaps it out on the
+ * spot).
  */
 function PlanItem({
   pick,
@@ -51,7 +30,7 @@ function PlanItem({
   selected,
   destination,
   onOpen,
-  onSwap,
+  swap,
 }: {
   pick: DraftPick;
   kind: PlaceKind;
@@ -62,25 +41,26 @@ function PlanItem({
   selected: boolean;
   destination: string;
   onOpen: (place: ResolvedPlace, kind: PlaceKind) => void;
-  onSwap: (pick: DraftPick, to: DraftPick) => void;
+  swap: PlanSwapProps;
 }) {
   const [swapOpen, setSwapOpen] = useState(false);
   const ref = useRef<HTMLLIElement>(null);
-  const name = shortPlaceName(pick.place.name);
   const meta = [meal ? (meal === "lunch" ? "Lunch" : "Dinner") : null, pick.place.category, pick.place.rating ? `★ ${pick.place.rating.toFixed(1)}` : null].filter(Boolean).join(" · ");
-  const alternates = pick.alternates ?? [];
-  // A place picked on a day's map brings its row into view.
+  const options = (pick.alternates ?? []).filter((a) => !swap.unavailable.has(a.place.id));
+  const recent = swap.recentId === pick.place.id;
+  // A place picked on a day's map, or just chosen from a list, brings its row into view.
   useEffect(() => {
-    if (selected) ref.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  }, [selected]);
+    if (selected || recent) ref.current?.scrollIntoView({ block: recent ? "center" : "nearest", behavior: "smooth" });
+  }, [selected, recent]);
   return (
     <li
       ref={ref}
-      className={clsx("rounded-2xl border transition-colors", selected ? "border-brand bg-brand-soft/50" : "border-border bg-white")}
+      className={clsx("rounded-2xl border transition-colors", selected ? "border-brand bg-brand-soft/50" : recent ? "border-emerald-300 bg-emerald-50/40" : "border-border bg-white")}
       data-testid="itinerary-stop"
       data-kind={kind}
       data-place-id={pick.place.id}
       data-selected={selected || undefined}
+      data-recent={recent || undefined}
     >
       <div className="flex items-start gap-3 p-3">
         {badge ? (
@@ -101,8 +81,9 @@ function PlanItem({
               <span className="flex items-baseline gap-2">
                 {time ? <span className="shrink-0 text-[13px] font-semibold tabular-nums text-neutral-600">{time}</span> : null}
                 <span className="truncate text-[15px] font-semibold leading-tight hover:underline" title={pick.place.name}>
-                  {name}
+                  {shortPlaceName(pick.place.name)}
                 </span>
+                {pick.swappedFrom ? <SwappedTag /> : null}
               </span>
               {meta ? <span className="mt-0.5 block truncate text-[12px] text-muted">{meta}</span> : null}
               {pick.why ? <span className="mt-0.5 line-clamp-2 block text-[13px] leading-snug text-neutral-700">{pick.why}</span> : null}
@@ -110,20 +91,18 @@ function PlanItem({
             <Score pick={pick} />
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            {alternates.length ? (
-              <button
-                type="button"
-                onClick={() => setSwapOpen((v) => !v)}
-                aria-expanded={swapOpen}
-                aria-label={`Swap ${pick.place.name}`}
-                className={clsx(
-                  "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[12px] font-semibold transition-colors pointer-coarse:h-10",
-                  swapOpen ? "border-brand bg-brand text-white" : "border-border bg-white text-foreground hover:bg-surface",
-                )}
-              >
-                <ArrowLeftRight className="h-3.5 w-3.5" aria-hidden="true" /> Swap
-              </button>
-            ) : null}
+            <button
+              type="button"
+              onClick={() => setSwapOpen((v) => !v)}
+              aria-expanded={swapOpen}
+              aria-label={`Swap ${pick.place.name}`}
+              className={clsx(
+                "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[12px] font-semibold transition-colors pointer-coarse:h-10",
+                swapOpen ? "border-brand bg-brand text-white" : "border-border bg-white text-foreground hover:bg-surface",
+              )}
+            >
+              <ArrowLeftRight className="h-3.5 w-3.5" aria-hidden="true" /> Swap
+            </button>
             <RecThumbs name={pick.place.name} kind={kind} place={pick.place} destination={destination} context="chat" match={pick.match} size="sm" />
             <button type="button" onClick={() => onOpen(pick.place, kind)} className="ml-auto inline-flex items-center gap-0.5 text-[12px] font-semibold text-brand hover:underline">
               Details &amp; reviews <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
@@ -132,34 +111,19 @@ function PlanItem({
         </div>
       </div>
       {swapOpen ? (
-        <div className="border-t border-border/70 px-3 pb-3 pt-2" data-testid="swap-options">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Swap {name} for</div>
-          <ul className="mt-2 grid gap-2">
-            {alternates.map((alt) => (
-              <li key={alt.place.id} className="flex items-center gap-3 rounded-xl border border-border bg-white p-2">
-                <Thumb place={alt.place} size={44} />
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-[14px] font-semibold" title={alt.place.name}>
-                    {shortPlaceName(alt.place.name)}
-                  </div>
-                  <div className="truncate text-[12px] text-muted">{[alt.place.category, alt.why].filter(Boolean).join(" · ")}</div>
-                </div>
-                <Score pick={alt} />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSwapOpen(false);
-                    onSwap(pick, alt);
-                  }}
-                  aria-label={`Swap in ${alt.place.name}`}
-                  className="h-8 shrink-0 rounded-full bg-brand px-3 text-[12px] font-semibold text-white hover:bg-brand-hover pointer-coarse:h-10"
-                >
-                  Use this
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <SwapOptions
+          pick={pick}
+          kind={kind}
+          options={options}
+          onSwap={(to) => {
+            setSwapOpen(false);
+            swap.onSwap(pick, to);
+          }}
+          onSeeAll={() => {
+            setSwapOpen(false);
+            swap.onSeeAll(pick, kind);
+          }}
+        />
       ) : null}
     </li>
   );
@@ -198,7 +162,7 @@ export function ItineraryWorkspace({
   onRetry,
   onAsk,
   onOpen,
-  onSwap,
+  swap,
 }: {
   draft: ItineraryDraft | null;
   loading: boolean;
@@ -209,7 +173,7 @@ export function ItineraryWorkspace({
   onRetry: () => void;
   onAsk: () => void;
   onOpen: (place: ResolvedPlace, kind: PlaceKind) => void;
-  onSwap: (pick: DraftPick, to: DraftPick) => void;
+  swap: PlanSwapProps;
 }) {
   const [openDay, setOpenDay] = useState<number | null>(1);
   if (!draft && loading) {
@@ -253,7 +217,7 @@ export function ItineraryWorkspace({
         <section className="rounded-2xl border border-border bg-surface/40 p-3" data-testid="itinerary-stay" aria-label="Where you'll stay">
           <h4 className="px-1 pb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Where you&apos;ll stay</h4>
           <ul className="grid grid-cols-[minmax(0,1fr)]">
-            <PlanItem pick={draft.stay} kind="hotel" selected={picked(draft.stay.place.id)} destination={destination} onOpen={onOpen} onSwap={onSwap} />
+            <PlanItem pick={draft.stay} kind="hotel" selected={picked(draft.stay.place.id)} destination={destination} onOpen={onOpen} swap={swap} />
           </ul>
         </section>
       ) : null}
@@ -294,7 +258,7 @@ export function ItineraryWorkspace({
                   selected={picked(s.place.id)}
                   destination={destination}
                   onOpen={onOpen}
-                  onSwap={onSwap}
+                  swap={swap}
                 />
               ))}
             </ol>

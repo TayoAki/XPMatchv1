@@ -225,7 +225,15 @@ scheduling chip open the itinerary board as a full-height sheet (short map, then
    category, rating, why it fits and its match score, with three things to do:
    - **Swap**: three ready alternates of the same kind that the plan does not use yet (near that stop,
      each with its photo, category, reason and score); **Use this** puts one in that slot, at the same
-     time, and the place it replaced becomes an alternate, so a swap can be undone.
+     time, and the place it replaced becomes the first option, so a swap can be undone. A place the
+     plan already has elsewhere or one marked not a fit is never offered. Under the options, **See all
+     stays** (or things to do, restaurants) opens that tab to choose from every place of its kind:
+     "Choose a stay to replace Hotel Artemide · Cancel", with **Use as my stay** (or **Use this**) on
+     each row, "Your stay" on the current one and "In your plan" on places the plan already has.
+     Choosing returns to the Itinerary tab with the new place highlighted and a "Swapped in" tag.
+     The Stays tab always offers **Use as my stay**, and so does a hotel's own panel ("Your stay in the
+     Rome plan" on the current one); while a stop is being replaced, a place's panel offers **Use
+     instead of {stop}**.
    - **Good pick / Miss** thumbs: a miss (Not a fit) swaps the place for its first alternate that is
      not a miss too, on the spot, without rebuilding the rest of the days.
    - **Details & reviews** (or a click on its name, or its pin on the day's map) opens the place over
@@ -237,7 +245,8 @@ scheduling chip open the itinerary board as a full-height sheet (short map, then
    follow the swaps. The Stays, Activities and Dining tabs list the traveler's scored picks for the city;
    a row opens its place the same way. Escape goes back from a place, then closes the plan (not while
    typing in the chat); so does the close button, which gives the chat its full width back. Below
-   1280 px there is no workspace: the Itinerary control turns the card over in place.
+   1280 px there is no workspace: the Itinerary control turns the card over in place, and every row of
+   the plan there has its own Swap button (the same options and See all).
    **Traveler reviews.** Every real place's panel (in the workspace, over the map or in a phone sheet)
    carries what travelers on XPMatch say about it. The overview has one line: "3 traveler reviews · 2
    verified", "Loved by 2 verified travelers like you" and **Read reviews**, or "No traveler reviews

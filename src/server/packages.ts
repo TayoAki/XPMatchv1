@@ -3,6 +3,7 @@ import type { BudgetTier, Pace, TravelerProfile } from "@/lib/types";
 import { candidateFromPlace, scoreMatch, type MatchInputs, type MatchResult } from "@/lib/match";
 import { haversineKm } from "@/lib/itinerary";
 import { CUISINES, INTERESTS, optionByLabel } from "@/lib/profile/options";
+import { whyFor } from "@/lib/recs/why";
 import { catalogPool } from "./catalog";
 import { placesApiKey, resolveDestination, searchTextPlaces } from "./places";
 import { buildHomeQueries } from "./recommend";
@@ -125,15 +126,7 @@ export function basedOnFor(profile: TravelerProfile): string[] {
   return [...new Set(out)];
 }
 
-/** One line for the card from the strongest positive reasons; quality is the fallback. */
-export function whyFor(match: MatchResult, place: ResolvedPlace): string {
-  const positive = match.reasons.filter((r) => r.delta > 0);
-  const specific = positive.filter((r) => r.factor !== "quality").slice(0, 2).map((r) => r.text);
-  if (specific.length) return specific.join(" · ");
-  const quality = positive.find((r) => r.factor === "quality");
-  if (quality) return quality.text;
-  return [place.category, place.priceLevel].filter(Boolean).join(" · ") || "A solid pick here";
-}
+export { whyFor };
 
 async function seedKind(destination: ResolvedPlace, kind: PackageSlotKind, profile: TravelerProfile): Promise<void> {
   const rows = buildHomeQueries(profile);

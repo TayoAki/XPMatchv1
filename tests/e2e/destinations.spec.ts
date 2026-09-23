@@ -100,14 +100,77 @@ test("destination cards: an itinerary per city, opened as the plan workspace wit
     await expect(stay).toHaveAttribute("data-place-id", original);
   });
 
+  await test.step("See all stays opens the Stays tab to choose from every hotel; the one chosen becomes the stay", async () => {
+    const original = (await stay.getAttribute("data-place-id")) ?? "";
+    await stay.getByRole("button", { name: /^Swap / }).click();
+    await stay.getByTestId("swap-options").getByRole("button", { name: "See all stays" }).click();
+    await expect(detail.getByRole("tab", { name: "Stays" })).toHaveAttribute("aria-selected", "true");
+    await expect(detail.getByTestId("choose-banner")).toContainText("Choose a stay to replace Hotel Artemide");
+    await expect(detail.locator(`[data-testid="destination-reco-row"][data-place-id="${original}"]`)).toContainText("Your stay", { timeout: 40_000 });
+    const use = detail.getByRole("button", { name: /^Use .+ as my stay$/ }).first();
+    const chosen = ((await use.getAttribute("aria-label")) ?? "").replace(/^Use /, "").replace(/ as my stay$/, "");
+    await use.click();
+    await expect(detail.getByRole("tab", { name: "Itinerary" })).toHaveAttribute("aria-selected", "true");
+    await expect(detail.getByTestId("choose-banner")).toHaveCount(0);
+    await expect(stay).not.toHaveAttribute("data-place-id", original);
+    await expect(stay).toHaveAttribute("data-recent", "true");
+    await expect(stay).toContainText("Swapped in");
+    await expect(stay.getByRole("button", { name: `Details for ${chosen}` })).toBeVisible();
+    await expect(detail.getByTestId("itinerary-summary")).not.toContainText("Hotel Artemide");
+    // The stay as built is the first option to go back to.
+    await stay.getByRole("button", { name: /^Swap / }).click();
+    await stay.getByTestId("swap-options").getByRole("button", { name: /^Swap in / }).first().click();
+    await expect(stay).toHaveAttribute("data-place-id", original);
+    await expect(stay).not.toContainText("Swapped in");
+  });
+
+  await test.step("a hotel's own panel makes it the stay, and the stay's panel says it is", async () => {
+    const original = (await stay.getAttribute("data-place-id")) ?? "";
+    await detail.getByRole("tab", { name: "Stays" }).click();
+    const sheet = workspace.getByTestId("place-sheet");
+    const current = detail.locator(`[data-testid="destination-reco-row"][data-place-id="${original}"]`);
+    await current.getByRole("button", { name: /^Show / }).click();
+    await expect(sheet.getByTestId("plan-stay")).toContainText("Your stay in the Rome plan");
+    await expect(sheet.getByRole("button", { name: "Use as my stay" })).toHaveCount(0);
+    await sheet.getByRole("button", { name: "Back to Rome" }).click();
+    const other = detail.locator(`[data-testid="destination-reco-row"]:not([data-place-id="${original}"])`).first();
+    const otherId = (await other.getAttribute("data-place-id")) ?? "";
+    await other.getByRole("button", { name: /^Show / }).click();
+    await sheet.getByRole("button", { name: "Use as my stay" }).click();
+    await expect(sheet).toHaveCount(0);
+    await expect(detail.getByRole("tab", { name: "Itinerary" })).toHaveAttribute("aria-selected", "true");
+    await expect(stay).toHaveAttribute("data-place-id", otherId);
+    await stay.getByRole("button", { name: /^Swap / }).click();
+    await stay.getByTestId("swap-options").getByRole("button", { name: /^Swap in / }).first().click();
+    await expect(stay).toHaveAttribute("data-place-id", original);
+  });
+
+  await test.step("a stop's See all opens its tab to choose from; the plan's own places are marked; Cancel returns", async () => {
+    const stop = detail.getByTestId("itinerary-day").first().locator('[data-testid="itinerary-stop"][data-kind="attraction"]').first();
+    await stop.getByRole("button", { name: /^Swap / }).click();
+    await stop.getByTestId("swap-options").getByRole("button", { name: "See all things to do" }).click();
+    await expect(detail.getByRole("tab", { name: "Activities" })).toHaveAttribute("aria-selected", "true");
+    const banner = detail.getByTestId("choose-banner");
+    await expect(banner).toContainText("Choose something to do to replace");
+    const rows = detail.getByTestId("destination-reco-row");
+    await expect(rows.first()).toBeVisible({ timeout: 40_000 });
+    for (const row of await rows.all()) {
+      await expect(row.getByRole("button", { name: /^Use .+ instead of / }).or(row.getByText("In your plan"))).toBeVisible();
+    }
+    await banner.getByRole("button", { name: "Cancel" }).click();
+    await expect(detail.getByRole("tab", { name: "Itinerary" })).toHaveAttribute("aria-selected", "true");
+    await expect(detail.getByTestId("choose-banner")).toHaveCount(0);
+  });
+
   await test.step("the Stays tab lists every pick; a row opens its place over the plan with Back", async () => {
     await detail.getByRole("tab", { name: "Stays" }).click();
     const rows = detail.getByTestId("destination-reco-row");
     await expect(rows.first()).toBeVisible({ timeout: 40_000 });
     await expect(rows.first()).toHaveAttribute("data-kind", "hotel");
     await expect(detail.getByRole("button", { name: /^Show all/ })).toHaveCount(0);
-    const name = (await rows.first().getByRole("button").getAttribute("aria-label"))?.replace(/^Show /, "").replace(/ on map$/, "") ?? "";
-    await rows.first().getByRole("button").click();
+    const show = rows.first().getByRole("button", { name: /^Show / });
+    const name = (await show.getAttribute("aria-label"))?.replace(/^Show /, "").replace(/ on map$/, "") ?? "";
+    await show.click();
     const sheet = workspace.getByTestId("place-sheet");
     await expect(sheet.getByRole("heading", { name })).toBeVisible({ timeout: 20_000 });
     await expect(sheet.getByRole("button", { name: "Add to trip" })).toBeVisible();
@@ -185,10 +248,21 @@ test("destination cards: an itinerary per city, opened as the plan workspace wit
       await expect(card).toHaveAttribute("data-face", "photo");
       await card.getByRole("button", { name: "Itinerary for Rome" }).tap();
       await turned(card);
+      // Swap works on the card too: the stay's list, then its first option.
+      const cardStay = card.locator('[data-testid="itinerary-stop"][data-kind="hotel"]');
+      await expect(cardStay).toHaveCount(1, { timeout: 40_000 });
+      const before = (await cardStay.getAttribute("data-place-id")) ?? "";
+      await cardStay.getByRole("button", { name: /^Swap / }).tap();
+      const option = cardStay.getByTestId("swap-options").getByRole("button", { name: /^Swap in / }).first();
+      const pickName = ((await option.getAttribute("aria-label")) ?? "").replace(/^Swap in /, "");
+      await option.tap();
+      await expect(cardStay).not.toHaveAttribute("data-place-id", before);
+      await expect(card.getByTestId("itinerary-summary")).toContainText(`stay at ${pickName}`);
+      await expect(cardStay.getByRole("button", { name: /^Swap / })).toBeVisible();
       await card.getByRole("tab", { name: "Stays" }).tap();
       const row = card.getByTestId("destination-reco-row").first();
       await expect(row).toBeVisible({ timeout: 40_000 });
-      await row.getByRole("button").tap();
+      await row.getByRole("button", { name: /^Show / }).tap();
       await expect(p.getByTestId("mobile-place-sheet")).toBeVisible();
       await p.getByTestId("mobile-place-sheet").getByRole("button", { name: "Close" }).click();
       await expect(p.getByTestId("mobile-map-sheet")).toBeVisible();

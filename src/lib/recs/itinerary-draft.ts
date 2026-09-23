@@ -5,6 +5,8 @@ import { api } from "@/lib/api";
 import { newStopId } from "@/lib/itinerary";
 import { labelFor, type MatchReason, type MatchResult } from "@/lib/match";
 import { shortPlaceName } from "@/lib/places/names";
+import type { PlaceKind, ResolvedPlace } from "@/lib/places/types";
+import { whyFor } from "@/lib/recs/why";
 import type { ItineraryDay, Trip, TravelerProfile, TripPlanner } from "@/lib/types";
 import type { DraftPick, ItineraryDraft } from "@/server/itineraries";
 
@@ -67,19 +69,60 @@ export function useItineraryDraft(destination: string | null, days: number) {
 }
 
 /**
- * The plan with swaps applied (`swaps`: the id of a place in the plan as built → the id of one of
- * its alternates): the swapped pick takes the alternate's place, match and reason and keeps its
- * time, meal and length; its own alternates become the place it replaced plus the others. Day
- * titles and the plan's score follow.
+ * The traveler's swaps: the id of a place in the plan as built → what shows in its place, one of
+ * its ready alternates or any place of its kind they chose from a list or its own panel.
  */
-export function applySwaps(draft: ItineraryDraft, swaps: Record<string, string>): ItineraryDraft {
+export type Swaps = Record<string, DraftPick>;
+
+/** How many options a pick offers after a swap: the place it replaced first, then the others. */
+const OPTIONS = 3;
+
+const bare = (p: DraftPick): DraftPick => ({ place: p.place, match: p.match, why: p.why });
+
+/**
+ * A place chosen for the plan from a list or its own panel, as light as the builder's alternates:
+ * one photo, no reviews or map fields (it is saved with the trip as it is).
+ */
+export function planPick(place: ResolvedPlace, match: MatchResult, kind: PlaceKind = place.kind): DraftPick {
+  const { id, name, lat, lng, address, locality, category, rating, userRatingCount, priceLevel, summary, googleMapsUri, websiteUri, types, source } = place;
+  return {
+    place: {
+      id,
+      name,
+      kind,
+      lat,
+      lng,
+      address,
+      locality,
+      category,
+      rating,
+      userRatingCount,
+      priceLevel,
+      summary,
+      googleMapsUri,
+      websiteUri,
+      types,
+      source,
+      photos: place.photos?.slice(0, 1) ?? [],
+      photoCredits: place.photoCredits?.slice(0, 1),
+    },
+    match,
+    why: whyFor(match, place),
+  };
+}
+
+/**
+ * The plan with swaps applied: the swapped pick takes the chosen place, match and reason and
+ * keeps its time, meal and length; its options become the place it replaced (so a swap can be
+ * undone) and then its other alternates. Day titles and the plan's score follow.
+ */
+export function applySwaps(draft: ItineraryDraft, swaps: Swaps): ItineraryDraft {
   if (!Object.keys(swaps).length) return draft;
   const swap = <T extends DraftPick>(p: T): T => {
     const to = swaps[p.place.id];
-    const alt = to && to !== p.place.id ? p.alternates?.find((a) => a.place.id === to) : undefined;
-    if (!alt) return p;
-    const replaced: DraftPick = { place: p.place, match: p.match, why: p.why };
-    return { ...p, place: alt.place, match: alt.match, why: alt.why, swappedFrom: p.place.id, alternates: [replaced, ...(p.alternates ?? []).filter((a) => a.place.id !== to)] };
+    if (!to || to.place.id === p.place.id) return p;
+    const alternates = [bare(p), ...(p.alternates ?? []).filter((a) => a.place.id !== to.place.id)].slice(0, OPTIONS);
+    return { ...p, place: to.place, match: to.match, why: to.why, swappedFrom: p.place.id, alternates };
   };
   const stay = draft.stay ? swap(draft.stay) : null;
   const days = draft.days.map((d) => {
@@ -100,16 +143,20 @@ export function applySwaps(draft: ItineraryDraft, swaps: Record<string, string>)
 
 /**
  * Swaps for the places the traveler marked not a fit: each such pick of the plan as built (or
- * the alternate swapped in for it) gives way to its first alternate that is not a miss too.
+ * the place swapped in for it) gives way to the first of its options (the place as built, then
+ * its alternates) that is neither a miss nor already elsewhere in the plan.
  */
-export function swapsForMisses(draft: ItineraryDraft, swaps: Record<string, string>, missed: ReadonlySet<string>): Record<string, string> {
-  const out: Record<string, string> = {};
+export function swapsForMisses(draft: ItineraryDraft, swaps: Swaps, missed: ReadonlySet<string>): Swaps {
+  const out: Swaps = {};
   if (!missed.size) return out;
+  const used = new Set(draftPicks(applySwaps(draft, swaps)).map((p) => p.place.id));
   for (const p of draftPicks(draft)) {
-    const current = swaps[p.place.id] ?? p.place.id;
+    const current = swaps[p.place.id]?.place.id ?? p.place.id;
     if (!missed.has(current)) continue;
-    const next = [p.place.id, ...(p.alternates ?? []).map((a) => a.place.id)].find((id) => !missed.has(id));
-    if (next) out[p.place.id] = next;
+    const next = [bare(p), ...(p.alternates ?? [])].find((o) => !missed.has(o.place.id) && !used.has(o.place.id));
+    if (!next) continue;
+    out[p.place.id] = next;
+    used.add(next.place.id);
   }
   return out;
 }

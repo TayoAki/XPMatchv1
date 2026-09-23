@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
-import { ArrowLeft, ArrowRight, CalendarDays, Heart, MapPin, PanelRightOpen, RefreshCw, Search, Sparkles, X } from "lucide-react";
+import { ArrowLeft, ArrowLeftRight, ArrowRight, Bed, CalendarDays, Heart, MapPin, PanelRightOpen, RefreshCw, Search, Sparkles, X } from "lucide-react";
 import { ToolCallStatus } from "@copilotkit/core";
 import type { ShowDestinationsArgs, Streaming } from "@/lib/travel/schemas";
 import { googleMapsSearchUrl } from "@/lib/travel/links";
@@ -13,7 +13,8 @@ import type { MapPlace, PlaceKind, ResolvedPlace } from "@/lib/places/types";
 import { photoAtWidth } from "@/lib/places/destination-photo";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { useDestinationPicks, type DestinationPicks, type PickRowKey } from "@/lib/recs/destination-picks";
-import { applySwaps, draftMatch, draftPicks, loadItineraryDraft, swapsForMisses, useItineraryDraft } from "@/lib/recs/itinerary-draft";
+import { applySwaps, draftMatch, draftPicks, loadItineraryDraft, planPick, swapsForMisses, useItineraryDraft, type Swaps } from "@/lib/recs/itinerary-draft";
+import { planPickerKey, useRegisterPlanPicker, type PlanPicker } from "@/lib/plan-picker";
 import { MAX_ITINERARY_DAYS, daysBetween, daysFromStay } from "@/lib/itinerary";
 import { shortPlaceName } from "@/lib/places/names";
 import type { DraftPick, ItineraryDraft } from "@/server/itineraries";
@@ -29,6 +30,7 @@ import { photoCreditTitle } from "@/components/ui/PhotoCredit";
 import { CardPhoto, CardRow, SectionHeader, Text } from "./shared";
 import { ItineraryPlan, MakeItineraryButton } from "./ItineraryPlan";
 import { ItineraryWorkspace } from "./ItineraryWorkspace";
+import type { PlanSwapProps } from "./PlanParts";
 
 type DestinationArgs = Streaming<ShowDestinationsArgs>["destinations"] extends (infer U)[] | undefined ? U : never;
 type Tab = "itinerary" | "stays" | "activities" | "dining";
@@ -42,6 +44,26 @@ const TAB_FILTER: Record<Tab, MapFilter> = { itinerary: "all", stays: "hotel", a
 const FILTER_TAB: Record<MapFilter, Tab> = { all: "itinerary", hotel: "stays", attraction: "activities", restaurant: "dining" };
 const TAB_ROW: Record<Exclude<Tab, "itinerary">, PickRowKey> = { stays: "stays", activities: "things", dining: "eat" };
 const ROW_KIND: Record<PickRowKey, PlaceKind> = { things: "attraction", stays: "hotel", eat: "restaurant" };
+/** The tab that lists every place of a kind, where a pick's "See all" goes to choose another. */
+const KIND_TAB: Partial<Record<PlaceKind, Exclude<Tab, "itinerary">>> = { hotel: "stays", attraction: "activities", restaurant: "dining" };
+const CHOOSE_NOUN: Partial<Record<PlaceKind, string>> = { hotel: "a stay", attraction: "something to do", restaurant: "a place to eat" };
+
+/** A place of the plan being replaced from its tab's full list: its id in the plan as built, its kind and the name on show. */
+interface Choosing {
+  id: string;
+  kind: PlaceKind;
+  name: string;
+}
+
+/** What a tab's rows can do with the plan: make a hotel the stay, or put a place in for the stop being replaced. */
+interface RowPlan {
+  stayId: string | null;
+  taken: ReadonlySet<string>;
+  missed: ReadonlySet<string>;
+  choosing: Choosing | null;
+  onUse: (place: ResolvedPlace, match: MatchResult, kind: PlaceKind) => void;
+  onCancel: () => void;
+}
 const HOVER_IN_MS = 250;
 const HOVER_OUT_MS = 300;
 const TAGLINE_MAX = 72;
@@ -189,9 +211,15 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
   const plan = useItineraryDraft(seen && place && name ? label : null, days);
   // The plan as the traveler shaped it: their swaps, and a place marked not a fit (in its own
   // panel, a row, anywhere) giving way to its first alternate that is not a miss too.
-  const [swaps, setSwaps] = useState<Record<string, string>>({});
+  const [swaps, setSwaps] = useState<Swaps>({});
   const missed = useMemo(() => new Set(recFeedback.filter((f) => f.verdict === "down").map((f) => f.placeId)), [recFeedback]);
   const shown = useMemo(() => (plan.draft ? applySwaps(plan.draft, { ...swaps, ...swapsForMisses(plan.draft, swaps, missed) }) : null), [plan.draft, swaps, missed]);
+  // Places a swap must not offer: already in the plan, or marked not a fit.
+  const taken = useMemo(() => new Set(shown ? draftPicks(shown).map((p) => p.place.id) : []), [shown]);
+  const unavailable = useMemo(() => new Set([...taken, ...missed]), [taken, missed]);
+  // "See all" from a pick's list: the stop being replaced from its tab, and the place just chosen.
+  const [choosing, setChoosing] = useState<Choosing | null>(null);
+  const [recentId, setRecentId] = useState<string | null>(null);
   const planMatch = useMemo(() => (shown?.days.length ? draftMatch(shown) : null), [shown]);
   const shownMatch = planMatch ?? match;
 
@@ -310,13 +338,87 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
     if (!isActive) activate();
   };
 
-  const selectTab = (next: Tab) => {
+  /** Shows a tab; leaving the tab being chosen from ends the choosing (unless `keepChoosing`, for "See all"). */
+  const selectTab = (next: Tab, keepChoosing = false) => {
     clearTimers();
+    if (!keepChoosing && next !== tab) setChoosing(null);
+    if (next !== "itinerary") setRecentId(null);
     setLocalTab(next);
     setShowAll(false);
     engage();
     if (threadId) mapActions.setFilter(threadId, TAB_FILTER[next]);
   };
+
+  // Choosing is on while its tab shows (a tab changed from the map's filter leaves it waiting).
+  const choosingNow = choosing && KIND_TAB[choosing.kind] === tab ? choosing : null;
+
+  /** Puts `to` where the plan's place `original` (its id as built) is; the place as built again clears the swap. */
+  const swapTo = (original: string, to: DraftPick) =>
+    setSwaps((prev) => {
+      const next = { ...prev };
+      if (to.place.id === original) delete next[original];
+      else next[original] = { place: to.place, match: to.match, why: to.why };
+      return next;
+    });
+
+  /** A swap picked in a pick's list: one of its ready options (the place it replaced among them). */
+  const swapIn = (pick: DraftPick, to: DraftPick) => {
+    setRecentId(null);
+    swapTo(pick.swappedFrom ?? pick.place.id, to);
+  };
+
+  /** "See all" in a pick's list: its kind's tab, to choose any other place instead. */
+  const seeAll = (pick: DraftPick, kind: PlaceKind) => {
+    const target = KIND_TAB[kind];
+    if (!target) return;
+    setChoosing({ id: pick.swappedFrom ?? pick.place.id, kind, name: pick.place.name });
+    selectTab(target, true);
+  };
+
+  const cancelChoosing = () => {
+    setChoosing(null);
+    selectTab("itinerary");
+  };
+
+  /**
+   * A place chosen from a tab or its own panel goes into the plan: a hotel as the stay, anything else
+   * instead of the stop being replaced. The plan comes back into view with it.
+   */
+  const choose = (item: ResolvedPlace, itemMatch: MatchResult, kind: PlaceKind) => {
+    const stay = shown?.stay;
+    const original = kind === "hotel" ? (stay ? (stay.swappedFrom ?? stay.place.id) : null) : choosing?.kind === kind ? choosing.id : null;
+    if (!original) return;
+    swapTo(original, planPick(item, itemMatch, kind));
+    setChoosing(null);
+    setRecentId(item.id);
+    if (threadId) mapActions.selectPlace(threadId, null);
+    selectTab("itinerary");
+  };
+
+  // The plan, for the panel of any of this city's places (wherever it opens): Use as my stay, Use instead of.
+  const chooseRef = useRef(choose);
+  useEffect(() => {
+    chooseRef.current = choose;
+  });
+  const planPicker = useMemo<PlanPicker | null>(
+    () =>
+      shown
+        ? {
+            city: name,
+            stayId: shown.stay?.place.id ?? null,
+            taken,
+            missed,
+            choosing: choosingNow ? { kind: choosingNow.kind, name: choosingNow.name } : null,
+            choose: (item, itemMatch, kind) => chooseRef.current(item, itemMatch, kind),
+          }
+        : null,
+    [shown, name, taken, missed, choosingNow],
+  );
+  useRegisterPlanPicker(planPickerKey(`reco:${toolCallId}`, scopeId), planPicker);
+  const swapProps: PlanSwapProps = { unavailable, recentId, onSwap: (pick, to) => swapIn(pick, to), onSeeAll: (pick, kind) => seeAll(pick, kind) };
+  const rowPlan: RowPlan | null = shown
+    ? { stayId: shown.stay?.place.id ?? null, taken, missed, choosing: choosingNow, onUse: (item, itemMatch, kind) => choose(item, itemMatch, kind), onCancel: cancelChoosing }
+    : null;
 
   const onTabKey = (e: KeyboardEvent<HTMLDivElement>, idPrefix: string) => {
     if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
@@ -375,16 +477,6 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
     : plan.loading
       ? "Building your itinerary…"
       : "";
-  /** A swap picked in the plan: the place as built gets the chosen alternate (or itself back). */
-  const swapIn = (pick: DraftPick, to: DraftPick) => {
-    const original = pick.swappedFrom ?? pick.place.id;
-    setSwaps((prev) => {
-      const next = { ...prev };
-      if (to.place.id === original) delete next[original];
-      else next[original] = to.place.id;
-      return next;
-    });
-  };
   const showingPhoto = face === "photo";
   // The place picked on the map, when it is one of this city's.
   const pickedPrefix = `reco:${scopeId}:`;
@@ -432,7 +524,7 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
             onRetry={plan.retry}
             onAsk={() => ask(planTheDays)}
             onOpen={(item, kind) => showOnMap(item, kind)}
-            onSwap={swapIn}
+            swap={swapProps}
           />
         ) : (
           <ItineraryPlan
@@ -443,6 +535,7 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
             onAsk={() => ask(planTheDays)}
             onShow={(item, kind) => showOnMap(item, kind)}
             selectedId={pickedId}
+            swap={swapProps}
           />
         )}
       </div>
@@ -452,13 +545,14 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
         items={rowsFor(tab)}
         loading={loading}
         error={error}
-        showAll={full || showAll}
+        showAll={full || showAll || !!choosingNow}
         onShowAll={() => setShowAll(true)}
         onRetry={retry}
         onAsk={() => ask(`Recommend ${TAB_LABEL[tab].toLowerCase()} in ${name} that fit me.`)}
         onShow={(item) => showOnMap(item, ROW_KIND[TAB_ROW[tab]])}
         selectedId={pickedId}
         followSelection={full}
+        plan={rowPlan}
       />
     );
 
@@ -811,6 +905,7 @@ function CategoryRows({
   onShow,
   selectedId,
   followSelection,
+  plan,
 }: {
   tab: Exclude<Tab, "itinerary">;
   items: { place: ResolvedPlace; match: MatchResult }[];
@@ -823,35 +918,102 @@ function CategoryRows({
   onShow: (place: ResolvedPlace) => void;
   selectedId: string | null;
   followSelection: boolean;
+  /** The card's plan, when it has one: rows can go into it. */
+  plan: RowPlan | null;
 }) {
-  if (loading && !items.length) return <SkeletonRows />;
+  const kind = ROW_KIND[TAB_ROW[tab]];
+  const choosingHere = plan?.choosing && plan.choosing.kind === kind ? plan.choosing : null;
+  const banner =
+    plan && choosingHere ? (
+      <div className="mb-2 flex items-center gap-2 rounded-[10px] border border-brand/30 bg-brand-soft/60 px-3 py-2 text-[13px]" data-testid="choose-banner">
+        <ArrowLeftRight className="h-3.5 w-3.5 shrink-0 text-brand" aria-hidden="true" />
+        <span className="min-w-0 flex-1">
+          Choose {CHOOSE_NOUN[kind]} to replace <span className="font-semibold">{shortPlaceName(choosingHere.name)}</span>
+        </span>
+        <button type="button" onClick={plan.onCancel} className="shrink-0 font-semibold text-brand hover:underline pointer-coarse:min-h-10">
+          Cancel
+        </button>
+      </div>
+    ) : null;
+  // What a row can do with the plan: every hotel can become the stay; while a stop is being
+  // replaced, every place of its kind can take its place (unless the plan already has it).
+  const actionFor = (place: ResolvedPlace, match: MatchResult): ReactNode => {
+    if (!plan) return null;
+    if (kind === "hotel") {
+      if (!plan.stayId) return null;
+      if (place.id === plan.stayId) {
+        return (
+          <RowTag brand>
+            <Bed className="h-3 w-3" aria-hidden="true" /> Your stay
+          </RowTag>
+        );
+      }
+      if (plan.missed.has(place.id)) return <RowTag>Not a fit</RowTag>;
+      return (
+        <RowAction filled={!!choosingHere} label={`Use ${place.name} as my stay`} onClick={() => plan.onUse(place, match, kind)}>
+          Use as my stay
+        </RowAction>
+      );
+    }
+    if (!choosingHere) return null;
+    if (plan.taken.has(place.id)) return <RowTag>In your plan</RowTag>;
+    if (plan.missed.has(place.id)) return <RowTag>Not a fit</RowTag>;
+    return (
+      <RowAction filled label={`Use ${place.name} instead of ${choosingHere.name}`} onClick={() => plan.onUse(place, match, kind)}>
+        Use this
+      </RowAction>
+    );
+  };
+  if (loading && !items.length) {
+    return (
+      <div>
+        {banner}
+        <SkeletonRows />
+      </div>
+    );
+  }
   if (error && !items.length) {
     return (
-      <div className="rounded-[10px] border border-dashed border-border bg-white px-3 py-3 text-[13px] text-muted">
-        Couldn&apos;t load recommendations.{" "}
-        <button type="button" onClick={onRetry} className="font-semibold text-brand hover:underline">
-          Retry
-        </button>
+      <div>
+        {banner}
+        <div className="rounded-[10px] border border-dashed border-border bg-white px-3 py-3 text-[13px] text-muted">
+          Couldn&apos;t load recommendations.{" "}
+          <button type="button" onClick={onRetry} className="font-semibold text-brand hover:underline">
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
   if (!items.length) {
     return (
-      <div className="rounded-[10px] border border-dashed border-border bg-white px-3 py-3 text-[13px] text-muted" data-testid="reco-empty">
-        No {TAB_LABEL[tab].toLowerCase()} recommendations yet.{" "}
-        <button type="button" onClick={onAsk} className="font-semibold text-brand hover:underline">
-          Ask for recommendations
-        </button>
+      <div>
+        {banner}
+        <div className="rounded-[10px] border border-dashed border-border bg-white px-3 py-3 text-[13px] text-muted" data-testid="reco-empty">
+          No {TAB_LABEL[tab].toLowerCase()} recommendations yet.{" "}
+          <button type="button" onClick={onAsk} className="font-semibold text-brand hover:underline">
+            Ask for recommendations
+          </button>
+        </div>
       </div>
     );
   }
   const visible = showAll ? items : items.slice(0, 3);
-  const kind = ROW_KIND[TAB_ROW[tab]];
   return (
     <div>
+      {banner}
       <ul className="grid gap-2">
         {visible.map(({ place, match }) => (
-          <RecoRow key={place.id} place={place} match={match} kind={kind} selected={place.id === selectedId} followSelection={followSelection} onShow={() => onShow(place)} />
+          <RecoRow
+            key={place.id}
+            place={place}
+            match={match}
+            kind={kind}
+            selected={place.id === selectedId}
+            followSelection={followSelection}
+            onShow={() => onShow(place)}
+            action={actionFor(place, match)}
+          />
         ))}
       </ul>
       {!showAll && items.length > visible.length ? (
@@ -863,7 +1025,34 @@ function CategoryRows({
   );
 }
 
-/** One recommended place: thumbnail, name, category and area, the reason it fits, and its score; the row shows it on the map. */
+function RowTag({ children, brand = false }: { children: ReactNode; brand?: boolean }) {
+  return (
+    <span className={clsx("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold", brand ? "bg-brand-soft text-brand" : "bg-surface text-muted")} data-testid="row-tag">
+      {children}
+    </span>
+  );
+}
+
+function RowAction({ children, label, filled = false, onClick }: { children: ReactNode; label: string; filled?: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      className={clsx(
+        "inline-flex h-8 items-center rounded-full px-3 text-[12px] font-semibold transition-colors pointer-coarse:h-10",
+        filled ? "bg-brand text-white hover:bg-brand-hover" : "border border-brand bg-white text-brand hover:bg-brand-soft",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+/**
+ * One recommended place: thumbnail, name, category and area, the reason it fits, and its score; the
+ * row shows it on the map. `action` (Use as my stay, Use this, Your stay) sits under it.
+ */
 function RecoRow({
   place,
   match,
@@ -871,6 +1060,7 @@ function RecoRow({
   selected,
   followSelection,
   onShow,
+  action,
 }: {
   place: ResolvedPlace;
   match: MatchResult;
@@ -878,6 +1068,7 @@ function RecoRow({
   selected: boolean;
   followSelection: boolean;
   onShow: () => void;
+  action?: ReactNode;
 }) {
   const photo = place.photos?.[0];
   const reason = topReason(match);
@@ -893,6 +1084,7 @@ function RecoRow({
       className={clsx("rounded-[10px] border transition-colors", selected ? "border-brand bg-brand-soft/60" : "border-border bg-white")}
       data-testid="destination-reco-row"
       data-kind={kind}
+      data-place-id={place.id}
       data-selected={selected || undefined}
     >
       <button
@@ -924,6 +1116,7 @@ function RecoRow({
           <MapPin className="h-3.5 w-3.5 text-neutral-400" aria-hidden="true" />
         </span>
       </button>
+      {action ? <div className="-mt-1 flex items-center justify-end gap-2 px-2.5 pb-2.5">{action}</div> : null}
     </li>
   );
 }

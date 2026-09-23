@@ -19,6 +19,7 @@ import { TopicChips } from "@/components/place/TopicChips";
 import { ReactionControl } from "@/components/feedback/ReactionControl";
 import { MatchLine } from "@/components/recs/MatchLine";
 import { ReviewsTeaser, TravelerReviews } from "@/components/place/TravelerReviews";
+import { UseInPlan } from "@/components/place/UseInPlan";
 import { reviewsOnTopic } from "@/lib/places/evidence";
 import type { EvidenceTopic } from "@/lib/places/facts";
 
@@ -218,6 +219,8 @@ export function PlaceDetailSheet({
             </div>
             {/* How well it fits this traveler, and their say: Good fit / Not a fit (a miss leaves itineraries). */}
             <MatchLine name={place.name} kind={place.kind} place={data} destination={focusName ?? data.locality} context="sheet" labeled className="mt-3" />
+            {/* One of a card's city plan's places: Use as my stay, or Use instead of the stop being replaced. */}
+            <UseInPlan pin={place} place={data} className="mt-3" />
 
             {photos.length === 1 ? (
               <div className={clsx("relative mt-5 overflow-hidden rounded-2xl", small ? "h-[200px]" : "h-[300px]")}>

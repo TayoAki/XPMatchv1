@@ -3,7 +3,7 @@ import { DEFAULT_PROFILE, type TravelerProfile } from "@/lib/types";
 import type { ResolvedPlace } from "@/lib/places/types";
 import { candidateFromPlace, scoreMatch } from "@/lib/match";
 import { daysFromStay, localCuisine, planItinerary, visitMinutes, type ItineraryDraft, type ScoredPools } from "@/server/itineraries";
-import { applySwaps, draftPicks, swapsForMisses } from "@/lib/recs/itinerary-draft";
+import { applySwaps, draftPicks, planPick, swapsForMisses } from "@/lib/recs/itinerary-draft";
 
 const profile: TravelerProfile = { ...DEFAULT_PROFILE, pace: "balanced", dayRhythm: "balanced", walking: "moderate" };
 const destination: ResolvedPlace = { id: "city", name: "Rome", kind: "destination", lat: 41.9, lng: 12.5, photos: [], source: "google" };
@@ -143,36 +143,56 @@ describe("swaps", () => {
     }
   });
 
-  it("puts a swapped-in place where the pick was and keeps the one it replaced as an alternate", () => {
+  it("puts a swapped-in place where the pick was and keeps the one it replaced as an option", () => {
     const plan = draft();
     const stop = plan.days[0].stops.find((s) => s.kind === "attraction")!;
     const to = stop.alternates![0];
-    const swapped = applySwaps(plan, { [stop.place.id]: to.place.id });
+    const swapped = applySwaps(plan, { [stop.place.id]: to });
     const now = swapped.days[0].stops.find((s) => s.startTime === stop.startTime)!;
     expect(now.place.id).toBe(to.place.id);
     expect(now.swappedFrom).toBe(stop.place.id);
     expect(now.durationMin).toBe(stop.durationMin);
     expect(now.alternates?.[0].place.id).toBe(stop.place.id);
     expect(now.alternates?.some((a) => a.place.id === to.place.id)).toBe(false);
+    expect(now.alternates!.length).toBeLessThanOrEqual(3);
     // The rest of the plan is untouched, and swapping back is the plan as built.
     expect(swapped.stay).toBe(plan.stay);
-    expect(applySwaps(plan, { [stop.place.id]: stop.place.id })).toBe(plan);
+    expect(applySwaps(plan, { [stop.place.id]: stop })).toBe(plan);
     expect(applySwaps(plan, {})).toBe(plan);
-    // An id that is not one of its alternates changes nothing.
-    expect(applySwaps(plan, { [stop.place.id]: "elsewhere" }).days[0].stops.find((s) => s.startTime === stop.startTime)?.place.id).toBe(stop.place.id);
   });
 
-  it("swaps a place marked not a fit for its first alternate that is not one too", () => {
+  it("takes any place of the kind chosen from a list, light enough to save with the trip", () => {
+    const plan = draft();
+    const stay = plan.stay!;
+    const elsewhere = scored("hotel", 77, 41.91, 12.49, { name: "Hotel Elsewhere", photos: ["/p/1", "/p/2", "/p/3"] });
+    const pick = planPick({ ...elsewhere.place, reviews: [{ author: "A", text: "Great" }] } as ResolvedPlace, elsewhere.match, "hotel");
+    expect(pick.place.photos).toEqual(["/p/1"]);
+    expect("reviews" in pick.place).toBe(false);
+    expect(pick.why.length).toBeGreaterThan(0);
+    const swapped = applySwaps(plan, { [stay.place.id]: pick });
+    expect(swapped.stay?.place.name).toBe("Hotel Elsewhere");
+    expect(swapped.stay?.swappedFrom).toBe(stay.place.id);
+    // The stay it replaced leads its options, which stay at three.
+    expect(swapped.stay?.alternates?.[0].place.id).toBe(stay.place.id);
+    expect(swapped.stay?.alternates).toHaveLength(3);
+  });
+
+  it("swaps a place marked not a fit for its first option that is neither a miss nor elsewhere in the plan", () => {
     const plan = draft();
     const stay = plan.stay!;
     const [first, second] = stay.alternates!;
     expect(swapsForMisses(plan, {}, new Set())).toEqual({});
-    expect(swapsForMisses(plan, {}, new Set([stay.place.id]))).toEqual({ [stay.place.id]: first.place.id });
-    expect(swapsForMisses(plan, {}, new Set([stay.place.id, first.place.id]))).toEqual({ [stay.place.id]: second.place.id });
+    expect(swapsForMisses(plan, {}, new Set([stay.place.id]))[stay.place.id].place.id).toBe(first.place.id);
+    expect(swapsForMisses(plan, {}, new Set([stay.place.id, first.place.id]))[stay.place.id].place.id).toBe(second.place.id);
     // A miss on the place swapped in goes back to the one it replaced.
-    expect(swapsForMisses(plan, { [stay.place.id]: first.place.id }, new Set([first.place.id]))).toEqual({ [stay.place.id]: stay.place.id });
+    expect(swapsForMisses(plan, { [stay.place.id]: first }, new Set([first.place.id]))[stay.place.id].place.id).toBe(stay.place.id);
     // With every option a miss, the plan keeps what it has.
     expect(swapsForMisses(plan, {}, new Set([stay.place.id, ...stay.alternates!.map((a) => a.place.id)]))).toEqual({});
+    // An option another stop already took is passed over.
+    const [a, b] = plan.days[0].stops.filter((s) => s.kind === "attraction");
+    const shared = a.alternates![0];
+    const out = swapsForMisses(plan, { [b.place.id]: shared }, new Set([a.place.id]));
+    expect(out[a.place.id].place.id).toBe(a.alternates![1].place.id);
   });
 });
 

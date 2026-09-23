@@ -60,8 +60,9 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   Josun Palace"; from 1280 px a click opens the **plan workspace**: the plan in the center and the
   chat in a column on the right, with "Where you'll stay" and a card per day whose **Map** opens that
   day's own map (one at a time) above its stops, numbered like the pins. Every place can be swapped
-  for one of three ready alternates, marked Not a fit (it swaps out on the spot) or opened in full
-  over the plan with Back to {city}. On smaller screens the card turns over instead (hover on a
+  for one of three ready alternates or, through See all, for any place of its kind on its tab (Use
+  as my stay on every hotel row and hotel panel), marked Not a fit (it swaps out on the spot) or
+  opened in full over the plan with Back to {city}. On smaller screens the card turns over instead (hover on a
   desktop, the Itinerary control on phones). Every card ends in **Make itinerary** and Save: one click saves the
   plan as a trip ("4 days in Seoul") and turns into Open itinerary; a trip tray on the map keeps the
   trip in view. Cards, pins and stops show short place names ("Josun Palace", the full listing name
@@ -347,6 +348,8 @@ src/components/chat/cards/PackageCard.tsx    The package card (on request): vari
 src/server/itineraries.ts + src/app/api/itineraries   Itinerary builder: a day-by-day plan per destination for this traveler
 src/components/chat/cards/ItineraryPlan.tsx  The plan on a destination card and the Make itinerary button
 src/components/chat/cards/ItineraryWorkspace.tsx   The plan in the workspace: day cards with their own maps, Swap, Not a fit
+src/components/chat/cards/PlanParts.tsx      A pick's swap list (ready options, See all), shared by the workspace and the card
+src/lib/plan-picker.ts + src/components/place/UseInPlan.tsx   A place's panel acting on its card's plan (Use as my stay)
 src/components/panel/RightPanel.tsx          Map / discovery column, or the plan workspace when a card is opened
 src/server/reviews.ts + src/app/api/places/[id]/{reviews,checkin}   Traveler reviews, check-ins, proof, travelers like you
 src/components/place/TravelerReviews.tsx     Reviews line and tab on a place's panel (check in, write, read)
