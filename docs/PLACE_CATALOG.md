@@ -98,6 +98,12 @@ displayed and its `google_fetched_at` is older than 30 days (one Details call at
 the surface needs), which is the window the terms give. Our own fields (one-liners, tags, ratings,
 saves) have no expiry. Places pins keep rendering on Google maps with attribution.
 
+> **Correction (2026-09-23):** the 30-day window covers only latitude and longitude (Maps Service
+> Specific Terms §14.3). Place IDs may be kept indefinitely; no other Places content may be cached or
+> stored (Terms §3.2.3(b), Places policies). Storing names, ratings, photos, summaries and reviews as
+> this section describes goes beyond that. See `docs/EVENT_SOURCES.md` section 1 for what is affected
+> and the compliant shape; this needs a decision before more is built on the catalog.
+
 ## 3. What it costs after
 
 Assumes a seeded city with an 80% catalog hit rate, photos shared through the CDN.
