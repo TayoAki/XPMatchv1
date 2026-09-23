@@ -11,6 +11,7 @@ import { daysFromModel, type ModelStop } from "@/lib/itinerary";
 import { useHitlPendingMarker } from "@/lib/hitl-store";
 import { candidateFromPlace } from "@/lib/match";
 import type { PlaceKind } from "@/lib/places/types";
+import { shortPlaceName } from "@/lib/places/names";
 import { PlaceImage } from "@/components/ui/PlaceImage";
 import { Button } from "@/components/ui/Button";
 import { usePlacePin, useRegisterPlaces } from "@/components/map/useRegisterPlaces";
@@ -79,7 +80,7 @@ function ProposalStop({ stop, index, toolCallId, destination }: { stop: StreamSt
           {/* min-w-0 lets the name truncate on phones; the badge keeps its width. */}
           {place ? (
             <button type="button" onClick={pin.open} className="min-w-0 flex-1 truncate text-left text-[13px] font-semibold hover:underline" title={`Show ${place.name} on the map`}>
-              {stop.name}
+              {stop.name ? shortPlaceName(stop.name) : null}
             </button>
           ) : (
             <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">{stop.name}</span>

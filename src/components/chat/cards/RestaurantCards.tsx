@@ -9,6 +9,7 @@ import { CompareToggle } from "./CompareControls";
 import { HiddenPlaceCard, ReactionControl, useReaction } from "@/components/feedback/ReactionControl";
 import { TasteFit } from "@/components/feedback/TasteFit";
 import { MatchLine } from "@/components/recs/MatchLine";
+import { shortPlaceName } from "@/lib/places/names";
 
 export function RestaurantCards({ args, status, toolCallId }: { args: Streaming<ShowRestaurantsArgs>; status: ToolCallStatus; toolCallId: string }) {
   const items = (args.restaurants ?? []).filter((r) => r && r.name);
@@ -65,7 +66,7 @@ function RestaurantCard({
               <Body>
                 {/* One line: a long name is cut with an ellipsis; the full name is the tooltip and the panel's title. */}
                 <div className="min-w-0 truncate text-[15px] font-semibold" title={r.name}>
-                  {r.name}
+                  {r.name ? shortPlaceName(r.name) : null}
                 </div>
                 {/* Cuisine, area and price, with Compare across from it. */}
                 <div className="flex items-center justify-between gap-2">

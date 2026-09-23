@@ -21,6 +21,7 @@ import type { MapPin as Pin } from "@/components/map/GoogleMap";
 import { GuideCard } from "@/components/guides/GuideCard";
 import { useUiState } from "@/components/providers/UiState";
 import { MatchLine } from "@/components/recs/MatchLine";
+import { shortPlaceName } from "@/lib/places/names";
 
 type Category = "for-you" | "restaurants" | "experiences" | "stays";
 type Tab = Category | "guides";
@@ -95,7 +96,9 @@ function NearbyCard({
       </div>
       <div className="p-4">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="text-[16px] font-semibold leading-snug">{place.name}</h3>
+          <h3 className="min-w-0 truncate text-[16px] font-semibold leading-snug" title={place.name}>
+            {shortPlaceName(place.name)}
+          </h3>
           {place.rating ? (
             <span className="inline-flex shrink-0 items-center gap-1 text-[14px] font-semibold">
               <Star className="h-3.5 w-3.5 fill-current" /> {place.rating.toFixed(1)}

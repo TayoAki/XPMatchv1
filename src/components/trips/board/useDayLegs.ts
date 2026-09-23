@@ -42,8 +42,7 @@ export function useDayLegs(stops: ItineraryStop[], mode: DirectionsMode): Routed
   if (routed && routed.signature === signature) return routed.legs;
   const estimates: RoutedLeg[] = [];
   for (let i = 1; i < points.length; i++) {
-    const est = estimateLeg(points[i - 1], points[i]);
-    estimates.push({ ...est, mode: mode === "walk" ? "walk" : mode === "drive" ? "drive" : est.mode, source: "estimate" });
+    estimates.push({ ...estimateLeg(points[i - 1], points[i], mode === "transit" ? undefined : mode), source: "estimate" });
   }
   return estimates;
 }

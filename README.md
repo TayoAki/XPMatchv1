@@ -36,9 +36,10 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   diversity, a price spread and the day rhythm), in three variants (your match, the second interest
   leading, a pace or budget shift). Every slot has **Swap** with two ready alternates, **Lock**,
   thumbs, Add to trip and Show on the map; chips narrow the whole package (budget a notch either way,
-  pace, walkable from the stay, the profile facts it was built from as toggles); **Turn into a trip**
-  hands the exact places to `create_trip`. Keeps, swaps, locks, thumbs and variant picks are stored
-  (`package_events`) and calibrate the match factors per traveler; admins see keep and trip rates.
+  pace, walkable from the stay, the profile facts it was built from as toggles); **Make itinerary**
+  saves the exact places as a trip laid out over the days in one click. Keeps, swaps, locks, thumbs
+  and variant picks are stored (`package_events`) and calibrate the match factors per traveler;
+  admins see keep and trip rates.
 - **Home picks with a match score** — "For you in Rome" (the next trip, the dreamed-of destination,
   the planner's Where or the home city, switchable) lines up three things to do, three stays and
   three places to eat from Google Places, queried from the deep profile and scored by a deterministic
@@ -50,12 +51,17 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   feedback. Admins see the hit rate. Card sets in chat and the home picks are horizontal rows that
   the thumbs reorder: a thumbs-down slides the card to the end of the row and greys it out, a
   thumbs-up brings it to the front, the same thumb again undoes it.
-- **Destination cards with a city profile** — a photo face (hover on a desktop, tap on a phone) flips
-  to quick facts, "Your match" and Overview / Stays / Activities / Dining tabs of this traveler's
-  scored picks for the city; selecting a card scopes the map to that city ("Explore Rome") behind one
-  All / Stays / Dining / Experiences filter the card's tabs mirror, a row shows that place on the map,
-  and every card ends in Add to trip and Save. A first "Add to trip" creates the trip in one step; a
-  trip tray on the map keeps the trip so far in view.
+- **Every destination card is a complete itinerary** — the server's itinerary builder
+  (`src/server/itineraries.ts`, `POST /api/itineraries`) plans the days from the place catalog for
+  this traveler: the best-matched stay, things to do grouped by area into days by their pace, lunch
+  and dinner near each day's stops (the local food nudged up), times by their day rhythm, a match
+  score per stop and for the plan. The photo face (hover on a desktop, tap on a phone) says "4-day
+  itinerary · stay at Josun Palace" and flips to the plan, "Your match" and Itinerary / Stays /
+  Activities / Dining tabs; selecting a card scopes the map to that city ("Explore Rome") behind one
+  All / Stays / Dining / Experiences filter the card's tabs mirror. Every card ends in **Make
+  itinerary** and Save: one click saves the plan as a trip ("4 days in Seoul") and turns into Open
+  itinerary; a trip tray on the map keeps the trip in view. Cards, pins and stops show short place
+  names ("Josun Palace", the full listing name as the tooltip).
 - **Learns tastes with your say-so** — when you mention a lasting preference in chat, a "Remember
   this?" card offers **Always / For this trip / No thanks** (`remember_preference`, human-in-the-loop).
   "Update my assistant" lists everything learned with delete buttons and a "Learn from our chats"
@@ -325,7 +331,9 @@ src/server/catalog.ts + src/lib/places/names.ts   The place catalog: stored plac
 src/server/seed.ts + src/app/api/admin/seed  List searches that fill a city; the admin Seed city button
 src/server/packages.ts + src/app/api/packages/*   Package builder (variants, alternates, coherence) and the events log
 src/server/package-learning.ts               Calibration from package events and the admin package numbers
-src/components/chat/cards/PackageCard.tsx    The package opener card: variants, swap, lock, narrowing, Turn into a trip
+src/components/chat/cards/PackageCard.tsx    The package opener card: variants, swap, lock, narrowing, Make itinerary
+src/server/itineraries.ts + src/app/api/itineraries   Itinerary builder: a day-by-day plan per destination for this traveler
+src/components/chat/cards/ItineraryPlan.tsx  The plan on a destination card and the Make itinerary button
 src/components/map/PinStrip.tsx              Mini cards under the map, in step with the pins
 src/components/shell/*                       Site header, side rail, planner chips, phone tab bar, concierge launcher, app shell
 src/components/ui/Carousel.tsx, Reveal.tsx   Snap-scrolling rows with arrows; reveal-on-scroll and staggered entrances

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { diceSimilarity, nameTokens, normalizeName, pickCatalogMatch, primaryName } from "@/lib/places/names";
+import { diceSimilarity, nameTokens, normalizeName, pickCatalogMatch, primaryName, shortPlaceName, shortTitle } from "@/lib/places/names";
 
 const c = (id: string, name: string, userRatingCount = 0) => ({ id, nameNorm: normalizeName(name), userRatingCount });
 
@@ -67,5 +67,37 @@ describe("pickCatalogMatch", () => {
   it("prefers the place more people rated when two names tie", () => {
     const twins = [c("a", "Osteria Nuova", 10), c("b", "Osteria Nuova", 500)];
     expect(pickCatalogMatch("Osteria Nuova", twins)?.id).toBe("b");
+  });
+});
+
+describe("shortPlaceName", () => {
+  it("drops the chain and area parts after the name", () => {
+    expect(shortPlaceName("Josun Palace, a Luxury Collection Hotel, Seoul Gangnam")).toBe("Josun Palace");
+    expect(shortPlaceName("Hotel de Russie, a Rocco Forte Hotel")).toBe("Hotel de Russie");
+    expect(shortPlaceName("Andaz Seoul Gangnam, by Hyatt")).toBe("Andaz Seoul Gangnam");
+    expect(shortPlaceName("Grand Hotel Palace - an IHG Hotel")).toBe("Grand Hotel Palace");
+    expect(shortPlaceName("Hotel Nine Tree by Hilton")).toBe("Hotel Nine Tree");
+  });
+
+  it("title-cases a name written in capitals and drops a name in brackets", () => {
+    expect(shortPlaceName("HOTEL THE MITSUI KYOTO, a Luxury Collection Hotel & Spa")).toBe("Hotel The Mitsui Kyoto");
+    expect(shortPlaceName("N SEOUL TOWER")).toBe("N Seoul Tower");
+    expect(shortPlaceName("Myeongdong Kyoja (명동교자)")).toBe("Myeongdong Kyoja");
+    expect(shortPlaceName("Halal Korean Restaurant (Home Cooked Meal Gim Soensaeng")).toBe("Halal Korean Restaurant");
+  });
+
+  it("leaves ordinary names alone", () => {
+    for (const name of ["Four Seasons Hotel Seoul", "Roscioli Salumeria con Cucina", "Ritz-Carlton Kyoto", "Four Points by Sheraton Josun", "Lotte World Tower & Mall", "W"]) {
+      expect(shortPlaceName(name)).toBe(name);
+    }
+  });
+});
+
+describe("shortTitle", () => {
+  it("shortens a trip title only when it is the place's listing name", () => {
+    const place = { name: "Josun Palace, a Luxury Collection Hotel, Seoul Gangnam" };
+    expect(shortTitle(place.name, place)).toBe("Josun Palace");
+    expect(shortTitle("Check in - Josun Palace", place)).toBe("Check in - Josun Palace");
+    expect(shortTitle("Dinner - Roscioli, Rome", null)).toBe("Dinner - Roscioli, Rome");
   });
 });

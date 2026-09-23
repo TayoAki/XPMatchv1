@@ -12,6 +12,7 @@ import { MapFilters } from "./MapFilters";
 import { PinStrip } from "./PinStrip";
 import { PlaceDetailSheet } from "./PlaceDetailSheet";
 import { iconSvg } from "./markerIcons";
+import { shortPlaceName } from "@/lib/places/names";
 
 /**
  * Phones have no side column, so the map lives in a sheet over the chat: a "Map · N pinned" pill
@@ -95,7 +96,7 @@ export function MobileMapSheet() {
                       <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-surface text-neutral-500" dangerouslySetInnerHTML={{ __html: iconSvg(p.kind, 18) }} />
                     )}
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[14px] font-semibold">{p.name}</span>
+                      <span className="block truncate text-[14px] font-semibold">{shortPlaceName(p.name)}</span>
                       <span className="flex items-center gap-1 truncate text-[12px] text-muted">
                         {p.rating ? <Star className="h-3 w-3 fill-current text-foreground" /> : null}
                         {meta.join(" · ")}

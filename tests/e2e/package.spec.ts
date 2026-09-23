@@ -63,10 +63,17 @@ test("package: one personalized card with variants, swaps, locks, narrowing and 
     await page.getByTestId("place-sheet").getByRole("button", { name: "Close", exact: true }).click();
   });
 
-  await test.step("turn the package into a trip", async () => {
+  await test.step("Make itinerary saves the package as a trip with its days, in one click", async () => {
     const card = page.getByTestId("package-card");
-    await card.getByRole("button", { name: "Turn into a trip" }).click();
-    await expect(page.getByText(/Turn this package into a trip/).first()).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByTestId("trip-proposal")).toBeVisible({ timeout: 40_000 });
+    const names = await card.getByTestId("package-item").locator("h4").evaluateAll((els) => els.map((el) => el.getAttribute("title") ?? ""));
+    await card.getByRole("button", { name: /^Make .+ itinerary$/ }).click();
+    const open = card.getByRole("link", { name: /^Open .+ itinerary$/ });
+    await expect(open).toBeVisible({ timeout: 30_000 });
+    const tripId = (await open.getAttribute("href"))?.split("/trips/")[1] ?? "";
+    const trip = (await (await page.request.get(`/api/trips/${tripId}`)).json()) as { itinerary: { stops: { place?: { name: string } }[] }[] };
+    const planned = trip.itinerary.flatMap((d) => d.stops.map((s) => s.place?.name ?? ""));
+    // Exactly the package's places: the stay, the things to do and the places to eat it holds.
+    expect(new Set(planned)).toEqual(new Set(names));
+    await expect(page.getByTestId("trip-proposal")).toHaveCount(0);
   });
 });

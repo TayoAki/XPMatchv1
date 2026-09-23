@@ -7,6 +7,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { ArrowDown, ArrowUp, Bed, ChevronDown, Clock, GripVertical, Landmark, MapPin, Pencil, Star, StickyNote, Utensils } from "lucide-react";
 import type { ItineraryStop } from "@/lib/types";
 import { stopPinKey } from "@/lib/itinerary";
+import { shortTitle } from "@/lib/places/names";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { Button } from "@/components/ui/Button";
 import { TextArea, TextInput } from "@/components/ui/Field";
@@ -138,8 +139,8 @@ export function StopCard({ stop, index, color, dayIndex, dayCount, canEdit, hove
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0 flex-1 basis-[150px]">
             {place ? (
-              <button type="button" onClick={() => onSelectPlace(key)} className="block max-w-full truncate text-left text-[15px] font-semibold hover:underline">
-                {stop.title}
+              <button type="button" onClick={() => onSelectPlace(key)} className="block max-w-full truncate text-left text-[15px] font-semibold hover:underline" title={stop.title}>
+                {shortTitle(stop.title, place)}
               </button>
             ) : (
               <div className="truncate text-[15px] font-semibold">{stop.title}</div>

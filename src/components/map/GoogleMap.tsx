@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { ResolvedPlace } from "@/lib/places/types";
 import { googleMapsBrowserKey, googleMapsMapId, loadGoogleMaps, onGoogleMapsAuthFailure } from "./googleMapsLoader";
+import { shortPlaceName } from "@/lib/places/names";
 import { buildMarkerElement, iconSvg, setMarkerState } from "./markerIcons";
 
 export type MapStatus = "loading" | "ready" | "error";
@@ -64,7 +65,7 @@ function syncMarkers(
     if (!handle) {
       const element = buildMarkerElement(item.place.kind, item.place.name, {
         focus: item.focus,
-        label: labels && !item.focus && !item.place.badge ? item.place.name : undefined,
+        label: labels && !item.focus && !item.place.badge ? shortPlaceName(item.place.name) : undefined,
         badge: item.place.badge,
         color: item.place.color,
       });
@@ -347,7 +348,9 @@ function MapFallback({ status, error, focus, pins }: { status: MapStatus; error:
                       ) : (
                         <span className="text-neutral-500" dangerouslySetInnerHTML={{ __html: iconSvg(p.kind, 14) }} />
                       )}
-                      {p.name}
+                      <span className="min-w-0 truncate" title={p.name}>
+                        {shortPlaceName(p.name)}
+                      </span>
                     </li>
                   ))}
                 </ul>

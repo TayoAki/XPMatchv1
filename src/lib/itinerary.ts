@@ -201,6 +201,28 @@ export interface LatLngLike {
   lng: number;
 }
 
+/** The longest itinerary a card builds. */
+export const MAX_ITINERARY_DAYS = 7;
+
+/** Days from a suggested stay ("3–4 nights", "2 days", "a week", "a long weekend"); 3 when it says nothing usable. */
+export function daysFromStay(text: string | undefined): number {
+  const t = (text ?? "").toLowerCase();
+  if (/weekend/.test(t)) return /long/.test(t) ? 3 : 2;
+  const n = t.match(/\d+/);
+  if (/\bweek/.test(t)) return n ? Math.min(MAX_ITINERARY_DAYS, Number(n[0]) * 7) : MAX_ITINERARY_DAYS;
+  if (!n) return 3;
+  return Math.max(1, Math.min(MAX_ITINERARY_DAYS, Number(n[0])));
+}
+
+/** Calendar days from a start and end date ("2026-10-03" to "2026-10-05" is 3); null without both. */
+export function daysBetween(start: string | undefined, end: string | undefined): number | null {
+  if (!start || !end) return null;
+  const a = Date.parse(`${start}T00:00:00Z`);
+  const b = Date.parse(`${end}T00:00:00Z`);
+  if (!Number.isFinite(a) || !Number.isFinite(b) || b < a) return null;
+  return Math.round((b - a) / 86_400_000) + 1;
+}
+
 export function haversineKm(a: LatLngLike, b: LatLngLike): number {
   const toRad = (x: number) => (x * Math.PI) / 180;
   const dLat = toRad(b.lat - a.lat);
@@ -219,13 +241,13 @@ export interface TravelLeg {
 
 /**
  * Travel time estimate between two stops: straight-line distance times a 1.3
- * path factor, walking at 5 km/h up to 2.5 km (about half an hour), otherwise
- * driving at 25 km/h in town. Labeled as an estimate in the UI; routing APIs
- * can replace it later.
+ * path factor, walking at 5 km/h, driving at 25 km/h in town. Without a mode it
+ * walks up to 2.5 km (about half an hour) and drives beyond. Labeled as an
+ * estimate in the UI; the Routes API replaces it when the server has one.
  */
-export function estimateLeg(a: LatLngLike, b: LatLngLike): TravelLeg {
+export function estimateLeg(a: LatLngLike, b: LatLngLike, mode?: TravelLeg["mode"]): TravelLeg {
   const km = haversineKm(a, b) * 1.3;
-  const mode: TravelLeg["mode"] = km <= 2.5 ? "walk" : "drive";
+  mode ??= km <= 2.5 ? "walk" : "drive";
   const speed = mode === "walk" ? 5 : 25;
   const minutes = Math.max(1, Math.round((km / speed) * 60));
   return { km: Math.round(km * 10) / 10, minutes, mode };

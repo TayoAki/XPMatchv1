@@ -10,7 +10,7 @@ Done since the audit: `ADMIN_EMAILS` set (Tayo, Faven); password resets by admin
 app; the home picks race after the quiz; the place catalog (every Google place stored once and
 served from Postgres, lookups answered from remembered queries, 400 lookups a day per account, a
 Seed city button on `/admin`) and the package opener (one personalized card per destination with
-three variants, swap, lock, thumbs, narrowing chips and Turn into a trip, mini cards under the map,
+three variants, swap, lock, thumbs, narrowing chips and Make itinerary, mini cards under the map,
 keeps and swaps calibrating the match score; `docs/PACKAGES_PLAN.md`). Before inviting, seed the
 cities testers are likely to ask for from `/admin` so their first package is answered from the
 catalog.

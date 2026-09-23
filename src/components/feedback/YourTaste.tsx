@@ -3,6 +3,7 @@
 import { Meh, ThumbsDown, ThumbsUp, Trash2 } from "lucide-react";
 import { useTravelStore } from "@/lib/store";
 import { TASTE_DOMAINS, TASTE_DOMAIN_LABEL, VERDICT_LABEL, type FeedbackVerdict } from "@/lib/feedback/types";
+import { shortPlaceName } from "@/lib/places/names";
 
 const VERDICT_ICON: Record<FeedbackVerdict, typeof ThumbsUp> = { loved: ThumbsUp, fine: Meh, disliked: ThumbsDown };
 
@@ -49,7 +50,9 @@ export function YourTaste() {
                 return (
                   <li key={p.placeId} className="flex items-center gap-2 text-[13px]">
                     <Icon className="h-3.5 w-3.5 shrink-0 text-neutral-500" aria-label={VERDICT_LABEL[p.verdict]} />
-                    <span className="min-w-0 flex-1 truncate">{p.name}</span>
+                    <span className="min-w-0 flex-1 truncate" title={p.name}>
+                      {shortPlaceName(p.name)}
+                    </span>
                     {p.category ? <span className="hidden truncate text-[12px] text-muted sm:inline">{p.category}</span> : null}
                     {p.score !== undefined ? <span className="rounded-full bg-surface px-2 py-0.5 text-[12px] font-semibold">{p.score.toFixed(1)}</span> : null}
                   </li>

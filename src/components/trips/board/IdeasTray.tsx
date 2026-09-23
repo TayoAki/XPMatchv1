@@ -8,6 +8,7 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Lightbulb, MapPin, Star } from "lucide-react";
 import type { TripItem } from "@/lib/types";
+import { shortTitle } from "@/lib/places/names";
 import { PlaceImage } from "@/components/ui/PlaceImage";
 import { tripItemKey } from "../TripMap";
 import { IDEAS_CONTAINER, ideaDragId } from "./useItineraryDnd";
@@ -68,7 +69,9 @@ function IdeaCard({
       ) : null}
       <IdeaThumb item={item} destination={destination} />
       <div className="min-w-0 flex-1">
-        <div className="truncate text-[14px] font-semibold">{item.title}</div>
+        <div className="truncate text-[14px] font-semibold" title={item.title}>
+          {shortTitle(item.title, place)}
+        </div>
         <div className="flex flex-wrap items-center gap-x-2 text-[12px] text-muted">
           {place?.rating ? (
             <span className="inline-flex items-center gap-1 font-medium text-foreground">

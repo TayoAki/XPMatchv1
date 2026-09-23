@@ -28,6 +28,7 @@ import type { ItineraryDay, ItineraryStop, TripDetail, TripItem, TripItemKind, T
 import { newStopId, stopPinKey } from "@/lib/itinerary";
 import type { PlaceKind } from "@/lib/places/types";
 import { resolvePlaces } from "@/lib/places/client";
+import { shortTitle } from "@/lib/places/names";
 import { Button } from "@/components/ui/Button";
 import { Field, Select, TextArea, TextInput, Chip } from "@/components/ui/Field";
 import { EmptyState } from "@/components/PageFrame";
@@ -281,7 +282,9 @@ function IdeaRow({
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <div className="truncate text-[15px] font-semibold">{item.title}</div>
+            <div className="truncate text-[15px] font-semibold" title={item.title}>
+              {shortTitle(item.title, place)}
+            </div>
             <div className="flex flex-wrap items-center gap-x-2 text-[13px] text-muted">
               {place?.rating ? (
                 <span className="inline-flex items-center gap-1 font-medium text-foreground">
@@ -387,8 +390,8 @@ function StopSummaryRow({ stop, onSelectPlace }: { stop: ItineraryStop; onSelect
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           {place ? (
-            <button type="button" onClick={() => onSelectPlace(stopPinKey(stop))} className="truncate text-left text-[14px] font-semibold hover:underline">
-              {stop.title}
+            <button type="button" onClick={() => onSelectPlace(stopPinKey(stop))} className="truncate text-left text-[14px] font-semibold hover:underline" title={stop.title}>
+              {shortTitle(stop.title, place)}
             </button>
           ) : (
             <span className="truncate text-[14px] font-semibold">{stop.title}</span>

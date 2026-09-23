@@ -9,6 +9,7 @@ import { mapActions, useMapView } from "@/lib/map-store";
 import { useCardThreadId, usePlacePin, useRegisterPlaces } from "@/components/map/useRegisterPlaces";
 import { useSendMessage } from "@/components/chat/useSendMessage";
 import { AddToTripButton, CardShell, SaveButton, SectionHeader, usd } from "./shared";
+import { shortPlaceName } from "@/lib/places/names";
 
 type StreamingOption = Streaming<CompareOptionArg>;
 
@@ -169,7 +170,9 @@ function ColumnHeader({
       onMouseEnter={() => key && mapActions.setHovered(key)}
       onMouseLeave={() => mapActions.setHovered(null)}
     >
-      <div className="text-[15px] font-semibold">{option.name}</div>
+      <div className="truncate text-[15px] font-semibold" title={option.name}>
+        {option.name ? shortPlaceName(option.name) : null}
+      </div>
       {option.area ? <div className="text-[12px] font-normal text-muted">{option.area}</div> : null}
       <div className="mt-2 flex flex-wrap items-center gap-1.5 font-normal">
         {place ? (

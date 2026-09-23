@@ -29,6 +29,36 @@ export function primaryName(query: string): string {
   return query.split(",")[0].trim();
 }
 
+/** Brand endings that follow the name without a comma ("Andaz Seoul Gangnam by Hyatt"). */
+const BRAND_TAIL = /\s+by\s+(marriott|hilton|hyatt|ihg|wyndham|accor|radisson|best western)$/i;
+
+function titleCase(word: string): string {
+  return word.length <= 2 ? word : word.charAt(0) + word.slice(1).toLowerCase();
+}
+
+/**
+ * The name a card shows: Google's listing name without the chain and area parts that follow it.
+ * "Josun Palace, a Luxury Collection Hotel, Seoul Gangnam" → "Josun Palace";
+ * "HOTEL THE MITSUI KYOTO, a Luxury Collection Hotel & Spa" → "Hotel The Mitsui Kyoto";
+ * "Myeongdong Kyoja (명동교자)" → "Myeongdong Kyoja". The full name stays on the place itself.
+ */
+export function shortPlaceName(name: string): string {
+  const full = name.replace(/\s+/g, " ").trim();
+  if (!full) return full;
+  // Bracketed parts go, and a bracket Google left open takes the rest of the name with it.
+  let short = full.replace(/\s*[(（][^)）]*[)）]/g, "").replace(/\s*[(（].*$/, "").trim() || full;
+  const first = short.split(/,\s+|\s+[-–—|·]\s+/)[0].trim();
+  if (first.length >= 3) short = first;
+  short = short.replace(BRAND_TAIL, "").trim() || short;
+  if (/[A-Z]/.test(short) && !/[a-z]/.test(short)) short = short.split(" ").map(titleCase).join(" ");
+  return short;
+}
+
+/** A trip stop or idea's title to show: the short name when it is just the place's listing name, else what the traveler wrote. */
+export function shortTitle(title: string, place?: { name: string } | null): string {
+  return place && title === place.name ? shortPlaceName(title) : title;
+}
+
 export function nameTokens(normalized: string): string[] {
   return normalized.split(" ").filter(Boolean);
 }

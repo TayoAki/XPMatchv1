@@ -6,6 +6,7 @@ import clsx from "clsx";
 import { Star } from "lucide-react";
 import type { MapPlace } from "@/lib/places/types";
 import { iconSvg } from "./markerIcons";
+import { shortPlaceName } from "@/lib/places/names";
 
 const KIND_LABEL: Record<MapPlace["kind"], string> = { hotel: "Stay", restaurant: "Eat", attraction: "Do", destination: "Place" };
 
@@ -69,7 +70,9 @@ export function PinStrip({
                 <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-surface text-neutral-500" dangerouslySetInnerHTML={{ __html: iconSvg(p.kind, 18) }} />
               )}
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-[12px] font-semibold leading-tight">{p.name}</span>
+                <span className="block truncate text-[12px] font-semibold leading-tight" title={p.name}>
+                  {shortPlaceName(p.name)}
+                </span>
                 <span className="mt-0.5 flex items-center gap-1 truncate text-[11px] text-muted">
                   <span className="rounded-full bg-surface px-1.5 font-medium text-neutral-700">{KIND_LABEL[p.kind]}</span>
                   {p.rating ? (

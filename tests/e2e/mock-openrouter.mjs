@@ -296,7 +296,7 @@ const server = http.createServer((req, res) => {
         return streamReply(res, { text: "Three places in Korea that fit you.", toolCall: { name: "show_destinations", args: KOREA } });
       }
       if (toolName === "show_destinations" && /korea/.test(text)) {
-        return streamReply(res, { text: "Assuming about a week for two with flexible dates. Pick a city and I'll plan the days around it." });
+        return streamReply(res, { text: "Assuming about a week for two with flexible dates. Each card is a full plan built for you; tap Make itinerary to save one." });
       }
       if (toolName === "set_search_constraints" && tools.includes("show_hotels")) {
         return streamReply(res, { text: "Here are two stays that fit.", toolCall: { name: "show_hotels", args: HOTELS } });

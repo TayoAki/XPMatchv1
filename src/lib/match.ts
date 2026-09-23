@@ -157,7 +157,7 @@ export function calibrationFrom(recFeedback: RecFeedback[] | undefined): Partial
   return out;
 }
 
-function labelFor(score: number): MatchLabel {
+export function labelFor(score: number): MatchLabel {
   if (score >= 80) return "Great match";
   if (score >= 65) return "Good match";
   if (score >= 50) return "Worth a look";

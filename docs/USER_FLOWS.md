@@ -145,8 +145,10 @@ scheduling chip open the itinerary board as a full-height sheet (short map, then
    **Add to trip**, Save and **Show on the map**. Chips under the set narrow the whole package
    (**Easier on the budget** / **A notch up**, **Relaxed** / **Balanced** / **Packed**, **Walkable
    from the stay**) and the "Built from" facts are toggles (leave Museums out and the things to do
-   re-pick). **Turn into a trip** sends the exact places to the assistant, which proposes the trip
-   with `create_trip`. The package's places are the map's pins for that message; a swap or rebuild
+   re-pick). **Make itinerary** saves the package as a trip in one click: the itinerary builder
+   (below) lays exactly these places over the days (the stay first on day 1, a dinner each day),
+   the trip joins the chat's trip tray and the button becomes **Open itinerary**. The package's places
+   are the map's pins for that message; a swap or rebuild
    replaces them. The follow-up card tools (hotels, restaurants, things to do) stay for "more
    hotels" or "swap the dinner" requests. A city the catalog has never seen is seeded first (a few
    list searches), so the first traveler there pays cents and the next ones nothing.
@@ -154,8 +156,12 @@ scheduling chip open the itinerary board as a full-height sheet (short map, then
    things to do, each set as one **row** that scrolls sideways (snapping card by card, arrows on
    pointer devices, a swipe on phones) rather than a grid to scroll down through. A hotel, restaurant
    or attraction card runs twice as wide from tablet width up, with the photo as a column on the left
-   so the details fit on a few lines (on phones the photo sits on top and the row swipes); a long name
-   is cut to one line with an ellipsis, and the full name is its tooltip and the panel's title. The
+   so the details fit on a few lines (on phones the photo sits on top and the row swipes). Cards,
+   rows, map pins and trip stops show a place's **short name**: Google's listing name without the chain
+   and area parts ("Josun Palace", not "Josun Palace, a Luxury Collection Hotel, Seoul Gangnam"), a
+   name in capitals title-cased and a bracketed translation dropped; anything still too long is cut to
+   one line with an ellipsis, and the full name is its tooltip and the panel's title. A stop title the
+   traveler typed is shown as written. The
    card keeps to one main action, **Add to trip**, with **Rate** in its bottom-right corner,
    **Compare** across from the category line and the **Save** heart on the photo; tapping the photo
    opens the place panel, whose **Rate**, **Save** and **Add to trip** sit in a bar at its very bottom
@@ -180,21 +186,40 @@ scheduling chip open the itinerary board as a full-height sheet (short map, then
    Judgments are stored per place, lower the score of a pick the traveler already passed on, dampen
    factors that keep misleading them (calibration), and reach the assistant as "Recommendation
    feedback" so it never re-recommends a recent miss and corrects for repeated reasons.
-   **Destination cards** are two-faced: the photo face (city name, region, a one-line tagline, the
-   match badge and thumbs, "Curated for you" when the pick is tied to the profile) flips to the **city
-   profile**: quick facts (suggested stay, city feel, known for, best season), "Your match" with the
-   strongest reason, and Overview / Stays / Activities / Dining tabs listing this traveler's scored
-   picks for the city (three rows, then Show all; the profile scrolls inside the card). On a desktop
-   the profile appears after a moment's hover and hides again on leaving, unless a click, a tab, a
-   row or keyboard focus pinned it; on a phone the **City profile** and **Photo** controls flip it.
-   Selecting a card (its photo, name or City profile) makes it the active city: the map header reads
+   **Destination cards** are each a complete itinerary built for this traveler. The photo face (city
+   name, region, a one-line tagline, the plan in a line such as "4-day itinerary · stay at Josun
+   Palace", the plan's match badge and thumbs, "Curated for you" when the pick is tied to the profile)
+   flips to **Built for you**: "Your match" with the reasons most of the plan shares, why the city
+   fits, Itinerary / Stays / Activities / Dining tabs, then quick facts (suggested stay, city feel,
+   known for, best season); the back scrolls inside the card. The **Itinerary** tab is the plan: where
+   they'll stay, then Day 1…N, each stop with its time, photo, short name, category, a one-line why and
+   its match score, lunch and dinner near that day's stops. The other tabs list this traveler's scored
+   picks for the city (three rows, then Show all). On a desktop the back appears after a moment's hover
+   and hides again on leaving, unless a click, a tab, a row or keyboard focus pinned it; on a phone the
+   **Itinerary** and **Photo** controls flip it.
+   The **itinerary builder** (`POST /api/itineraries`, one lookup from the daily budget, built when the
+   card scrolls into view and kept for the session) works from the place catalog, seeding a city it
+   has never seen. It scores every stay, thing to do and place to eat with the match model (profile,
+   taste, learned preferences, feedback), picks the stay (score, day-rhythm fit, central), spreads the
+   things to do over the days by area (as many a day as their pace allows, the best area first), orders
+   each day as a route from the stay, gives every day a dinner and a lunch when there are enough places
+   to eat (the local food gets a nudge: Korean in Seoul), never repeats a place or another branch of it,
+   and sets times by the day rhythm (early days start 08:30, late ones 10:30). The days are the
+   planner's dates when set, otherwise the card's suggested stay, at most a week; the card's score is
+   the plan's average.
+   Selecting a card (its photo, name or Itinerary) makes it the active city: the map header reads
    "Explore {city}" with its recommended places behind one **All / Stays / Dining / Experiences**
-   filter that the card's tabs mirror; a row shows that exact place on the map and opens its panel
-   (with its own Save and Add to trip); "All places" returns to the whole conversation. Every card
-   ends in the same two actions: **Add to trip** (filled) and **Save** (outlined). A traveler with no
-   trip yet gets "Trip to {city}" created and the item added in one step; the trip a conversation adds
-   to is remembered and shown as a small tray on the map (title, nights or "Dates flexible", travelers,
-   View trip).
+   filter that the card's tabs mirror (the Itinerary tab pins the plan's places); a row shows that
+   exact place on the map and opens its panel (with its own Save and Add to trip); "All places" returns
+   to the whole conversation. Every card ends in the same two actions: **Make itinerary** (filled) and
+   **Save** (outlined). Make itinerary saves the plan as a trip, "{n} days in {city}", in one click (no
+   picker, no extra lookups): the stay first on day 1, every stop with its place, time and note, the
+   planner's dates and travelers when set; the trip becomes the conversation's trip and the button
+   turns into **Open itinerary**. A city the catalog cannot fill yet says "Not enough places here yet to
+   plan the days", and Make itinerary asks the concierge for the days instead. Hotel, restaurant and
+   attraction cards keep **Add to trip** for a single place: a traveler with no trip yet gets "Trip to
+   {city}" created and the item added in one step. The trip a conversation adds to is remembered and
+   shown as a small tray on the map (title, nights or "Dates flexible", travelers, View trip).
 4. **Understood as (smart filters)** — when the request carries criteria ("a quiet hotel under $250 a night
    with a pool and good vibes"), the assistant first shows a chip strip: dark chips are must-haves, light
    ones preferences, and "Not applied: 'good vibes'" lists what could not be mapped. Removing a chip, adding

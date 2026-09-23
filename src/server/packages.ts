@@ -76,11 +76,11 @@ const KINDS: PackageSlotKind[] = ["hotel", "attraction", "restaurant"];
 /** Below this many stored places of a kind, the city gets seeded before building. */
 const MIN_POOL = 12;
 const BUDGETS: BudgetTier[] = ["budget", "mid-range", "premium", "luxury"];
-const WALK_TOLERANCE_KM: Record<TravelerProfile["walking"], number> = { lots: 3, moderate: 2, little: 1 };
+export const WALK_TOLERANCE_KM: Record<TravelerProfile["walking"], number> = { lots: 3, moderate: 2, little: 1 };
 const MORNING = /\b(cafe|café|coffee|bakery|market|viewpoint|park|garden|museum|gallery|breakfast|brunch)\b/i;
 const EVENING = /\b(bar|nightlife|cocktail|wine|jazz|club|pub|lounge|late)\b/i;
 
-interface Scored {
+export interface Scored {
   place: ResolvedPlace;
   match: MatchResult;
 }
@@ -97,7 +97,7 @@ interface VariantSpec {
   radiusKm?: number;
 }
 
-function thingsFor(pace: Pace): number {
+export function thingsFor(pace: Pace): number {
   return pace === "relaxed" ? 2 : pace === "packed" ? 4 : 3;
 }
 
@@ -152,7 +152,7 @@ async function seedKind(destination: ResolvedPlace, kind: PackageSlotKind, profi
   );
 }
 
-async function loadPools(destination: ResolvedPlace, profile: TravelerProfile): Promise<Record<PackageSlotKind, ResolvedPlace[]>> {
+export async function loadPools(destination: ResolvedPlace, profile: TravelerProfile): Promise<Record<PackageSlotKind, ResolvedPlace[]>> {
   const read = async (kind: PackageSlotKind) => (await catalogPool(destination, kind)).map((hit) => ({ ...hit.place, kind }));
   const pools = {} as Record<PackageSlotKind, ResolvedPlace[]>;
   for (const kind of KINDS) pools[kind] = await read(kind);
@@ -172,7 +172,7 @@ function passesFloor(place: ResolvedPlace, profile: TravelerProfile): boolean {
   return place.rating >= 4.0 && ((place.userRatingCount ?? 0) >= 50 || lenient);
 }
 
-function scorePool(pool: ResolvedPlace[], inputs: MatchInputs, excluded: Set<string>, categoriesOff: string[]): Scored[] {
+export function scorePool(pool: ResolvedPlace[], inputs: MatchInputs, excluded: Set<string>, categoriesOff: string[]): Scored[] {
   const off = categoriesOff.map((c) => c.toLowerCase());
   const kept = pool.filter((p) => !excluded.has(p.id) && !off.some((c) => lower(p.category).includes(c)));
   const scored = kept.map((place) => ({ place, match: scoreMatch(candidateFromPlace(place), inputs) }));
@@ -190,7 +190,7 @@ function coherence(anchor: LatLng | null, place: ResolvedPlace, tolerance: numbe
   return Math.max(-15, -3 * (km - tolerance));
 }
 
-function timeFit(profile: TravelerProfile, place: ResolvedPlace): number {
+export function timeFit(profile: TravelerProfile, place: ResolvedPlace): number {
   const text = placeText(place);
   if (profile.dayRhythm === "early" && MORNING.test(text)) return 3;
   if (profile.dayRhythm === "late" && EVENING.test(text)) return 3;

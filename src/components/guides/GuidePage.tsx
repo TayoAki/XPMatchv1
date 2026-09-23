@@ -10,6 +10,7 @@ import { api, ApiError } from "@/lib/api";
 import type { GuideDetail, GuideItem } from "@/lib/types";
 import { findSaved, useTravelStore } from "@/lib/store";
 import { useMediaQuery } from "@/lib/use-media-query";
+import { shortPlaceName } from "@/lib/places/names";
 import { EmptyState } from "@/components/PageFrame";
 import { Button } from "@/components/ui/Button";
 import { PlaceImage } from "@/components/ui/PlaceImage";
@@ -46,7 +47,9 @@ function PlaceRow({ item, index, destination, onShow }: { item: GuideItem; index
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <div className="truncate text-[17px] font-semibold">{place.name}</div>
+            <div className="truncate text-[17px] font-semibold" title={place.name}>
+              {shortPlaceName(place.name)}
+            </div>
             <div className="flex flex-wrap items-center gap-x-2 text-[13px] text-muted">
               {place.rating ? (
                 <span className="inline-flex items-center gap-1 font-medium text-foreground">

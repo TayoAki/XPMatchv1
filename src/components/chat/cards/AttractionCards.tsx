@@ -10,6 +10,7 @@ import { CompareToggle } from "./CompareControls";
 import { HiddenPlaceCard, ReactionControl, useReaction } from "@/components/feedback/ReactionControl";
 import { TasteFit } from "@/components/feedback/TasteFit";
 import { MatchLine } from "@/components/recs/MatchLine";
+import { shortPlaceName } from "@/lib/places/names";
 
 export function AttractionCards({ args, status, toolCallId }: { args: Streaming<ShowAttractionsArgs>; status: ToolCallStatus; toolCallId: string }) {
   const items = (args.attractions ?? []).filter((a) => a && a.name);
@@ -67,7 +68,7 @@ function AttractionCard({
               <Body>
                 {/* One line: a long name is cut with an ellipsis; the full name is the tooltip and the panel's title. */}
                 <div className="min-w-0 truncate text-[15px] font-semibold" title={a.name}>
-                  {a.name}
+                  {a.name ? shortPlaceName(a.name) : null}
                 </div>
                 {/* The area, with Compare across from it. */}
                 <div className="flex items-center justify-between gap-2">

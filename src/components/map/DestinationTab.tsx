@@ -9,6 +9,7 @@ import type { MapPlace, PlaceKind, ResolvedPlace } from "@/lib/places/types";
 import { findSaved, useTravelStore, type TravelerProfile } from "@/lib/store";
 import { mapActions, useMapView } from "@/lib/map-store";
 import { googleMapsSearchUrl } from "@/lib/travel/links";
+import { shortPlaceName } from "@/lib/places/names";
 import { PlaceImage } from "@/components/ui/PlaceImage";
 import { useSendMessage } from "@/components/chat/useSendMessage";
 import { useUiState } from "@/components/providers/UiState";
@@ -80,7 +81,9 @@ function Row({ place, destination, onOpen }: { place: ResolvedPlace; destination
     <>
       <Thumb place={place} fallback={destination} />
       <div className="min-w-0 flex-1">
-        <div className="truncate text-[15px] font-semibold">{place.name}</div>
+        <div className="truncate text-[15px] font-semibold" title={place.name}>
+          {shortPlaceName(place.name)}
+        </div>
         <div className="flex flex-wrap items-center gap-x-2 text-[13px] text-muted">
           {place.rating ? (
             <span className="inline-flex items-center gap-1 font-medium text-foreground">

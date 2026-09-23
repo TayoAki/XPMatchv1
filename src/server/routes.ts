@@ -63,8 +63,8 @@ export function parseRoutesResponse(data: RoutesResponse, expectedLegs: number, 
 function estimates(points: LatLngLike[], mode: TravelMode): RouteLeg[] {
   const legs: RouteLeg[] = [];
   for (let i = 1; i < points.length; i++) {
-    const est = estimateLeg(points[i - 1], points[i]);
-    legs.push({ ...est, mode: mode === "walk" ? "walk" : mode === "drive" ? "drive" : est.mode, source: "estimate" });
+    // Walk and drive are timed at their own speed; transit gets the walk-or-drive guess.
+    legs.push({ ...estimateLeg(points[i - 1], points[i], mode === "transit" ? undefined : mode), source: "estimate" });
   }
   return legs;
 }

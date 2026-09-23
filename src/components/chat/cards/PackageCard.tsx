@@ -13,11 +13,13 @@ import { CUISINES, INTERESTS, STAY_TYPES } from "@/lib/profile/options";
 import { useTravelStore } from "@/lib/store";
 import type { ShowPackageArgs, Streaming } from "@/lib/travel/schemas";
 import type { PackageConstraints, PackageItem, PackagePick, PackageResult, PackageVariantKey } from "@/server/packages";
-import { useSendMessage } from "@/components/chat/useSendMessage";
 import { useCardThreadId } from "@/components/map/useRegisterPlaces";
 import { useUiState } from "@/components/providers/UiState";
 import { MatchBadge } from "@/components/recs/MatchBadge";
 import { CardGrid, CardPhoto, SaveButton, SectionHeader } from "./shared";
+import { MakeItineraryButton } from "./ItineraryPlan";
+import { loadItineraryDraft } from "@/lib/recs/itinerary-draft";
+import { shortPlaceName } from "@/lib/places/names";
 
 const KIND_LABEL: Record<PackageItem["kind"], string> = { hotel: "Stay", attraction: "Things to do", restaurant: "Eat" };
 type Pace = NonNullable<PackageConstraints["pace"]>;
@@ -89,7 +91,6 @@ export function PackageCard({ args, status, toolCallId }: { args: Streaming<Show
   const threadId = useCardThreadId();
   const { profile, taste, preferences, recFeedback, packageCalibration, recordRecFeedback, hydrated } = useTravelStore();
   const { openAddToTrip } = useUiState();
-  const send = useSendMessage();
 
   const [data, setData] = useState<PackageResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -235,17 +236,29 @@ export function PackageCard({ args, status, toolCallId }: { args: Streaming<Show
     logEvent({ action: "open", slot: item.slot, fromPlaceId: item.place.id });
   };
 
-  const toTrip = () => {
-    if (!data || !variant) return;
+  /** The concierge's way, when the package cannot be planned here: the exact places, as a message. */
+  const packagePrompt = () => {
+    if (!data || !variant) return "";
     const stay = variant.items.find((i) => i.kind === "hotel");
     const things = variant.items.filter((i) => i.kind === "attraction").map((i) => i.place.name);
     const eats = variant.items.filter((i) => i.kind === "restaurant").map((i) => i.place.name);
+    return `Turn this package into a trip to ${data.destination.name}: ${stay ? `stay at ${stay.place.name}; ` : ""}things to do: ${things.join(", ")}; places to eat: ${eats.join(", ")}. Keep these exact places and build a day-by-day itinerary around them.`;
+  };
+
+  /** The package's own places planned into days: enough days for every thing to do and every meal (lunch and dinner a day). */
+  const packageDraft = () => {
+    if (!data || !variant) return Promise.resolve(null);
+    const things = variant.items.filter((i) => i.kind === "attraction").length;
+    const eats = variant.items.filter((i) => i.kind === "restaurant").length;
+    const days = Math.max(things > 3 ? 2 : 1, Math.ceil(eats / 2));
+    return loadItineraryDraft(destinationQuery || data.destination.name, days, { only: variant.items.map((i) => i.place.id) });
+  };
+
+  const onSavedAsTrip = () => {
+    if (!variant) return;
     logEvent({ action: "to_trip" });
     // Every place carried into the trip counts as kept, with the factors that put it there.
     for (const item of variant.items) logEvent({ action: "keep", slot: item.slot, fromPlaceId: item.place.id, factors: (live.get(item.slot) ?? item.match).factors });
-    void send(
-      `Turn this package into a trip to ${data.destination.name}: ${stay ? `stay at ${stay.place.name}; ` : ""}things to do: ${things.join(", ")}; places to eat: ${eats.join(", ")}. Keep these exact places and build a day-by-day itinerary around them.`,
-    );
   };
 
   const destinationName = data?.destination.name ?? destinationQuery;
@@ -335,8 +348,8 @@ export function PackageCard({ args, status, toolCallId }: { args: Streaming<Show
                   <MatchBadge match={match} size="sm" className="absolute bottom-2 left-2" />
                 </CardPhoto>
                 <div className="flex flex-1 flex-col gap-1 p-3">
-                  <h4 className="line-clamp-2 text-[14px] font-semibold" title={p.name}>
-                    {p.name}
+                  <h4 className="truncate text-[14px] font-semibold" title={p.name}>
+                    {shortPlaceName(p.name)}
                   </h4>
                   <div className="flex flex-wrap items-center gap-x-2 text-[12px] text-muted">
                     {p.rating ? (
@@ -436,13 +449,14 @@ export function PackageCard({ args, status, toolCallId }: { args: Streaming<Show
 
       {data && variant && variant.items.length ? (
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={toTrip}
-            className="inline-flex h-9 items-center gap-1.5 rounded-full bg-brand px-4 text-[13px] font-semibold text-white hover:bg-brand-hover pointer-coarse:h-11"
-          >
-            <Route className="h-4 w-4" /> Turn into a trip
-          </button>
+          <MakeItineraryButton
+            name={data.destination.name}
+            label={destinationQuery || data.destination.name}
+            getDraft={packageDraft}
+            fallbackPrompt={packagePrompt()}
+            onSaved={onSavedAsTrip}
+            className="inline-flex h-9 items-center gap-1.5 rounded-full bg-brand px-4 text-[13px] font-semibold text-white hover:bg-brand-hover disabled:cursor-wait disabled:opacity-70 pointer-coarse:h-11"
+          />
           <span className="text-[12px] text-muted">
             {variant.items.length} places · {data.poolSize.hotel + data.poolSize.attraction + data.poolSize.restaurant} in the catalog for {destinationName}
           </span>

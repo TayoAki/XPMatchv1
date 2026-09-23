@@ -8,6 +8,7 @@ import type { ImportRecord } from "@/lib/import/types";
 import type { GuideDetail } from "@/lib/types";
 import { api } from "@/lib/api";
 import { mapActions } from "@/lib/map-store";
+import { shortPlaceName } from "@/lib/places/names";
 import { useCardThreadId } from "@/components/map/useRegisterPlaces";
 import { useUiState } from "@/components/providers/UiState";
 import { useSendMessage } from "@/components/chat/useSendMessage";
@@ -121,7 +122,9 @@ export function ImportedPlacesCards({ record, pinOnMap = true }: { record: Impor
                 <Photo src={p.place.photos[0]} alt={p.place.name} fallback={[p.place.name, record.destination ?? ""]} credit={photoCreditTitle(p.place.photoCredits?.[0])} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
-                    <div className="text-[15px] font-semibold">{p.place.name}</div>
+                    <div className="text-[15px] font-semibold" title={p.place.name}>
+                      {shortPlaceName(p.place.name)}
+                    </div>
                     <SaveButton place={p.place} kind={p.kind} title={p.place.name} subtitle={p.place.locality} destination={record.destination} url={p.place.googleMapsUri} className="bg-surface shadow-none" />
                   </div>
                   <div className="flex flex-wrap items-center gap-x-2 text-[13px] text-muted">

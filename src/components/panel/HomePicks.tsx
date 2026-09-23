@@ -20,6 +20,7 @@ import { TextInput } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { MatchBadge } from "@/components/recs/MatchBadge";
 import { RecThumbs } from "@/components/recs/RecThumbs";
+import { shortPlaceName } from "@/lib/places/names";
 
 interface HomeRowData {
   key: "things" | "stays" | "eat";
@@ -108,8 +109,8 @@ function PickCard({ place, match, destination, context, topPick, verdict, classN
         </div>
       </div>
       <div className="flex flex-1 flex-col gap-1.5 p-3">
-        <h3 className="line-clamp-2 text-[14px] font-semibold leading-snug" title={place.name}>
-          {place.name}
+        <h3 className="truncate text-[14px] font-semibold leading-snug" title={place.name}>
+          {shortPlaceName(place.name)}
         </h3>
         <div className="flex flex-wrap items-center gap-x-2 text-[12px] text-muted">
           {place.rating ? (

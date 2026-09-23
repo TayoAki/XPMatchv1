@@ -148,7 +148,7 @@ document tool for every client**.
 | **Advisor** | Independent travel advisors | $49/seat/month ($39 annual) | Client links, client list, white-label proposal export, everything in Plus for each client | First client proposal free; cancel anytime | ≈ $4/seat incl. clients | ≈ 90% |
 
 **Why this ladder.** Trip Pass is the low-friction first purchase at the exact moment of intent
-("Turn into a trip"). Plus is where the recurring revenue and the retention question live. Concierge is
+("Make itinerary"). Plus is where the recurring revenue and the retention question live. Concierge is
 the "sell the service first" engine: it validates willingness to pay in week one, funds the early months,
 produces case studies, and every concierge trip is built inside the app, so it also stress-tests the
 product. Advisor is the multiplier: one seat brings 20–50 travelers a year onto the platform and is the
@@ -232,7 +232,7 @@ proposals and call notes and never sends one-to-one outreach under its own name.
 
 | Offer | Motion | Where the sale happens |
 | --- | --- | --- |
-| Trip Pass, Plus | Product-led: paywall at "Turn into a trip", second package, import, members | In the app (Stripe checkout) |
+| Trip Pass, Plus | Product-led: paywall at "Make itinerary", second package, import, members | In the app (Stripe checkout) |
 | Concierge | Founder-led: order form on the site, a 20-minute call, delivery in 48 hours | Landing page + calendar link + Stripe payment link |
 | Advisor | Outbound LAPS engine + free first proposal | Cold email, LinkedIn and Instagram DMs, host-agency webinars |
 
@@ -283,7 +283,7 @@ address and a working unsubscribe on every send. Sending domains are never share
 | Item | Effort | Why |
 | --- | --- | --- |
 | Stripe billing: plans, checkout, customer portal, webhooks, entitlements | 3–4 days | No self-serve revenue exists today |
-| Paywall moments: "Turn into a trip", second package in a destination, imports, members | 2 days | Sell at the moment of intent |
+| Paywall moments: "Make itinerary", second package in a destination, imports, members | 2 days | Sell at the moment of intent |
 | Concierge order form, payment link and an admin fulfillment queue | 3 days | Sell the service in week one |
 | Advisor workspace: client list, client link with the advisor's name, proposal export (PDF) | 2–3 weeks | The advisor offer |
 | Pricing page and two landing pages (travelers, advisors) with one CTA each | 2 days | One CTA per page; defer decks and videos until someone asks |
@@ -364,7 +364,7 @@ find it. Everything here serves day zero.
 | Quiz | Six steps on desktop, three questions in chat on phones | Three questions everywhere, the rest inferred over time | Fewer steps before the first package |
 | First package | "For you in <destination>" home picks plus the package opener when a destination is in focus | The package is the first screen after the quiz, for the destination the person named | Already built; make it the landing state |
 | Aha moment | Match score with "Why this score", swap and lock | Same, plus the "your taste" card | Measure time to first swap or lock |
-| First trip | Proposal card → Save → board | "Turn into a trip" from the package | Paywall for Trip Pass here after the first free trip |
+| First trip | Proposal card → Save → board | "Make itinerary" from the package | Paywall for Trip Pass here after the first free trip |
 | Second session | Jump back in, Updates | Pre-trip email and "next trip" nudge | Lifecycle email |
 
 ### 8.2 Activation metrics and targets
@@ -477,7 +477,7 @@ by anchoring the account to the taste profile that improves with use.
    the inspiration score (to build: score Inspiration and "Get inspired" with the match model) → saved
    inspiration imports that wait for dates → seasonal nudges by email.
 4. **Members.** Trips with two or more members retain better in every collaboration product; make
-   inviting a member a step of "Turn into a trip"; members-by-link without an account first.
+   inviting a member a step of "Make itinerary"; members-by-link without an account first.
 5. **Advisor stickiness.** Client history, exports and the advisor's public link accumulate on the seat;
    the second client is the retention moment, so the first-proposal onboarding must lead to it.
 6. **Churn saves.** Cancel flow offers a pause (up to 6 months, keeps the profile) before cancel; a
@@ -501,7 +501,7 @@ by anchoring the account to the taste profile that improves with use.
 | --- | --- |
 | Scored Inspiration and "Get inspired" tiles with "next trip for you" | 2–3 days |
 | Pause-instead-of-cancel in the billing portal | 1 day |
-| Members by link; invite as a step of "Turn into a trip" | 1–2 days |
+| Members by link; invite as a step of "Make itinerary" | 1–2 days |
 | Lifecycle email: pre-trip, post-trip, seasonal, win-back | shared with 7.4 |
 | Profile progress on the home page | 1 day |
 

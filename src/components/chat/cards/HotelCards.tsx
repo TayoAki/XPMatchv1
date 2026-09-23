@@ -10,6 +10,7 @@ import { CompareToggle } from "./CompareControls";
 import { HiddenPlaceCard, ReactionControl, useReaction } from "@/components/feedback/ReactionControl";
 import { TasteFit } from "@/components/feedback/TasteFit";
 import { MatchLine } from "@/components/recs/MatchLine";
+import { shortPlaceName } from "@/lib/places/names";
 
 export function HotelCards({ args, status, toolCallId }: { args: Streaming<ShowHotelsArgs>; status: ToolCallStatus; toolCallId: string }) {
   const items = (args.hotels ?? []).filter((h) => h && h.name);
@@ -85,7 +86,7 @@ function HotelCard({
                 <div className="flex items-start justify-between gap-2">
                   {/* One line: a long name is cut with an ellipsis; the full name is the tooltip and the panel's title. */}
                   <div className="min-w-0 truncate text-[15px] font-semibold" title={h.name}>
-                    {h.name}
+                    {h.name ? shortPlaceName(h.name) : null}
                   </div>
                   <Stars rating={h.rating} />
                 </div>

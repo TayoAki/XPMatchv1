@@ -1,8 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 import { goToChat, sendChat, signup, uniqueEmail } from "./helpers";
 
-/** The two-face destination cards: photo, city profile, recommendation rows on the map, the two actions. */
-test("destination cards: hover and click flip, quick facts, rows on the map, save, add to a new trip", async ({ page }) => {
+/** The two-face destination cards: each a complete itinerary built for the traveler, the city profile, rows on the map, the two actions. */
+test("destination cards: an itinerary per city, hover and click flip, quick facts, rows on the map, save, make itinerary", async ({ page }) => {
   await signup(page, { email: uniqueEmail("dest"), cuisines: ["Italian"] });
   await goToChat(page);
   await sendChat(page, "Where should we go this fall?");
@@ -15,12 +15,13 @@ test("destination cards: hover and click flip, quick facts, rows on the map, sav
   // can never show through the city profile, mirrored (some browsers draw parts of a back face).
   const credit = rome.locator(".xp-flip__front").getByTestId("photo-credit");
 
-  await test.step("the photo face carries the score and the thumbs, the footer the two actions", async () => {
+  await test.step("the photo face carries the itinerary, its score and the thumbs, the footer the two actions", async () => {
     await expect(rome).toHaveAttribute("data-face", "photo");
     await expect(credit).toBeVisible({ timeout: 20_000 });
+    await expect(rome.getByTestId("itinerary-summary")).toContainText(/\d-day itinerary · stay at /, { timeout: 40_000 });
     await expect(rome.getByTestId("destination-match").getByTestId("match-badge")).toBeVisible({ timeout: 20_000 });
     await expect(rome.getByRole("button", { name: "Miss: Rome" })).toBeVisible();
-    await expect(rome.getByRole("button", { name: "Add Rome to trip" })).toBeEnabled({ timeout: 20_000 });
+    await expect(rome.getByRole("button", { name: "Make Rome itinerary" })).toBeEnabled({ timeout: 20_000 });
     await expect(rome.getByRole("button", { name: "Save Rome" })).toBeVisible();
     // The two cards sit side by side in a row.
     const tops = await cards.evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().top)));
@@ -37,8 +38,8 @@ test("destination cards: hover and click flip, quick facts, rows on the map, sav
     await expect(credit).toBeVisible();
   });
 
-  await test.step("City profile pins the profile, shows the quick facts and selects the city on the map", async () => {
-    await rome.getByRole("button", { name: "City profile of Rome" }).click();
+  await test.step("Itinerary pins the back open: quick facts, the days with their stops, the city on the map", async () => {
+    await rome.getByRole("button", { name: "Itinerary for Rome" }).click();
     await expect(rome).toHaveAttribute("data-face", "profile");
     await expect(rome).toHaveAttribute("data-reveal", "pinned");
     await expect(credit).toBeHidden();
@@ -47,6 +48,11 @@ test("destination cards: hover and click flip, quick facts, rows on the map, sav
     await expect(rome.getByTestId("quick-facts")).toContainText("3–4 nights");
     await expect(rome.getByTestId("quick-facts")).toContainText("Food & antiquity");
     await expect(rome.getByTestId("your-match")).toContainText("%");
+    const plan = rome.getByTestId("itinerary-plan");
+    await expect(plan).toContainText("Where you'll stay");
+    await expect(plan.getByTestId("itinerary-day").first()).toContainText("Day 1");
+    await expect(plan.getByTestId("itinerary-day").first().getByTestId("itinerary-stop").first()).toContainText(/\d{2}:\d{2}/);
+    await expect(plan.getByTestId("itinerary-stop").filter({ hasText: "Dinner" }).first()).toBeVisible();
     await expect(page.getByTestId("map-header")).toContainText("Explore Rome");
     await page.mouse.move(2, 2);
     // Pinned: leaving does not flip it back.
@@ -79,19 +85,27 @@ test("destination cards: hover and click flip, quick facts, rows on the map, sav
     await page.getByTestId("map-filter-restaurant").click();
     await expect(rome.getByRole("tab", { name: "Dining" })).toHaveAttribute("aria-selected", "true");
     await page.getByTestId("map-filter-all").click();
-    await expect(rome.getByRole("tab", { name: "Overview" })).toHaveAttribute("aria-selected", "true");
+    await expect(rome.getByRole("tab", { name: "Itinerary" })).toHaveAttribute("aria-selected", "true");
   });
 
-  await test.step("Save saves only the city; Add to trip creates the first trip in one step", async () => {
+  await test.step("Save saves only the city; Make itinerary saves the whole plan as a trip in one click", async () => {
     await rome.getByRole("button", { name: "Save Rome" }).click();
     await expect(rome.getByRole("button", { name: "Remove Rome from saved" })).toHaveAttribute("aria-pressed", "true");
-    await rome.getByRole("button", { name: "Add Rome to trip" }).click();
-    const done = page.getByRole("dialog", { name: "Added to your trip" });
-    await expect(done).toBeVisible({ timeout: 30_000 });
-    await expect(done).toContainText("Trip to Rome");
-    await done.getByRole("button", { name: "Done" }).click();
-    await expect(page.getByTestId("trip-tray")).toContainText("Trip to Rome");
+    await rome.getByRole("button", { name: "Make Rome itinerary" }).click();
+    const open = rome.getByRole("link", { name: "Open Rome itinerary" });
+    await expect(open).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId("trip-tray")).toContainText(/\d days? in Rome/);
     await expect(page.getByTestId("trip-tray")).toContainText("Dates flexible");
+    // The trip holds every day of the plan, each stop with its place, time and why it fits.
+    const tripId = (await open.getAttribute("href"))?.split("/trips/")[1] ?? "";
+    const trip = (await (await page.request.get(`/api/trips/${tripId}`)).json()) as { title: string; itinerary: { stops: { title: string; kind?: string; startTime?: string; note: string; place?: { name: string } }[] }[] };
+    expect(trip.title).toMatch(/\d days? in Rome/);
+    expect(trip.itinerary.length).toBeGreaterThanOrEqual(1);
+    const stops = trip.itinerary.flatMap((d) => d.stops);
+    expect(stops[0].kind).toBe("hotel");
+    expect(stops.every((s) => !!s.place)).toBe(true);
+    expect(stops.some((s) => s.kind === "restaurant" && /^Dinner · /.test(s.note))).toBe(true);
+    expect(stops.filter((s) => s.kind === "attraction").every((s) => /^\d{2}:\d{2}$/.test(s.startTime ?? ""))).toBe(true);
   });
 
   await test.step("Photo returns to the picture; a thumbs-down sends the other card to the end", async () => {
@@ -113,8 +127,8 @@ test("destination cards: hover and click flip, quick facts, rows on the map, sav
       await sendChat(p, "Where should we go this fall?");
       const card = p.getByTestId("destination-card").filter({ hasText: "Ancient streets" });
       await expect(card).toBeVisible({ timeout: 40_000 });
-      await expect(card).toContainText("Tap City profile");
-      await card.getByRole("button", { name: "City profile of Rome" }).tap();
+      await expect(card).toContainText("Tap Itinerary");
+      await card.getByRole("button", { name: "Itinerary for Rome" }).tap();
       await expect(card).toHaveAttribute("data-face", "profile");
       await card.getByRole("tab", { name: "Stays" }).tap();
       const row = card.getByTestId("destination-reco-row").first();

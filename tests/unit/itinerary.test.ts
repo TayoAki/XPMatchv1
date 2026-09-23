@@ -127,6 +127,17 @@ describe("geography", () => {
     expect(drive.mode).toBe("drive");
   });
 
+  it("times a chosen mode at its own speed, not the other one's", () => {
+    const far = [{ lat: 41.89, lng: 12.49 }, { lat: 41.91, lng: 12.51 }] as const;
+    const walk = estimateLeg(far[0], far[1], "walk");
+    expect(walk.mode).toBe("walk");
+    expect(walk.km).toBeGreaterThan(2.5);
+    expect(Math.abs(walk.minutes - (walk.km / 5) * 60)).toBeLessThan(2);
+    const drive = estimateLeg({ lat: 41.8902, lng: 12.4922 }, { lat: 41.8986, lng: 12.4769 }, "drive");
+    expect(drive.mode).toBe("drive");
+    expect(drive.minutes).toBeLessThan(6);
+  });
+
   it("orders stops by nearest neighbor and keeps text-only stops last", () => {
     const stops = [stop("far", "Far", 41.95, 12.55), stop("start", "Start", 41.89, 12.49), stop("near", "Near", 41.891, 12.491), stop("text", "Lunch somewhere")];
     const ordered = optimizeDay(stops);

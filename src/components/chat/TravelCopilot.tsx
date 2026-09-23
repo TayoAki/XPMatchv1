@@ -369,11 +369,11 @@ export function TravelCopilot() {
     {
       name: "show_package",
       description:
-        "Open a destination with ONE personalized package card: the best stay, things to do and places to eat for this traveler, chosen by the app from its own place catalog and scored against the profile, with swap and lock controls, three variants and a Turn-into-a-trip button. Call it first (after focus_map) whenever a destination is clear and the traveler has not asked for one specific kind of place. You name the destination and may add one or two sentences; the app picks the places.",
+        "Open a destination with ONE personalized package card: the best stay, things to do and places to eat for this traveler, chosen by the app from its own place catalog and scored against the profile, with swap and lock controls, three variants and a Make itinerary button that saves it as a trip with its days. Call it first (after focus_map) whenever a destination is clear and the traveler has not asked for one specific kind of place. You name the destination and may add one or two sentences; the app picks the places.",
       parameters: showPackageSchema,
       followUp: true,
       handler: async ({ destination }) =>
-        `The ${destination} package card is displayed (stay, things to do, places to eat, each with a match score, swap, lock and thumbs; three variants; Turn into a trip). Do not list the places. Add at most one sentence and offer to swap, narrow, or turn it into a trip.`,
+        `The ${destination} package card is displayed (stay, things to do, places to eat, each with a match score, swap, lock and thumbs; three variants; Make itinerary saves it as a trip). Do not list the places. Add at most one sentence and offer to swap or narrow it, or to tap Make itinerary.`,
       render: PackageRenderer,
     },
     [],
@@ -383,7 +383,7 @@ export function TravelCopilot() {
     {
       name: "show_destinations",
       description:
-        "Show destination recommendation cards (where to go). Use whenever suggesting places to travel; include 3-5 options with why each fits this traveler.",
+        "Show destination cards (where to go). Each card becomes a complete itinerary the app builds for this traveler (stay, day-by-day stops, a match score) with a Make itinerary button. Use whenever suggesting places to travel; include 3-5 options with why each fits this traveler and a suggestedStay, whose length sets the days.",
       parameters: showDestinationsSchema,
       followUp: true,
       handler: async () => CARDS_DONE,
