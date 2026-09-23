@@ -70,6 +70,17 @@ test("destination cards: an itinerary per city, opened as the plan workspace wit
     expect(opacity).toBe(1);
   });
 
+  await test.step("beside the plan the chat widens while it is in use and narrows again when the plan is", async () => {
+    await expect(chat).not.toHaveAttribute("data-wide", "true");
+    const narrow = (await chat.boundingBox())?.width ?? 0;
+    await page.getByPlaceholder("Ask your concierge").click();
+    await expect(chat).toHaveAttribute("data-wide", "true");
+    await expect.poll(async () => (await chat.boundingBox())?.width ?? 0).toBeGreaterThan(narrow + 40);
+    await detail.getByRole("heading", { name: "Rome", level: 2 }).click();
+    await expect(chat).not.toHaveAttribute("data-wide", "true");
+    await expect.poll(async () => (await chat.boundingBox())?.width ?? 0).toBeLessThan(narrow + 2);
+  });
+
   await test.step("each day opens its own map above its stops, one at a time", async () => {
     const days = detail.getByTestId("itinerary-day");
     const firstMap = days.first().getByTestId("day-map");
@@ -108,6 +119,60 @@ test("destination cards: an itinerary per city, opened as the plan workspace wit
     await expect(sheet).toHaveCount(0);
     await expect(page.getByPlaceholder("Ask your concierge")).toBeVisible();
     await expect(page.getByTestId("copilot-user-message").first()).toBeVisible();
+  });
+
+  await test.step("a day's stops move: a step later and back, to another day, and dragged back; times, numbers and the map follow", async () => {
+    const days = detail.getByTestId("itinerary-day");
+    const day1 = days.first();
+    const stops = day1.getByTestId("itinerary-stop");
+    const nameOf = async (stop: Locator) => ((await stop.getByRole("button", { name: /^Details for / }).getAttribute("aria-label")) ?? "").replace(/^Details for /, "");
+    const timeOf = async (stop: Locator) => (await stop.getByRole("button", { name: /^Details for / }).textContent())?.match(/\d{2}:\d{2}/)?.[0] ?? "";
+    const names = async () => Promise.all((await stops.all()).map(nameOf));
+    const times = async () => Promise.all((await stops.all()).map(timeOf));
+    const before = await names();
+    const beforeTimes = await times();
+    const [first, second] = before;
+    if (!(await day1.getByTestId("day-map").count())) await day1.getByRole("button", { name: "Show the map of day 1" }).click();
+    const pins = day1.getByTestId("day-map").getByTestId("map-pin-list").locator("li");
+
+    // A step later: the two trade places, the times run forward in the new order (a meal is never
+    // moved earlier than planned), and the day's pins renumber.
+    await stops.first().getByRole("button", { name: `Move ${first} later` }).click();
+    await expect.poll(names).toEqual([second, first, ...before.slice(2)]);
+    const moved = await times();
+    expect([...moved].sort()).toEqual(moved);
+    expect(moved[1] > moved[0]).toBe(true);
+    await expect(pins.nth(1)).toContainText(`1. ${second}`);
+    await expect(pins.nth(2)).toContainText(`2. ${first}`);
+    // A step back is the plan as built, times and all.
+    await stops.nth(1).getByRole("button", { name: `Move ${first} earlier` }).click();
+    await expect.poll(names).toEqual(before);
+    expect(await times()).toEqual(beforeTimes);
+    await expect(stops.first().getByRole("button", { name: `Move ${first} earlier` })).toBeDisabled();
+
+    if ((await days.count()) > 1) {
+      // To another day with the day picker: it goes to the end of that day.
+      await stops.first().getByRole("combobox", { name: `Day for ${first}` }).selectOption("2");
+      await expect.poll(names).toEqual(before.slice(1));
+      const day2 = days.nth(1).getByTestId("itinerary-stop");
+      await expect(day2.last().getByRole("button", { name: `Details for ${first}` })).toBeVisible();
+      // Back to day 1 the same way (at its end), then dragged by its handle onto the day's first stop, it takes that slot.
+      await day2.last().getByRole("combobox", { name: `Day for ${first}` }).selectOption("1");
+      await expect.poll(names).toEqual([...before.slice(1), first]);
+      await day1.getByRole("button", { name: "Hide the map of day 1" }).click();
+      await day1.evaluate((el) => el.scrollIntoView({ block: "start" }));
+      const handle = stops.last().getByRole("button", { name: `Drag ${first}` });
+      const from = await handle.boundingBox();
+      const to = await stops.first().boundingBox();
+      if (!from || !to) throw new Error("no boxes to drag between");
+      await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(from.x + from.width / 2 + 10, from.y + from.height / 2 + 10, { steps: 4 });
+      await page.mouse.move(to.x + to.width / 2, to.y + to.height / 3, { steps: 20 });
+      await page.mouse.up();
+      await expect.poll(names).toEqual(before);
+      expect(await times()).toEqual(beforeTimes);
+    }
   });
 
   await test.step("the stay swaps for a ready alternate, the plan and the card follow, and swaps back", async () => {

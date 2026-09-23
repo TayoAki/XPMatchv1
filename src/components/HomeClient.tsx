@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import clsx from "clsx";
 import { TravelChat } from "@/components/chat/TravelChat";
 import { MobileMapSheet } from "@/components/map/MobileMapSheet";
@@ -42,13 +42,42 @@ export function HomeClient({ threadId, initialPrompt, tripId }: { threadId?: str
   const backToChat = useCallback(() => {
     if (threadOnScreen) mapActions.selectPlace(threadOnScreen, null);
   }, [threadOnScreen]);
+  // Beside a plan the chat widens while the traveler is in it (typing, reading, scrolling) and
+  // narrows again when they work on the plan. It is remembered per plan, so opening a plan, or
+  // another city's from its card in the chat, starts narrow; a place open over it keeps it narrow.
+  const [chatFor, setChatFor] = useState<string | null>(null);
+  const chatWide = workspace && !sidePlace && chatFor !== null && chatFor === view.detail;
+  const planOpen = workspace ? view.detail : null;
+  useEffect(() => {
+    if (!planOpen) return;
+    // Where a press or the focus lands, by the page's layout: the plan is drawn into its column
+    // through a portal, so React's own event bubbling would credit the chat with it.
+    const onEnter = (e: Event) => {
+      const el = e.target instanceof Element ? e.target : null;
+      if (!el) return;
+      if (el.closest('[data-testid="plan-workspace"]')) setChatFor(null);
+      else if (el.closest('[data-testid="chat-column"]') && !el.closest('[data-testid="side-place"]')) setChatFor(planOpen);
+    };
+    document.addEventListener("pointerdown", onEnter, true);
+    document.addEventListener("focusin", onEnter, true);
+    return () => {
+      document.removeEventListener("pointerdown", onEnter, true);
+      document.removeEventListener("focusin", onEnter, true);
+    };
+  }, [planOpen]);
   return (
     <TripScopeProvider tripId={effectiveTripId}>
       <div className="flex h-full min-h-0">
         <section
-          className={clsx("relative flex min-w-0 flex-col", workspace ? "order-2 w-[clamp(360px,27vw,440px)] shrink-0 border-l border-border/60" : "flex-1")}
+          className={clsx(
+            "relative flex min-w-0 flex-col",
+            workspace
+              ? clsx("order-2 shrink-0 border-l border-border/60 transition-[width] duration-300 ease-out motion-reduce:transition-none", chatWide ? "w-[clamp(440px,42vw,760px)]" : "w-[clamp(360px,27vw,440px)]")
+              : "flex-1",
+          )}
           data-testid="chat-column"
           data-side={workspace || undefined}
+          data-wide={chatWide || undefined}
         >
           <div className="flex h-full min-h-0 flex-col" inert={!!sidePlace} aria-hidden={sidePlace ? true : undefined}>
             <TravelChat key={chatKey} threadId={threadId} initialPrompt={initialPrompt} tripId={effectiveTripId ?? undefined} />

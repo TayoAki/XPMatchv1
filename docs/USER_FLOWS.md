@@ -215,6 +215,9 @@ scheduling chip open the itinerary board as a full-height sheet (short map, then
    **The plan workspace** (from 1280 px wide): clicking a card (its photo, name or Itinerary) puts its
    plan in the center of the screen and moves the chat into a column on the right, where it stays
    readable and keeps working (typing there, or the next answer's cards, leave the plan open). The
+   chat column widens while the traveler is in it (a click or the focus in the conversation or its
+   composer) and narrows again as soon as they work on the plan; a plan opens with it narrow, and a
+   place open in it keeps it narrow. The
    workspace has a wide photo with the name, tagline and "Curated for you", the plan in a line, Your
    match, the tabs, quick facts, then **Make itinerary** and **Save**; the card in the chat gets a teal
    outline and "Open next to the chat". On the **Itinerary** tab come "Where you'll stay" and then a
@@ -236,6 +239,13 @@ scheduling chip open the itinerary board as a full-height sheet (short map, then
      instead of {stop}**.
    - **Good pick / Miss** thumbs: a miss (Not a fit) swaps the place for its first alternate that is
      not a miss too, on the spot, without rebuilding the rest of the days.
+   - **Move**: a day's stops can be put in any order. Drag one by its handle (within the day or onto
+     another day's stop or list), move it a step with the arrows around its number (at a day's edge
+     a step crosses into the day before or after), or send it to another day with its **Day** picker
+     (it goes to the end of that day). The day is re-timed from its first start, back to back with 20
+     minutes between stops, a meal never earlier than it was planned for; the numbers, the day's map
+     and its title follow, and so does Make itinerary. The keyboard works too (the handle, Space,
+     the arrow keys, Space).
    - **Details & reviews** (or a click on its name, or its pin on the day's map) opens the place in
      the column on the right, over the chat, so the plan stays in view beside it: photos, rating, its
      match score with **Good fit / Not a fit**, the overview with the traveler reviews line, the
@@ -244,7 +254,7 @@ scheduling chip open the itinerary board as a full-height sheet (short map, then
      (so does asking one of the panel's follow-up questions, to show the answer); a place marked Not a
      fit here leaves the plan and its panel closes with its replacement in the plan.
    The plan line ("stay at …"), the day titles, the score, the card in the chat and Make itinerary all
-   follow the swaps. The Stays, Activities and Dining tabs list the traveler's scored picks for the city;
+   follow the swaps and moves. The Stays, Activities and Dining tabs list the traveler's scored picks for the city;
    a row opens its place the same way. Escape goes back from a place (from the plan or the place's
    panel), then closes the plan (not while typing in the chat); so does the close button, which gives
    the chat its full width back. Below

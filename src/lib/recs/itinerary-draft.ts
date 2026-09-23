@@ -8,7 +8,7 @@ import { shortPlaceName } from "@/lib/places/names";
 import type { PlaceKind, ResolvedPlace } from "@/lib/places/types";
 import { whyFor } from "@/lib/recs/why";
 import type { ItineraryDay, Trip, TravelerProfile, TripPlanner } from "@/lib/types";
-import type { DraftPick, ItineraryDraft } from "@/server/itineraries";
+import type { DraftPick, DraftStop, ItineraryDraft } from "@/server/itineraries";
 
 /**
  * A card's itinerary: the complete plan the server builds for this traveler (see
@@ -111,6 +111,95 @@ export function planPick(place: ResolvedPlace, match: MatchResult, kind: PlaceKi
   };
 }
 
+/** A day's title from its first two things to do, as the builder names days. */
+function dayTitle(stops: DraftStop[], fallback: string): string {
+  return (
+    stops
+      .filter((s) => s.kind === "attraction")
+      .slice(0, 2)
+      .map((s) => shortPlaceName(s.place.name))
+      .join(" · ") || fallback
+  );
+}
+
+/**
+ * The traveler's own order of the plan's stops: for each day (by number), the stops' ids as built
+ * (`stopKey`) in the order they want them. A stop can be listed under another day than the one it
+ * was built in; days without an entry keep their order.
+ */
+export type StopOrder = Record<number, string[]>;
+
+/** A stop's id as built, which stays the same through swaps, so a moved stop keeps its slot when it is swapped. */
+export const stopKey = (pick: DraftPick): string => pick.swappedFrom ?? pick.place.id;
+
+/** Minutes between two stops, as the builder plans them. */
+const GAP_MIN = 20;
+const toMinutes = (hhmm: string) => {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm);
+  return m ? Number(m[1]) * 60 + Number(m[2]) : 0;
+};
+const toHhmm = (min: number) => `${String(Math.floor(min / 60) % 24).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+
+/**
+ * The plan in the traveler's order. Each day takes the stops its entry lists, then re-times them
+ * from the day's first start, back to back with 20 minutes between, a meal never earlier than it
+ * was planned for. Days that did not change come back as they were, and the draft itself when none
+ * did.
+ */
+export function applyOrder(draft: ItineraryDraft, order: StopOrder): ItineraryDraft {
+  if (!Object.keys(order).length) return draft;
+  const byKey = new Map<string, DraftStop>();
+  for (const d of draft.days) for (const s of d.stops) byKey.set(stopKey(s), s);
+  const placed = new Set<string>();
+  const lists = draft.days.map((d) => {
+    const stops: DraftStop[] = [];
+    for (const key of order[d.day] ?? d.stops.map(stopKey)) {
+      const stop = byKey.get(key);
+      if (!stop || placed.has(key)) continue;
+      placed.add(key);
+      stops.push(stop);
+    }
+    return stops;
+  });
+  // A stop that no entry lists stays in the day it was built in, at the end.
+  draft.days.forEach((d, i) => {
+    for (const s of d.stops) {
+      if (placed.has(stopKey(s))) continue;
+      placed.add(stopKey(s));
+      lists[i].push(s);
+    }
+  });
+  let changed = false;
+  const days = draft.days.map((d, i) => {
+    const stops = lists[i];
+    if (stops.length === d.stops.length && stops.every((s, j) => s === d.stops[j])) return d;
+    changed = true;
+    let at = d.stops.length ? Math.min(...d.stops.map((s) => toMinutes(s.startTime))) : toMinutes(stops[0]?.startTime ?? "09:30");
+    const timed = stops.map((s) => {
+      const start = s.meal ? Math.max(at, toMinutes(s.startTime)) : at;
+      at = start + s.durationMin + GAP_MIN;
+      return start === toMinutes(s.startTime) ? s : { ...s, startTime: toHhmm(start) };
+    });
+    return { ...d, stops: timed, title: timed.length ? dayTitle(timed, d.title) : "Free day" };
+  });
+  return changed ? { ...draft, days } : draft;
+}
+
+/**
+ * The order after moving one stop (by `stopKey`) of the plan as shown to a day (by number), at a
+ * position in that day's list. The plan's other stops keep their order.
+ */
+export function moveStopTo(shown: ItineraryDraft, key: string, toDay: number, toIndex: number): StopOrder {
+  const lists = new Map(shown.days.map((d) => [d.day, d.stops.map(stopKey)] as const));
+  const target = lists.get(toDay);
+  const from = [...lists.values()].find((keys) => keys.includes(key));
+  if (target && from) {
+    from.splice(from.indexOf(key), 1);
+    target.splice(Math.max(0, Math.min(toIndex, target.length)), 0, key);
+  }
+  return Object.fromEntries(lists);
+}
+
 /**
  * The plan with swaps applied: the swapped pick takes the chosen place, match and reason and
  * keeps its time, meal and length; its options become the place it replaced (so a swap can be
@@ -128,12 +217,7 @@ export function applySwaps(draft: ItineraryDraft, swaps: Swaps): ItineraryDraft 
   const days = draft.days.map((d) => {
     const stops = d.stops.map(swap);
     if (stops.every((s, i) => s === d.stops[i])) return d;
-    const title = stops
-      .filter((s) => s.kind === "attraction")
-      .slice(0, 2)
-      .map((s) => shortPlaceName(s.place.name))
-      .join(" · ");
-    return { ...d, stops, title: title || d.title };
+    return { ...d, stops, title: dayTitle(stops, d.title) };
   });
   if (stay === draft.stay && days.every((d, i) => d === draft.days[i])) return draft;
   const scores = [...(stay ? [stay.match.score] : []), ...days.flatMap((d) => d.stops.map((s) => s.match.score))];

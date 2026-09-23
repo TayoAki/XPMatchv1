@@ -3,7 +3,7 @@ import { DEFAULT_PROFILE, type TravelerProfile } from "@/lib/types";
 import type { ResolvedPlace } from "@/lib/places/types";
 import { candidateFromPlace, scoreMatch } from "@/lib/match";
 import { daysFromStay, localCuisine, planItinerary, visitMinutes, type ItineraryDraft, type ScoredPools } from "@/server/itineraries";
-import { applySwaps, draftPicks, planPick, swapsForMisses } from "@/lib/recs/itinerary-draft";
+import { applyOrder, applySwaps, draftPicks, moveStopTo, planPick, stopKey, swapsForMisses } from "@/lib/recs/itinerary-draft";
 
 const profile: TravelerProfile = { ...DEFAULT_PROFILE, pace: "balanced", dayRhythm: "balanced", walking: "moderate" };
 const destination: ResolvedPlace = { id: "city", name: "Rome", kind: "destination", lat: 41.9, lng: 12.5, photos: [], source: "google" };
@@ -193,6 +193,84 @@ describe("swaps", () => {
     const shared = a.alternates![0];
     const out = swapsForMisses(plan, { [b.place.id]: shared }, new Set([a.place.id]));
     expect(out[a.place.id].place.id).toBe(a.alternates![1].place.id);
+  });
+});
+
+describe("reordering", () => {
+  /** A two-day plan, as the client gets it, with a spare thing to do so stops have alternates. */
+  function draft(): ItineraryDraft {
+    const p = pools();
+    p.attraction.push(scored("attraction", 60, 41.9, 12.503));
+    return { ...planItinerary(p, destination, profile, 2), destination, basedOn: [], provider: "google", generatedAt: "2026-09-01T00:00:00Z" };
+  }
+  const keys = (plan: ItineraryDraft, day: number) => plan.days.find((d) => d.day === day)!.stops.map(stopKey);
+  const minutes = (hhmm: string) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3));
+
+  it("moves a stop within its day and re-times the day from its first start, 20 minutes between", () => {
+    const plan = draft();
+    const day = plan.days[0];
+    const [a, b] = day.stops;
+    const order = moveStopTo(plan, stopKey(b), 1, 0);
+    expect(order[1].slice(0, 2)).toEqual([stopKey(b), stopKey(a)]);
+    const moved = applyOrder(plan, order);
+    const stops = moved.days[0].stops;
+    expect(stops[0].place.id).toBe(b.place.id);
+    expect(stops[0].startTime).toBe(day.stops[0].startTime);
+    expect(stops[1].startTime).toBe(
+      `${String(Math.floor((minutes(stops[0].startTime) + stops[0].durationMin + 20) / 60)).padStart(2, "0")}:${String((minutes(stops[0].startTime) + stops[0].durationMin + 20) % 60).padStart(2, "0")}`,
+    );
+    // Times still run forward, and the other day is untouched.
+    const times = stops.map((s) => s.startTime);
+    expect([...times].sort()).toEqual(times);
+    expect(moved.days[1]).toBe(plan.days[1]);
+  });
+
+  it("never puts a meal earlier than it was planned for", () => {
+    const plan = draft();
+    const dinner = plan.days[0].stops.find((s) => s.meal === "dinner")!;
+    const moved = applyOrder(plan, moveStopTo(plan, stopKey(dinner), 1, 0));
+    const first = moved.days[0].stops[0];
+    expect(first.place.id).toBe(dinner.place.id);
+    expect(first.startTime).toBe(dinner.startTime);
+    // What follows the dinner starts after it.
+    expect(minutes(moved.days[0].stops[1].startTime)).toBeGreaterThanOrEqual(minutes(dinner.startTime) + dinner.durationMin + 20);
+  });
+
+  it("moves a stop to another day, and the day it left keeps its order", () => {
+    const plan = draft();
+    const [a] = plan.days[0].stops;
+    const moved = applyOrder(plan, moveStopTo(plan, stopKey(a), 2, 0));
+    expect(keys(moved, 2)[0]).toBe(stopKey(a));
+    expect(keys(moved, 1)).toEqual(keys(plan, 1).slice(1));
+    expect(moved.days[1].stops[0].startTime).toBe(plan.days[1].stops[0].startTime);
+    // Every place is still in the plan once, and the score is the same.
+    const ids = moved.days.flatMap((d) => d.stops.map((s) => s.place.id));
+    expect(new Set(ids).size).toBe(plan.days.flatMap((d) => d.stops).length);
+    expect(moved.score).toBe(plan.score);
+  });
+
+  it("keeps a moved stop's place when it is swapped, and a swapped one where it was moved", () => {
+    const plan = draft();
+    const stop = plan.days[0].stops.find((s) => s.kind === "attraction")!;
+    const to = stop.alternates![0];
+    const order = moveStopTo(plan, stopKey(stop), 2, 0);
+    const shown = applyOrder(applySwaps(plan, { [stop.place.id]: to }), order);
+    expect(shown.days[1].stops[0].place.id).toBe(to.place.id);
+    expect(stopKey(shown.days[1].stops[0])).toBe(stop.place.id);
+  });
+
+  it("returns the plan itself when the order changes nothing, and names an emptied day a free day", () => {
+    const plan = draft();
+    expect(applyOrder(plan, {})).toBe(plan);
+    expect(applyOrder(plan, { 1: keys(plan, 1), 2: keys(plan, 2) })).toBe(plan);
+    // A key that is not in the plan is ignored; a stop no day lists stays in its own day, at the end.
+    const [first, ...rest] = keys(plan, 1);
+    const partial = applyOrder(plan, { 1: [...rest, "nowhere"] });
+    expect(keys(partial, 1)).toEqual([...rest, first]);
+    let emptied = plan;
+    for (const key of keys(plan, 1)) emptied = applyOrder(plan, moveStopTo(emptied, key, 2, 99));
+    expect(emptied.days[0].stops).toHaveLength(0);
+    expect(emptied.days[0].title).toBe("Free day");
   });
 });
 

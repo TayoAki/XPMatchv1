@@ -13,7 +13,7 @@ import type { MapPlace, PlaceKind, ResolvedPlace } from "@/lib/places/types";
 import { photoAtWidth } from "@/lib/places/destination-photo";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { useDestinationPicks, type DestinationPicks, type PickRowKey } from "@/lib/recs/destination-picks";
-import { applySwaps, draftMatch, draftPicks, loadItineraryDraft, planPick, swapsForMisses, useItineraryDraft, type Swaps } from "@/lib/recs/itinerary-draft";
+import { applyOrder, applySwaps, draftMatch, draftPicks, loadItineraryDraft, moveStopTo, planPick, swapsForMisses, useItineraryDraft, type StopOrder, type Swaps } from "@/lib/recs/itinerary-draft";
 import { planPickerKey, useRegisterPlanPicker, type PlanPicker } from "@/lib/plan-picker";
 import { MAX_ITINERARY_DAYS, daysBetween, daysFromStay } from "@/lib/itinerary";
 import { shortPlaceName } from "@/lib/places/names";
@@ -29,7 +29,7 @@ import { RecThumbs } from "@/components/recs/RecThumbs";
 import { photoCreditTitle } from "@/components/ui/PhotoCredit";
 import { CardPhoto, CardRow, SectionHeader, Text } from "./shared";
 import { ItineraryPlan, MakeItineraryButton } from "./ItineraryPlan";
-import { ItineraryWorkspace } from "./ItineraryWorkspace";
+import { ItineraryWorkspace, type PlanMoveProps } from "./ItineraryWorkspace";
 import type { PlanSwapProps } from "./PlanParts";
 
 type DestinationArgs = Streaming<ShowDestinationsArgs>["destinations"] extends (infer U)[] | undefined ? U : never;
@@ -212,8 +212,13 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
   // The plan as the traveler shaped it: their swaps, and a place marked not a fit (in its own
   // panel, a row, anywhere) giving way to its first alternate that is not a miss too.
   const [swaps, setSwaps] = useState<Swaps>({});
+  // The order they put the stops in (dragged, moved a step, or to another day); times follow it.
+  const [order, setOrder] = useState<StopOrder>({});
   const missed = useMemo(() => new Set(recFeedback.filter((f) => f.verdict === "down").map((f) => f.placeId)), [recFeedback]);
-  const shown = useMemo(() => (plan.draft ? applySwaps(plan.draft, { ...swaps, ...swapsForMisses(plan.draft, swaps, missed) }) : null), [plan.draft, swaps, missed]);
+  const shown = useMemo(
+    () => (plan.draft ? applyOrder(applySwaps(plan.draft, { ...swaps, ...swapsForMisses(plan.draft, swaps, missed) }), order) : null),
+    [plan.draft, swaps, missed, order],
+  );
   // Places a swap must not offer: already in the plan, or marked not a fit.
   const taken = useMemo(() => new Set(shown ? draftPicks(shown).map((p) => p.place.id) : []), [shown]);
   const unavailable = useMemo(() => new Set([...taken, ...missed]), [taken, missed]);
@@ -416,6 +421,13 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
   );
   useRegisterPlanPicker(planPickerKey(`reco:${toolCallId}`, scopeId), planPicker);
   const swapProps: PlanSwapProps = { unavailable, recentId, onSwap: (pick, to) => swapIn(pick, to), onSeeAll: (pick, kind) => seeAll(pick, kind) };
+  const moveProps: PlanMoveProps = {
+    onMove: (key, toDay, toIndex) => {
+      if (!shown) return;
+      setRecentId(null);
+      setOrder(moveStopTo(shown, key, toDay, toIndex));
+    },
+  };
   const rowPlan: RowPlan | null = shown
     ? { stayId: shown.stay?.place.id ?? null, taken, missed, choosing: choosingNow, onUse: (item, itemMatch, kind) => choose(item, itemMatch, kind), onCancel: cancelChoosing }
     : null;
@@ -525,6 +537,7 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
             onAsk={() => ask(planTheDays)}
             onOpen={(item, kind) => showOnMap(item, kind)}
             swap={swapProps}
+            move={moveProps}
           />
         ) : (
           <ItineraryPlan
