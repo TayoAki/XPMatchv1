@@ -25,7 +25,7 @@ export function DiscoverHero({ destination, phoneQuiz }: { destination: string |
   const router = useRouter();
   const send = useSendMessage();
   const { openPlanner } = useUiState();
-  const { planner, profile } = useTravelStore();
+  const { planner, profile, keepPlannerForNextChat } = useTravelStore();
   const focus = useDiscoveryFocus();
   const { place, loading } = useDestinationPlace(destination);
   const homeCity = profile.homeCity.trim();
@@ -43,8 +43,11 @@ export function DiscoverHero({ destination, phoneQuiz }: { destination: string |
       ];
 
   const chatWithConcierge = () => {
-    if (planner.where.trim()) void send(buildPlanPrompt(planner));
-    else router.push("/chat");
+    if (planner.where.trim()) {
+      // The chat this opens plans the trip in the fields, so it starts from them.
+      keepPlannerForNextChat();
+      void send(buildPlanPrompt(planner));
+    } else router.push("/chat");
   };
 
   return (

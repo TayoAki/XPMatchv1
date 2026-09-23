@@ -138,6 +138,11 @@ export interface TravelStoreState {
   /** Per-factor weights learned from packages (kept vs swapped), applied on top of the thumbs calibration. */
   packageCalibration: Partial<Record<MatchFactor, number>>;
   proactiveDismissedAt: string | null;
+  /**
+   * The planner values were set outside a chat (the Discover fields, the Create a trip dialog on
+   * another page): the next new chat starts from them. Otherwise a new chat starts over.
+   */
+  plannerDraft: boolean;
   hydrated: boolean;
   /** True while a profile save is in flight; the home picks wait for it so they reflect the new answers. */
   profileSaving: boolean;
@@ -164,6 +169,7 @@ const DEFAULT_STATE: TravelStoreState = {
   recFeedback: [],
   packageCalibration: {},
   proactiveDismissedAt: null,
+  plannerDraft: false,
   hydrated: false,
   profileSaving: false,
 };
@@ -171,6 +177,8 @@ const DEFAULT_STATE: TravelStoreState = {
 let state: TravelStoreState = DEFAULT_STATE;
 let localLoaded = false;
 const listeners = new Set<() => void>();
+/** Whether a chat is on screen: planner values set there belong to that chat, not to the next one. */
+let chatOnScreen = false;
 
 /**
  * Version of what is kept in local storage. Before 2, focusing the map wrote the chat's destination
@@ -179,16 +187,18 @@ const listeners = new Set<() => void>();
  */
 const LOCAL_VERSION = 2;
 
-function loadLocal(): Pick<TravelStoreState, "planner" | "proactiveDismissedAt"> {
+type LocalState = Pick<TravelStoreState, "planner" | "proactiveDismissedAt" | "plannerDraft">;
+
+function loadLocal(): LocalState {
   try {
     const raw = window.localStorage.getItem(LOCAL_KEY);
-    if (!raw) return { planner: DEFAULT_PLANNER, proactiveDismissedAt: null };
-    const parsed = JSON.parse(raw) as Partial<Pick<TravelStoreState, "planner" | "proactiveDismissedAt">> & { v?: number };
+    if (!raw) return { planner: DEFAULT_PLANNER, proactiveDismissedAt: null, plannerDraft: false };
+    const parsed = JSON.parse(raw) as Partial<Pick<TravelStoreState, "planner" | "proactiveDismissedAt">> & { v?: number; draft?: boolean };
     const planner = { ...DEFAULT_PLANNER, ...(parsed.planner ?? {}) };
     if (parsed.v !== LOCAL_VERSION) planner.where = "";
-    return { planner, proactiveDismissedAt: parsed.proactiveDismissedAt ?? null };
+    return { planner, proactiveDismissedAt: parsed.proactiveDismissedAt ?? null, plannerDraft: parsed.draft === true };
   } catch {
-    return { planner: DEFAULT_PLANNER, proactiveDismissedAt: null };
+    return { planner: DEFAULT_PLANNER, proactiveDismissedAt: null, plannerDraft: false };
   }
 }
 
@@ -196,7 +206,7 @@ function persistLocal() {
   try {
     window.localStorage.setItem(
       LOCAL_KEY,
-      JSON.stringify({ v: LOCAL_VERSION, planner: state.planner, proactiveDismissedAt: state.proactiveDismissedAt }),
+      JSON.stringify({ v: LOCAL_VERSION, planner: state.planner, draft: state.plannerDraft, proactiveDismissedAt: state.proactiveDismissedAt }),
     );
   } catch {
     // Storage may be unavailable; the app keeps working in memory.
@@ -228,7 +238,7 @@ function set(patch: Partial<TravelStoreState> | ((prev: TravelStoreState) => Par
   const prev = readSnapshot();
   const next = typeof patch === "function" ? patch(prev) : patch;
   state = { ...prev, ...next };
-  if ("planner" in next || "proactiveDismissedAt" in next) persistLocal();
+  if ("planner" in next || "plannerDraft" in next || "proactiveDismissedAt" in next) persistLocal();
   emit();
 }
 
@@ -341,8 +351,28 @@ export const travelActions = {
       .finally(() => set({ profileSaving: false }));
   },
 
+  /** Values set with a chat on screen belong to that chat; values set anywhere else wait for the next chat. */
   updatePlanner(patch: Partial<TripPlanner>) {
-    set((prev) => ({ planner: { ...prev.planner, ...patch } }));
+    set((prev) => ({ planner: { ...prev.planner, ...patch }, plannerDraft: !chatOnScreen }));
+  },
+
+  /** The next new chat starts from the current planner values (Discover's "plan it with the concierge"). */
+  keepPlannerForNextChat() {
+    set({ plannerDraft: true });
+  },
+
+  /** The chat page reports while a chat is on screen. */
+  setChatOnScreen(on: boolean) {
+    chatOnScreen = on;
+  },
+
+  /**
+   * A new chat starts over: the Where, dates, travelers and budget of an earlier chat do not follow
+   * the traveler into it. Values set up outside a chat for it (the Discover fields) are taken once.
+   */
+  startNewChatPlanner() {
+    if (readSnapshot().plannerDraft) set({ plannerDraft: false });
+    else set({ planner: DEFAULT_PLANNER, plannerDraft: false });
   },
 
   /** Stores a learned preference (optimistically) and resolves with the saved row. */

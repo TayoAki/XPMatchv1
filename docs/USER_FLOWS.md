@@ -121,11 +121,14 @@ scheduling chip open the itinerary board as a full-height sheet (short map, then
    Discover composer (`/chat?prompt=…` sends the text once the chat is ready).
 2. **Destination** — as soon as a place is clear the assistant calls `focus_map`: the map centers on
    it, a "Looks like you're headed to Rome" callout appears with a **Create trip** button, the chat is
-   titled "Exploring Rome" and the **Where** chip under the composer shows Rome. That chip belongs to
-   the chat: a new chat starts at *Where*, going back to the Rome chat shows Rome again, and only a
-   Where the traveler sets themselves (the chips, the Discover fields, **Create trip**) carries across
-   chats. The latest message wins over all of it: "plan me a trip to Korea" plans Korea whatever the
-   planner or an upcoming trip says. The assistant answers with cards, not questions: what is missing
+   titled "Exploring Rome" and the **Where** chip under the composer shows Rome. The chips belong to
+   the chat: every new chat starts over (Where, When, Who and Budget blank), going back to the Rome
+   chat shows Rome again (after a reload too: the chat keeps its destination), and the one thing that
+   carries into a new chat is what was filled in on Discover (or in the Create a trip dialog on another
+   page) for the chat opened from there, once. **New chat** while an answer is still coming stops that
+   answer first, so nothing of it lands in the new chat; the first chat keeps what it had and carries
+   on when the traveler writes in it again. The latest message wins over all of it: "plan me a trip
+   to Korea" plans Korea whatever the planner or an upcoming trip says. The assistant answers with cards, not questions: what is missing
    (dates, length, who is going) it assumes from the planner and the profile, then says so in one
    sentence under the cards ("Assuming about a week for two with flexible dates"). A country or a
    large region comes back as three or four city cards at once (Seoul, Busan, Jeju), and the city the

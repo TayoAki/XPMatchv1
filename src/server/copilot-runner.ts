@@ -4,7 +4,7 @@ import type { AgentRunnerConnectRequest, AgentRunnerRunRequest, AgentRunnerStopR
 import { EventType, type BaseEvent } from "@ag-ui/client";
 import { Observable, throwError } from "rxjs";
 import { loadTranscript, saveTranscript } from "./models";
-import { settlePendingToolCalls } from "./transcripts";
+import { repairToolHistory, settlePendingToolCalls } from "./transcripts";
 
 /**
  * The signed-in user for the CopilotKit request being handled. The runtime's
@@ -52,6 +52,18 @@ export class PersistentAgentRunner extends InMemoryAgentRunner {
       return throwError(() => new Error("This conversation belongs to another traveler."));
     }
     this.claim(request.threadId, userId);
+    // A tool call without its result right after it (the traveler opened another chat mid-answer, or
+    // wrote before answering a card) would make the model call fail, so the history is repaired first
+    // (see repairToolHistory): on the agent, whose messages the model call is built from, and in the
+    // input this run records, so a reconnect replays the repaired history too.
+    const messages = request.input.messages;
+    if (Array.isArray(messages)) {
+      const settled = repairToolHistory(messages);
+      if (settled !== messages) {
+        request.agent.setMessages(settled);
+        request = { ...request, input: { ...request.input, messages: settled } };
+      }
+    }
     const events = super.run(request);
     if (userId) {
       // Side subscription: the run finalizes (and snapshots its messages) before the stream completes,

@@ -101,6 +101,10 @@ test("discover: hero photo and attribution, planner fields, create a trip, colle
     // Scoped to the chat: the side panel's picks carry a "Where to stay in Rome" row of their own.
     await expect(page.locator(".xp-chat").getByText("Where to stay in Rome")).toBeVisible({ timeout: 60_000 });
     await expect(page.getByTestId("concierge-launcher")).toHaveCount(0);
+    // The chat opened from Discover starts from the fields filled in there.
+    const chips = page.getByTestId("planner-chips");
+    await expect(chips).toContainText("Rome");
+    await expect(chips).toContainText("3 travelers");
   });
 
   await test.step("content pages carry the side rail; Discover keeps the launcher; the planner chips sit under the composer", async () => {
@@ -116,9 +120,10 @@ test("discover: hero photo and attribution, planner fields, create a trip, colle
     await rail.getByRole("link", { name: "Chats" }).click();
     await page.waitForURL((u) => u.pathname === "/chat");
     await expect(page.getByPlaceholder("Ask your concierge")).toBeVisible();
+    // A new chat starts over: the fields went with the chat opened from Discover, not with every chat.
     const chips = page.getByTestId("planner-chips");
-    await expect(chips).toContainText("Rome, Italy");
-    await expect(chips).toContainText("3 travelers");
+    await expect(chips.getByRole("button").first()).toHaveText("Where");
+    await expect(chips).not.toContainText("travelers");
     await chips.getByRole("button", { name: /Budget/ }).click();
     await expect(page.getByRole("dialog", { name: "Create a trip" })).toBeVisible();
     await page.getByRole("dialog", { name: "Create a trip" }).getByRole("button", { name: "Close" }).click();
@@ -131,6 +136,11 @@ test("discover: hero photo and attribution, planner fields, create a trip, colle
 
   await test.step("picks come as carousel rows, best first, with the reasons on the card", async () => {
     await page.goto("/");
+    // The chats opened since started over, so the fields are blank again: pick the destination.
+    await page.getByTestId("planner-field-where").click();
+    const whereEditor = page.getByRole("dialog", { name: "Where to?" });
+    await whereEditor.getByLabel("Destination").fill("Rome, Italy");
+    await whereEditor.getByRole("button", { name: "Apply" }).click();
     const things = page.getByTestId("home-row-things");
     await things.scrollIntoViewIfNeeded();
     await expect(things.getByTestId("home-pick").first()).toBeVisible({ timeout: 60_000 });

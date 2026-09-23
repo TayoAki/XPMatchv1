@@ -38,8 +38,8 @@ function TripPlannerForm() {
   const send = useSendMessage();
   const router = useRouter();
   const { focus } = useMapView();
-  // Opened from the chips of a chat about somewhere, the form starts from that chat's destination.
-  const [draft, setDraft] = useState<TripPlanner>(() => ({ ...planner, where: planner.where || focus?.name || "" }));
+  // The Where starts as the chip shows it: the destination of the chat on screen, else the planner's.
+  const [draft, setDraft] = useState<TripPlanner>(() => ({ ...planner, where: focus?.name || planner.where }));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
