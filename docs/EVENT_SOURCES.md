@@ -20,9 +20,10 @@ Terms and the Places API policies page (updated 2026-09-17):
   cache, or store Places API content beyond the allowed exceptions." Names, ratings, photos,
   categories, reviews and review summaries are not on the list.
 - **No creating content from Maps content.** Terms §3.2.3(c), including "use Google Maps Content to
-  improve machine learning and artificial intelligence models". The only explicit exception for
-  putting Maps content through an LLM is the **Maps Grounding Lite API** (service terms §10), which
-  requires Google Maps source links next to the output.
+  improve machine learning and artificial intelligence models". The written exceptions for putting
+  Maps content through a model are the **Maps Grounding Lite API** (service terms §10, any compliant
+  model) and **Grounding with Google Maps** in the Gemini API and Vertex AI (Gemini models only);
+  both require the Google Maps source links with the output.
 - **Showing reviews.** Credit each author, say how reviews are ordered and filtered, and for places
   in France show the visit date.
 
@@ -37,10 +38,13 @@ Where the app goes beyond that today:
 
 Recommended: a legal read, then the compliant shape: keep place IDs and our own data (reactions,
 traveler reviews, check-ins, match results, the plan), expire coordinates after 30 days, fetch names,
-ratings, photos and reviews from Google when a place is shown, and answer place questions through
-Grounding Lite or from our own and partner reviews. That costs more per view: much of the catalog's
-saving (about $1.20 instead of $8–10 per active traveler a month) came from storing content, so the
-cost model in `docs/COGS.md` needs re-running with display-time fetches. Nothing in the app has been
+ratings, photos and reviews from Google when a place is shown, and answer place questions from our
+own reviews or through Google's grounding. Fetching through the Places API costs more per view (about
+$0.027 for a name, rating and photo), and much of the catalog's saving (about $1.20 instead of $8–10
+per active traveler a month) came from storing content; Google's Places UI Kit, which renders the
+details, photos and reviews itself, costs $0.001 a view (pre-GA). `docs/PLACE_DATA.md` has how
+competitors handle this, Google's routes and their prices, and the questions for the legal read;
+`docs/COGS.md` needs re-running once the display route is chosen. Nothing in the app has been
 changed yet; this is for a decision.
 
 The same test applies to every source below: can we store it, rank with it, mix it with others and

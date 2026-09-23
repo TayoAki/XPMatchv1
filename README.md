@@ -212,7 +212,9 @@ See `docs/USER_FLOWS.md` for every user flow screen by screen, `docs/COGS.md` fo
 architecture and build plan, and `docs/BUSINESS_PLAN.md` for the business plan (offers, pricing, and
 the Sales, Marketing, Onboarding, Fulfillment and Retention playbooks with their gates) with its three
 working documents: `docs/COMPETITOR_LANDSCAPE.md`, `docs/REVENUE_MODEL.md` and
-`docs/OPERATING_SYSTEM.md`.
+`docs/OPERATING_SYSTEM.md`. `docs/EVENT_SOURCES.md` lists event and experience sources and flags
+what Google's terms allow us to store; `docs/PLACE_DATA.md` shows how other travel apps source, store
+and use place data, and Google's approved routes.
 
 ## Getting started
 

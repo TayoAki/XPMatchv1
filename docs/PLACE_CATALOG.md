@@ -102,7 +102,8 @@ saves) have no expiry. Places pins keep rendering on Google maps with attributio
 > Specific Terms §14.3). Place IDs may be kept indefinitely; no other Places content may be cached or
 > stored (Terms §3.2.3(b), Places policies). Storing names, ratings, photos, summaries and reviews as
 > this section describes goes beyond that. See `docs/EVENT_SOURCES.md` section 1 for what is affected
-> and the compliant shape; this needs a decision before more is built on the catalog.
+> and the compliant shape, and `docs/PLACE_DATA.md` for how competitors handle it and Google's
+> approved routes; this needs a decision before more is built on the catalog.
 
 ## 3. What it costs after
 
