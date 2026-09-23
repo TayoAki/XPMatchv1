@@ -155,6 +155,53 @@ The model's side stays close to Mindtrip's approach: ground the model on a place
 The difference is what goes into that index: storable open data and our travelers' own content,
 not Google's.
 
+### How the match works with the UI Kit
+
+The match is a scoring function of ours (`src/lib/match.ts`), not a model, and it runs before a
+card is drawn, so the UI Kit only replaces the drawing. Most of the score comes from our own data:
+the profile, the taste profile, learned likes, dislikes and dealbreakers, thumbs and the weights
+learned from them. Per place it reads three things from Google: the type ("Italian restaurant",
+"museum", "spa"), the price level, and the rating with its count. Chat cards already fall back to
+the model's own tags (cuisine, style, category, price tier) when no Google place is resolved.
+
+1. **Propose.** The model names places with its own tags, or a profile search runs ("Italian
+   restaurants in Rome").
+2. **Verify.** Each name becomes a place ID through an ID-only Text Search (free).
+3. **Score.** Our function, on our data plus type, price and rating read for this request only and
+   never stored.
+4. **Draw.** Our card frame (match badge, taste reasons, Swap, Add, Not a fit) around a UI Kit
+   element that Google fills from the place ID; the sheet is the full element with reviews and hours.
+5. **Keep.** Place ID, score, reasons and reactions; coordinates for pins up to 30 days.
+
+| Step | Places call | Fields | Price (list) |
+| --- | --- | --- | --- |
+| Verify | Text Search, IDs only | `id` | Free, unlimited |
+| Score a list | Text Search, up to 20 places a call | `types`, `location`, `priceLevel`, `rating`, `userRatingCount` | $35 per 1,000 calls, 1,000 free a month (about $0.002 a place) |
+| Score one named place | Place Details | the same | $20 per 1,000, 1,000 free |
+| Card | UI Kit compact details element | drawn by Google | $1 per 1,000 loads, 10,000 free |
+| Sheet | UI Kit details element | reviews, hours, photos | $1 per 1,000; Pro elements $5 |
+
+Price level and rating are Enterprise-tier fields. Types and location alone are Pro ($32 per 1,000,
+5,000 free), so leaving the rating out saves little.
+
+Two ways to feed step 3:
+
+- **A. Model tags only.** Google only verifies and draws: about $0.001 a card. The ranking cannot
+  see Google's rating, so quality rests on the model, the order Google's search returns places in,
+  and our travelers' reviews. A weak place stays in until a thumbs-down or Not a fit.
+- **B. Model tags plus Google's type, price and rating, read per request.** Keeps today's quality and
+  the rating floor (4.0 and 50 reviews). Nothing can be shared between travelers: a plan build re-runs
+  its ~15 searches (about $0.50 at list price) and home picks 8 to 10 (about $0.30 a refresh).
+  Depends on legal question 1.
+
+Recommended: B for plan builds and home picks, A for places the model names in chat (the card still
+shows Google's real rating).
+
+The taste profile has to move to our own data. "Like Roscioli, which you loved" compares the type
+and name of places the traveler reacted to, which we cannot keep from Google. Each reaction would
+store the place ID and our own tag (the model's, or one the traveler picks), and the reason line
+would name the kind ("like the Roman trattoria you loved") or fetch the name when shown.
+
 Questions for the legal read:
 
 1. May the itinerary builder rank with Google ratings read at request time and never stored?
