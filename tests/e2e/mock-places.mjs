@@ -100,6 +100,37 @@ export const PLACES = [
     photos: [{ name: "places/kyoto/photos/p1", authorAttributions: [{ displayName: "A Google user", uri: "https://maps.google.com/maps/contrib/0" }] }],
     googleMapsUri: "https://maps.google.com/?cid=kyoto",
   },
+  // A country and three of its cities, for a trip request at country level.
+  {
+    id: "south-korea",
+    kind: "destination",
+    types: ["country", "political"],
+    primaryType: "country",
+    displayName: { text: "South Korea" },
+    formattedAddress: "South Korea",
+    addressComponents: comps("South Korea", "South Korea", "South Korea"),
+    location: loc(36.5, 127.8),
+    editorialSummary: { text: "Palaces, mountains and a coastline of islands." },
+    photos: [{ name: "places/south-korea/photos/p1", authorAttributions: [{ displayName: "A Google user", uri: "https://maps.google.com/maps/contrib/0" }] }],
+    googleMapsUri: "https://maps.google.com/?cid=south-korea",
+  },
+  ...[
+    ["seoul", "Seoul", "Seoul", 37.5665, 126.978, "Palaces by day, night markets after dark."],
+    ["busan", "Busan", "Busan", 35.1796, 129.0756, "Beaches, seaside temples and fish markets."],
+    ["jeju", "Jeju", "Jeju-do", 33.4996, 126.5312, "Volcanic trails and quiet coastal roads."],
+  ].map(([id, name, region, lat, lng, summary]) => ({
+    id,
+    kind: "destination",
+    types: ["locality", "political"],
+    primaryType: "locality",
+    displayName: { text: name },
+    formattedAddress: `${name}, South Korea`,
+    addressComponents: comps(name, region, "South Korea"),
+    location: loc(lat, lng),
+    editorialSummary: { text: summary },
+    photos: [{ name: `places/${id}/photos/p1`, authorAttributions: [{ displayName: "A Google user", uri: "https://maps.google.com/maps/contrib/0" }] }],
+    googleMapsUri: `https://maps.google.com/?cid=${id}`,
+  })),
   {
     id: "hotel-de-russie",
     kind: "hotel",
@@ -453,7 +484,7 @@ function textSearch(body) {
       if (d < 40) score += 1;
       else score -= 50;
     }
-    if (p.kind === "destination" && !/\brome\b|\broma\b|\baustell\b|\bparos\b|\bamalfi\b|\bbanff\b|\bkyoto\b/.test(q)) score -= 20;
+    if (p.kind === "destination" && !/\brome\b|\broma\b|\baustell\b|\bparos\b|\bamalfi\b|\bbanff\b|\bkyoto\b|\bkorea\b|\bseoul\b|\bbusan\b|\bjeju\b/.test(q)) score -= 20;
     // "hotels in Rome" is a query for hotels, not for the city: Google would not answer with the locality.
     if (p.kind === "destination" && Object.values(KIND_WORDS).some((re) => re.test(q))) score -= 50;
     return { p, score };

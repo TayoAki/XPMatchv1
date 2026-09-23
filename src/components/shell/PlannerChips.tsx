@@ -3,6 +3,7 @@
 import clsx from "clsx";
 import { CalendarDays, MapPin, Users, Wallet } from "lucide-react";
 import { formatDateRange, useTravelStore } from "@/lib/store";
+import { useMapView } from "@/lib/map-store";
 import { useUiState, type PlannerTab } from "@/components/providers/UiState";
 
 const BUDGET_LABEL: Record<string, string> = {
@@ -19,16 +20,20 @@ const BUDGET_LABEL: Record<string, string> = {
  */
 export function PlannerChips({ className }: { className?: string }) {
   const { planner } = useTravelStore();
+  const { focus } = useMapView();
   const { openPlanner } = useUiState();
+  // This chat's own destination (where its map is focused) comes first, then the Where the traveler
+  // set. A new chat starts without the last chat's city.
+  const where = (focus?.name ?? "").trim() || planner.where.trim();
 
   const chips: { tab: PlannerTab; label: string; value?: string; icon: typeof MapPin }[] = [
-    { tab: "where", label: "Where", value: planner.where.trim() || undefined, icon: MapPin },
+    { tab: "where", label: "Where", value: where || undefined, icon: MapPin },
     { tab: "when", label: "When", value: formatDateRange(planner.startDate, planner.endDate) || undefined, icon: CalendarDays },
     {
       tab: "who",
       label: "Who",
       // Travelers defaults to 2, so only surface it once a trip is actually being planned.
-      value: planner.where.trim() && planner.travelers ? `${planner.travelers} ${planner.travelers === 1 ? "traveler" : "travelers"}` : undefined,
+      value: where && planner.travelers ? `${planner.travelers} ${planner.travelers === 1 ? "traveler" : "travelers"}` : undefined,
       icon: Users,
     },
     { tab: "budget", label: "Budget", value: planner.budgetTier ? BUDGET_LABEL[planner.budgetTier] : undefined, icon: Wallet },

@@ -121,7 +121,15 @@ scheduling chip open the itinerary board as a full-height sheet (short map, then
    Discover composer (`/chat?prompt=…` sends the text once the chat is ready).
 2. **Destination** — as soon as a place is clear the assistant calls `focus_map`: the map centers on
    it, a "Looks like you're headed to Rome" callout appears with a **Create trip** button, the chat is
-   titled "Exploring Rome" and the planner's *Where* fills in.
+   titled "Exploring Rome" and the **Where** chip under the composer shows Rome. That chip belongs to
+   the chat: a new chat starts at *Where*, going back to the Rome chat shows Rome again, and only a
+   Where the traveler sets themselves (the chips, the Discover fields, **Create trip**) carries across
+   chats. The latest message wins over all of it: "plan me a trip to Korea" plans Korea whatever the
+   planner or an upcoming trip says. The assistant answers with cards, not questions: what is missing
+   (dates, length, who is going) it assumes from the planner and the profile, then says so in one
+   sentence under the cards ("Assuming about a week for two with flexible dates"). A country or a
+   large region comes back as three or four city cards at once (Seoul, Busan, Jeju), and the city the
+   traveler picks gets the package.
 2a. **The package** — with the destination clear, the assistant's first card is one personalized
    package (`show_package`): the app, not the model, picks the best stay, things to do (two, three or
    four by pace) and three places to eat from its own place catalog, scored by the match model with a

@@ -69,8 +69,10 @@ import { api } from "@/lib/api";
 
 type RenderProps<T> = { args: Partial<T> | T; status: ToolCallStatus; result?: string; toolCallId: string };
 
+// The model's last word before it writes its reply, so it carries the two rules it most often breaks:
+// repeating the cards as a text list, and leaving its assumptions unsaid.
 const CARDS_DONE =
-  "Cards are now displayed to the traveler. Do not repeat their contents; add at most two short sentences of guidance or a natural next step.";
+  "The cards are now on screen with every name, photo and detail. Do not list, number or summarize them again. Reply with at most two short sentences: any assumptions you made (length, travelers, dates) and the next step.";
 
 // Stable renderer components (defined once so React keeps card state across re-renders).
 const DestinationsRenderer = ({ args, status, toolCallId }: RenderProps<ShowDestinationsArgs>) => (
@@ -261,7 +263,8 @@ export function TravelCopilot() {
   });
 
   useAgentContext({
-    description: "Trip planner values the traveler set in the app header (empty means not set)",
+    description:
+      "Trip planner values the traveler set themselves with the chips under the composer or the Discover fields (empty means not set). Background only: when the latest message names another destination, plan for that one.",
     value: {
       destination: planner.where,
       startDate: planner.startDate,
@@ -346,16 +349,14 @@ export function TravelCopilot() {
       followUp: true,
       handler: async ({ location }) => {
         const threadId = mapActions.activeThreadId();
-        // Resolve in the background so the tool result is appended right away; the map, chat title
-        // and planner update as soon as the lookup returns.
+        // Resolve in the background so the tool result is appended right away; the map and the chat
+        // title update as soon as the lookup returns. The planner is left alone: the Where chip reads
+        // this chat's focus, so a new chat does not inherit the last chat's destination.
         void resolvePlaces({ items: [{ key: "focus", query: location, kind: "destination" }] }).then((res) => {
           const place = res?.items[0]?.place ?? null;
-          if (!place) return;
-          if (threadId) {
-            mapActions.setFocus(threadId, place);
-            travelActions.upsertChat({ id: threadId, title: `Exploring ${place.name}`, destination: place.name, place });
-          }
-          if (travelActions.getPlanner().where !== place.name) travelActions.updatePlanner({ where: place.name });
+          if (!place || !threadId) return;
+          mapActions.setFocus(threadId, place);
+          travelActions.upsertChat({ id: threadId, title: `Exploring ${place.name}`, destination: place.name, place });
         });
         return `Centering the map on ${location}. Recommendations you show will be pinned there. Continue.`;
       },

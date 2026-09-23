@@ -7,6 +7,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Chip, Field, TextInput } from "@/components/ui/Field";
 import { useTravelStore, type BudgetTier, type TripPlanner } from "@/lib/store";
+import { useMapView } from "@/lib/map-store";
 import { useUiState } from "@/components/providers/UiState";
 import { useSendMessage } from "@/components/chat/useSendMessage";
 
@@ -36,7 +37,9 @@ function TripPlannerForm() {
   const { plannerTab, closePlanner } = useUiState();
   const send = useSendMessage();
   const router = useRouter();
-  const [draft, setDraft] = useState<TripPlanner>(() => planner);
+  const { focus } = useMapView();
+  // Opened from the chips of a chat about somewhere, the form starts from that chat's destination.
+  const [draft, setDraft] = useState<TripPlanner>(() => ({ ...planner, where: planner.where || focus?.name || "" }));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

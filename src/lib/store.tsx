@@ -172,15 +172,21 @@ let state: TravelStoreState = DEFAULT_STATE;
 let localLoaded = false;
 const listeners = new Set<() => void>();
 
+/**
+ * Version of what is kept in local storage. Before 2, focusing the map wrote the chat's destination
+ * into the planner's Where, so it followed the traveler into every new chat; that Where cannot be
+ * told apart from one the traveler set, so it is dropped once.
+ */
+const LOCAL_VERSION = 2;
+
 function loadLocal(): Pick<TravelStoreState, "planner" | "proactiveDismissedAt"> {
   try {
     const raw = window.localStorage.getItem(LOCAL_KEY);
     if (!raw) return { planner: DEFAULT_PLANNER, proactiveDismissedAt: null };
-    const parsed = JSON.parse(raw) as Partial<Pick<TravelStoreState, "planner" | "proactiveDismissedAt">>;
-    return {
-      planner: { ...DEFAULT_PLANNER, ...(parsed.planner ?? {}) },
-      proactiveDismissedAt: parsed.proactiveDismissedAt ?? null,
-    };
+    const parsed = JSON.parse(raw) as Partial<Pick<TravelStoreState, "planner" | "proactiveDismissedAt">> & { v?: number };
+    const planner = { ...DEFAULT_PLANNER, ...(parsed.planner ?? {}) };
+    if (parsed.v !== LOCAL_VERSION) planner.where = "";
+    return { planner, proactiveDismissedAt: parsed.proactiveDismissedAt ?? null };
   } catch {
     return { planner: DEFAULT_PLANNER, proactiveDismissedAt: null };
   }
@@ -190,7 +196,7 @@ function persistLocal() {
   try {
     window.localStorage.setItem(
       LOCAL_KEY,
-      JSON.stringify({ planner: state.planner, proactiveDismissedAt: state.proactiveDismissedAt }),
+      JSON.stringify({ v: LOCAL_VERSION, planner: state.planner, proactiveDismissedAt: state.proactiveDismissedAt }),
     );
   } catch {
     // Storage may be unavailable; the app keeps working in memory.

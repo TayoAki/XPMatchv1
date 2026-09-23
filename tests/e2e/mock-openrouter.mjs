@@ -119,6 +119,52 @@ const DESTINATIONS = {
   ],
 };
 
+// "Plan me a trip to Korea": a country, so the map focuses on it and city cards follow at once.
+const KOREA = {
+  title: "Where to go in South Korea",
+  destinations: [
+    {
+      name: "Seoul",
+      country: "South Korea",
+      tagline: "Palaces by day, night markets after dark.",
+      whyItFits: "Museums and street food on every block match your love of art and food.",
+      bestTime: "April to May, September to November",
+      estimatedDailyBudgetUsd: 150,
+      highlights: ["Gyeongbokgung Palace", "Gwangjang Market", "Bukchon Hanok Village"],
+      vibes: ["food", "culture", "walkable"],
+      suggestedStay: "4 nights",
+      cityFeel: "Fast & layered",
+      knownFor: "Food & palaces",
+    },
+    {
+      name: "Busan",
+      country: "South Korea",
+      tagline: "Beaches, seaside temples and fish markets.",
+      whyItFits: "Coastal hikes and seafood for a slower second stop.",
+      bestTime: "May to June, September to October",
+      estimatedDailyBudgetUsd: 120,
+      highlights: ["Haedong Yonggungsa", "Jagalchi Market", "Gamcheon Culture Village"],
+      vibes: ["beach", "food", "nature"],
+      suggestedStay: "2–3 nights",
+      cityFeel: "Salty & easygoing",
+      knownFor: "Seafood & coast",
+    },
+    {
+      name: "Jeju",
+      country: "South Korea",
+      tagline: "Volcanic trails and quiet coastal roads.",
+      whyItFits: "Nature and hiking days to close the trip.",
+      bestTime: "April to June, September to October",
+      estimatedDailyBudgetUsd: 130,
+      highlights: ["Seongsan Ilchulbong at sunrise", "Olle trail 7", "Manjanggul lava tube"],
+      vibes: ["nature", "calm", "hiking"],
+      suggestedStay: "2 nights",
+      cityFeel: "Green & unhurried",
+      knownFor: "Volcanoes & trails",
+    },
+  ],
+};
+
 const server = http.createServer((req, res) => {
   let body = "";
   req.on("data", (d) => (body += d));
@@ -246,6 +292,12 @@ const server = http.createServer((req, res) => {
     }
     // Continuations after a tool result.
     if (last?.role === "tool") {
+      if (toolName === "focus_map" && /korea/.test(text) && tools.includes("show_destinations")) {
+        return streamReply(res, { text: "Three places in Korea that fit you.", toolCall: { name: "show_destinations", args: KOREA } });
+      }
+      if (toolName === "show_destinations" && /korea/.test(text)) {
+        return streamReply(res, { text: "Assuming about a week for two with flexible dates. Pick a city and I'll plan the days around it." });
+      }
       if (toolName === "set_search_constraints" && tools.includes("show_hotels")) {
         return streamReply(res, { text: "Here are two stays that fit.", toolCall: { name: "show_hotels", args: HOTELS } });
       }
@@ -410,6 +462,9 @@ const server = http.createServer((req, res) => {
           },
         },
       });
+    }
+    if (/trip to korea|korea trip/.test(text) && tools.includes("focus_map")) {
+      return streamReply(res, { text: "", toolCall: { name: "focus_map", args: { location: "South Korea", reason: "trip request for a country" } } });
     }
     if (/where should (i|we) go|suggest .*destinations|destinations for|go this (fall|spring|summer|winter)/.test(text) && tools.includes("show_destinations")) {
       return streamReply(res, { text: "Two places that fit you.", toolCall: { name: "show_destinations", args: DESTINATIONS } });
