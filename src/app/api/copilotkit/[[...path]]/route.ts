@@ -21,9 +21,30 @@ const handler = createCopilotRuntimeHandler({
   basePath: "/api/copilotkit",
 });
 
+/**
+ * CopilotKit endpoints the app never uses and that know nothing about users: thread and memory
+ * operations (list, read, clear, subscribe; keyed by thread) and the development event stream
+ * (every run's events). The app keeps its own per-user chat list and transcripts. Refused outright,
+ * whatever position the segment takes in the path (the runtime's router matches trailing segments).
+ */
+const REFUSED_SEGMENTS = new Set(["threads", "memories", "cpk-debug-events"]);
+
+function isRefusedEndpoint(request: Request): boolean {
+  return new URL(request.url).pathname.split("/").some((s) => {
+    let segment = s;
+    try {
+      segment = decodeURIComponent(s);
+    } catch {
+      // Keep the raw segment.
+    }
+    return REFUSED_SEGMENTS.has(segment.toLowerCase());
+  });
+}
+
 const handle = async (request: Request) => {
   const user = await getSessionUser();
   if (!user) return Response.json({ error: "Please sign in" }, { status: 401 });
+  if (isRefusedEndpoint(request)) return Response.json({ error: "Not found" }, { status: 404 });
   return withCopilotUser(user.id, () => handler(request));
 };
 

@@ -409,7 +409,9 @@ export async function loadTripDetail(tripId: string, userId: string): Promise<Tr
       "SELECT id, kind, title, note, url, place, details, added_by, created_at FROM trip_items WHERE trip_id = $1 ORDER BY created_at DESC",
       [tripId],
     ),
-    queryAll<ChatRow>(`SELECT ${CHAT_FIELDS} FROM chats WHERE trip_id = $1 ORDER BY updated_at DESC`, [tripId]),
+    // Only the viewer's own trip chats: transcripts are stored per traveler, so another member's
+    // chat can neither be opened nor continued, and its title is that traveler's first message.
+    queryAll<ChatRow>(`SELECT ${CHAT_FIELDS} FROM chats WHERE trip_id = $1 AND user_id = $2 ORDER BY updated_at DESC`, [tripId, userId]),
   ]);
   const toMember = (m: MemberRow): TripMember => ({ userId: m.user_id, name: m.name, handle: m.handle, email: m.email, role: m.role as TripMember["role"] });
   const toItem = (i: ItemRow): TripItem => ({

@@ -103,6 +103,17 @@ What was checked and passed:
 - Logs: only two kinds of noise, bogus server-action probes (`Server Reference ID did not match`) and
   streams aborted by the client (`Error: aborted`). Neither is a failure.
 
+**Security fix (September 23, 2026).** The audit missed that CopilotKit's in-memory runner switches on
+its local-development thread endpoints: `GET /api/copilotkit/threads` listed every conversation the
+server held, `GET /api/copilotkit/threads/<id>/messages` returned any one of them, and
+`POST /api/copilotkit/threads/clear` wiped them all, for any signed-in account (reproduced locally with
+two accounts). Closed three ways: the runner turns the endpoints off, the route refuses any `threads`,
+`memories` or `cpk-debug-events` path with a 404, and the runner remembers who started each live thread
+so nobody else can run on it, replay it or stop it. A trip page lists only the viewer's own trip chats
+(transcripts are stored per traveler, so another member's chat could never be opened reliably).
+`tests/e2e/privacy.spec.ts` covers it. Exposure window: chats held in memory since each deploy; stored
+transcripts were never reachable through these endpoints.
+
 Blockers, in order (about an hour of work, none of it code):
 
 1. **`ADMIN_EMAILS`** (done the same day): set to the team's account emails, so bug reports, the beta
