@@ -30,8 +30,8 @@ test("traveler reviews: check in on the spot, review, and the next traveler sees
   const a = await openRomePlan(page);
   const spot = HOTELS[a.name];
   expect(spot, `the stay is one of the stand-in hotels (got ${a.name})`).toBeTruthy();
-  const workspace = page.getByTestId("plan-workspace");
-  const sheet = workspace.getByTestId("place-sheet");
+  // A place picked in the plan opens in the chat's column, beside the plan.
+  const sheet = page.getByTestId("side-place").getByTestId("place-sheet");
   const text = `Quiet room over the courtyard, a rooftop breakfast and ten minutes on foot to the Forum. ${Date.now()}`;
   let privateId = "";
 
@@ -102,7 +102,7 @@ test("traveler reviews: check in on the spot, review, and the next traveler sees
     await signup(pageB, { email: uniqueEmail("rev-b"), name: "Ada Lovelace", ...PROFILE });
     const b = await openRomePlan(pageB);
     expect(b.name).toBe(a.name);
-    const sheetB = pageB.getByTestId("plan-workspace").getByTestId("place-sheet");
+    const sheetB = pageB.getByTestId("side-place").getByTestId("place-sheet");
 
     await test.step("the next traveler sees the review verified, from someone who travels like them", async () => {
       await b.stay.getByRole("button", { name: `Details for ${b.name}` }).click();
@@ -127,7 +127,7 @@ test("traveler reviews: check in on the spot, review, and the next traveler sees
     await test.step("Not a fit on the stay swaps it for the next best one on the spot", async () => {
       await sheetB.getByRole("button", { name: `Not a fit: ${b.name}` }).click();
       await pageB.getByRole("dialog", { name: `Why isn't ${b.name} a fit?` }).getByRole("button", { name: "Too pricey" }).click();
-      // The place left the plan, so its details close on the plan with the new stay.
+      // The place left the plan, so its details close and the plan shows the new stay.
       await expect(sheetB).toHaveCount(0);
       await expect(b.stay).not.toHaveAttribute("data-place-id", b.id);
       await expect(b.stay).not.toContainText(b.name);

@@ -236,18 +236,21 @@ scheduling chip open the itinerary board as a full-height sheet (short map, then
      instead of {stop}**.
    - **Good pick / Miss** thumbs: a miss (Not a fit) swaps the place for its first alternate that is
      not a miss too, on the spot, without rebuilding the rest of the days.
-   - **Details & reviews** (or a click on its name, or its pin on the day's map) opens the place over
-     the plan: photos, rating, its match score with **Good fit / Not a fit**, the overview with the
-     traveler reviews line, the Reviews and Location tabs, Save and Add to trip. **Back to {city}**
-     returns to the plan as it was (same tab, same swaps); a place marked Not a fit here leaves the plan
-     and its panel closes on the plan with its replacement.
+   - **Details & reviews** (or a click on its name, or its pin on the day's map) opens the place in
+     the column on the right, over the chat, so the plan stays in view beside it: photos, rating, its
+     match score with **Good fit / Not a fit**, the overview with the traveler reviews line, the
+     Reviews and Location tabs, Save and Add to trip. The stop and its pin are marked in the plan, and
+     picking another stop or pin switches the place. **Back to chat** returns to the conversation
+     (so does asking one of the panel's follow-up questions, to show the answer); a place marked Not a
+     fit here leaves the plan and its panel closes with its replacement in the plan.
    The plan line ("stay at …"), the day titles, the score, the card in the chat and Make itinerary all
    follow the swaps. The Stays, Activities and Dining tabs list the traveler's scored picks for the city;
-   a row opens its place the same way. Escape goes back from a place, then closes the plan (not while
-   typing in the chat); so does the close button, which gives the chat its full width back. Below
+   a row opens its place the same way. Escape goes back from a place (from the plan or the place's
+   panel), then closes the plan (not while typing in the chat); so does the close button, which gives
+   the chat its full width back. Below
    1280 px there is no workspace: the Itinerary control turns the card over in place, and every row of
    the plan there has its own Swap button (the same options and See all).
-   **Traveler reviews.** Every real place's panel (in the workspace, over the map or in a phone sheet)
+   **Traveler reviews.** Every real place's panel (beside the plan, over the map or in a phone sheet)
    carries what travelers on XPMatch say about it. The overview has one line: "3 traveler reviews · 2
    verified", "Loved by 2 verified travelers like you" and **Read reviews**, or "No traveler reviews
    yet." with **Leave the first review**. The **Reviews** tab has "From travelers on XPMatch" first,

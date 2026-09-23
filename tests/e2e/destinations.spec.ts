@@ -21,6 +21,8 @@ test("destination cards: an itinerary per city, opened as the plan workspace wit
   const detail = page.getByTestId("card-detail");
   const chat = page.getByTestId("chat-column");
   const stay = detail.getByTestId("itinerary-stay").getByTestId("itinerary-stop");
+  // A place picked in the plan opens in the chat's column, beside the plan.
+  const sheet = chat.getByTestId("side-place").getByTestId("place-sheet");
 
   await test.step("the photo face carries the itinerary, its score and the thumbs, the footer the two actions", async () => {
     await expect(rome).toHaveAttribute("data-face", "photo");
@@ -83,6 +85,31 @@ test("destination cards: an itinerary per city, opened as the plan workspace wit
     }
   });
 
+  await test.step("a stop opens beside the plan, in the chat's column; the plan stays usable and another pick switches the place", async () => {
+    const day = detail.getByTestId("itinerary-day").filter({ has: page.getByTestId("day-map") }).first();
+    const stops = day.getByTestId("itinerary-stop");
+    const nameOf = async (stop: Locator) => ((await stop.getByRole("button", { name: /^Details for / }).getAttribute("aria-label")) ?? "").replace(/^Details for /, "");
+    const [first, second] = [stops.first(), stops.nth(1)];
+    const [firstName, secondName] = [await nameOf(first), await nameOf(second)];
+    await first.getByRole("button", { name: /^Details for / }).click();
+    await expect(sheet.getByRole("heading", { name: firstName })).toBeVisible({ timeout: 20_000 });
+    await expect(first).toHaveAttribute("data-selected", "true");
+    // Side by side: the plan in the center, the place on the right where the chat was.
+    await expect(detail.getByTestId("itinerary-plan")).toBeVisible();
+    const [planBox, placeBox] = [await workspace.boundingBox(), await sheet.boundingBox()];
+    expect(planBox && placeBox ? planBox.x + planBox.width <= placeBox.x + 1 : false).toBe(true);
+    // The day's map marks the same place.
+    await expect(day.getByTestId("day-map").getByTestId("map-pin-list").locator('li[data-selected="true"]')).toContainText(firstName);
+    await second.getByRole("button", { name: /^Details for / }).click();
+    await expect(sheet.getByRole("heading", { name: secondName })).toBeVisible({ timeout: 20_000 });
+    await expect(second).toHaveAttribute("data-selected", "true");
+    await expect(first).not.toHaveAttribute("data-selected", "true");
+    await sheet.getByRole("button", { name: "Back to chat" }).click();
+    await expect(sheet).toHaveCount(0);
+    await expect(page.getByPlaceholder("Ask your concierge")).toBeVisible();
+    await expect(page.getByTestId("copilot-user-message").first()).toBeVisible();
+  });
+
   await test.step("the stay swaps for a ready alternate, the plan and the card follow, and swaps back", async () => {
     const original = (await stay.getAttribute("data-place-id")) ?? "";
     await stay.getByRole("button", { name: /^Swap / }).click();
@@ -127,12 +154,11 @@ test("destination cards: an itinerary per city, opened as the plan workspace wit
   await test.step("a hotel's own panel makes it the stay, and the stay's panel says it is", async () => {
     const original = (await stay.getAttribute("data-place-id")) ?? "";
     await detail.getByRole("tab", { name: "Stays" }).click();
-    const sheet = workspace.getByTestId("place-sheet");
     const current = detail.locator(`[data-testid="destination-reco-row"][data-place-id="${original}"]`);
     await current.getByRole("button", { name: /^Show / }).click();
     await expect(sheet.getByTestId("plan-stay")).toContainText("Your stay in the Rome plan");
     await expect(sheet.getByRole("button", { name: "Use as my stay" })).toHaveCount(0);
-    await sheet.getByRole("button", { name: "Back to Rome" }).click();
+    await sheet.getByRole("button", { name: "Back to chat" }).click();
     const other = detail.locator(`[data-testid="destination-reco-row"]:not([data-place-id="${original}"])`).first();
     const otherId = (await other.getAttribute("data-place-id")) ?? "";
     await other.getByRole("button", { name: /^Show / }).click();
@@ -162,7 +188,7 @@ test("destination cards: an itinerary per city, opened as the plan workspace wit
     await expect(detail.getByTestId("choose-banner")).toHaveCount(0);
   });
 
-  await test.step("the Stays tab lists every pick; a row opens its place over the plan with Back", async () => {
+  await test.step("the Stays tab lists every pick; a row opens its place beside the list, Back returns to the chat", async () => {
     await detail.getByRole("tab", { name: "Stays" }).click();
     const rows = detail.getByTestId("destination-reco-row");
     await expect(rows.first()).toBeVisible({ timeout: 40_000 });
@@ -171,22 +197,26 @@ test("destination cards: an itinerary per city, opened as the plan workspace wit
     const show = rows.first().getByRole("button", { name: /^Show / });
     const name = (await show.getAttribute("aria-label"))?.replace(/^Show /, "").replace(/ on map$/, "") ?? "";
     await show.click();
-    const sheet = workspace.getByTestId("place-sheet");
     await expect(sheet.getByRole("heading", { name })).toBeVisible({ timeout: 20_000 });
     await expect(sheet.getByRole("button", { name: "Add to trip" })).toBeVisible();
     await expect(sheet.getByRole("button", { name: `Not a fit: ${name}` })).toBeVisible();
     await expect(sheet.getByRole("button", { name: "Hide map" })).toHaveCount(0);
-    await sheet.getByRole("button", { name: "Back to Rome" }).click();
+    await expect(rows.first()).toBeVisible();
+    await sheet.getByRole("button", { name: "Back to chat" }).click();
     await expect(sheet).toHaveCount(0);
     await expect(detail.getByRole("tab", { name: "Stays" })).toHaveAttribute("aria-selected", "true");
     await detail.getByRole("tab", { name: "Itinerary" }).click();
   });
 
-  await test.step("Escape goes back from a place, then closes the plan; typing in the chat leaves it open", async () => {
+  await test.step("Escape goes back from a place, from the plan or the place itself, then closes the plan; typing in the chat leaves it open", async () => {
     await stay.getByRole("button", { name: /^Details for / }).click();
-    await expect(workspace.getByTestId("place-sheet")).toBeVisible();
+    await expect(sheet).toBeVisible();
     await page.keyboard.press("Escape");
-    await expect(workspace.getByTestId("place-sheet")).toHaveCount(0);
+    await expect(sheet).toHaveCount(0);
+    await stay.getByRole("button", { name: /^Details for / }).click();
+    await sheet.getByRole("button", { name: "Back to chat" }).focus();
+    await page.keyboard.press("Escape");
+    await expect(sheet).toHaveCount(0);
     await page.getByPlaceholder("Ask your concierge").focus();
     await page.keyboard.press("Escape");
     await expect(workspace).toBeVisible();

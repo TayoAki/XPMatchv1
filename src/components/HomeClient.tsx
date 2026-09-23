@@ -1,20 +1,23 @@
 "use client";
 
+import { useCallback } from "react";
 import clsx from "clsx";
 import { TravelChat } from "@/components/chat/TravelChat";
 import { MobileMapSheet } from "@/components/map/MobileMapSheet";
+import { PlaceDetailSheet } from "@/components/map/PlaceDetailSheet";
 import { TripBoardSheet } from "@/components/trips/TripBoardSheet";
 import { RightPanel } from "@/components/panel/RightPanel";
 import { useUiState } from "@/components/providers/UiState";
 import { TripScopeProvider } from "@/components/trips/TripScope";
 import { useDetailCardMounted } from "@/components/map/detailSlot";
 import { useTravelStore } from "@/lib/store";
-import { useMapView } from "@/lib/map-store";
+import { mapActions, useMapView } from "@/lib/map-store";
 import { useMediaQuery } from "@/lib/use-media-query";
 
 /**
  * The concierge page (`/chat`): the active chat (history lives in the side rail) and the
- * discovery/map panel; with a plan open, the plan in the center and the chat on the right.
+ * discovery/map panel; with a plan open, the plan in the center and the chat on the right, where a
+ * place picked in the plan opens beside it.
  */
 export function HomeClient({ threadId, initialPrompt, tripId }: { threadId?: string; initialPrompt?: string; tripId?: string }) {
   const { newChatNonce } = useUiState();
@@ -31,6 +34,14 @@ export function HomeClient({ threadId, initialPrompt, tripId }: { threadId?: str
   const view = useMapView();
   const cardOnScreen = useDetailCardMounted(view.detail);
   const workspace = wide && !!view.detail && cardOnScreen;
+  // A place picked in the plan (a stop, a pin on a day's map) opens in this column, over the
+  // conversation, so the itinerary and the place are on screen together; Back returns to the chat,
+  // which stays mounted underneath.
+  const sidePlace = workspace && view.selectedKey ? view.selected : null;
+  const threadOnScreen = view.threadId;
+  const backToChat = useCallback(() => {
+    if (threadOnScreen) mapActions.selectPlace(threadOnScreen, null);
+  }, [threadOnScreen]);
   return (
     <TripScopeProvider tripId={effectiveTripId}>
       <div className="flex h-full min-h-0">
@@ -39,7 +50,14 @@ export function HomeClient({ threadId, initialPrompt, tripId }: { threadId?: str
           data-testid="chat-column"
           data-side={workspace || undefined}
         >
-          <TravelChat key={chatKey} threadId={threadId} initialPrompt={initialPrompt} tripId={effectiveTripId ?? undefined} />
+          <div className="flex h-full min-h-0 flex-col" inert={!!sidePlace} aria-hidden={sidePlace ? true : undefined}>
+            <TravelChat key={chatKey} threadId={threadId} initialPrompt={initialPrompt} tripId={effectiveTripId ?? undefined} />
+          </div>
+          {sidePlace ? (
+            <div className="absolute inset-0 z-30 bg-white" data-testid="side-place">
+              <PlaceDetailSheet key={view.selectedKey ?? "none"} place={sidePlace} focusName={view.focus?.name} onClose={backToChat} onSent={backToChat} backLabel="Back to chat" />
+            </div>
+          ) : null}
           <MobileMapSheet />
           <TripBoardSheet />
         </section>

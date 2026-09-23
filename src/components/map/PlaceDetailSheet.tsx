@@ -63,12 +63,15 @@ export function PlaceDetailSheet({
   focusName,
   onClose,
   onCollapse,
+  onSent,
   backLabel,
   compact = false,
 }: {
   place: ResolvedPlace;
   focusName?: string;
   onClose: () => void;
+  /** After the sheet sends a question to the chat: where the sheet covers the chat, it steps aside for the answer. */
+  onSent?: () => void;
   /** Opened from a card in the side panel: the close button reads "Back to {city}" and returns there. */
   backLabel?: string;
   /** Hides the whole map; without it (a card open above the map) there is no Hide map button. */
@@ -385,7 +388,10 @@ export function PlaceDetailSheet({
       {/* The next-question pill floats just above the action bar; outlined, so Add to trip stays the one filled action. */}
       <button
         type="button"
-        onClick={() => send(suggestion.prompt)}
+        onClick={() => {
+          send(suggestion.prompt);
+          onSent?.();
+        }}
         className={clsx("absolute flex h-11 items-center gap-2 rounded-full border border-border bg-white px-4 text-[14px] font-semibold text-brand shadow-lg hover:bg-surface", compact ? "bottom-[84px] right-4" : "bottom-[84px] right-6")}
       >
         <Sparkles className="h-4 w-4" /> {suggestion.label}

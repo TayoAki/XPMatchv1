@@ -62,7 +62,7 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   day's own map (one at a time) above its stops, numbered like the pins. Every place can be swapped
   for one of three ready alternates or, through See all, for any place of its kind on its tab (Use
   as my stay on every hotel row and hotel panel), marked Not a fit (it swaps out on the spot) or
-  opened in full over the plan with Back to {city}. On smaller screens the card turns over instead (hover on a
+  opened in full in the right column beside the plan, with Back to chat. On smaller screens the card turns over instead (hover on a
   desktop, the Itinerary control on phones). Every card ends in **Make itinerary** and Save: one click saves the
   plan as a trip ("4 days in Seoul") and turns into Open itinerary; a trip tray on the map keeps the
   trip in view. Cards, pins and stops show short place names ("Josun Palace", the full listing name
