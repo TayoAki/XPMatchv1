@@ -127,7 +127,7 @@ use Yelp or Tripadvisor content signed deals for it.
 | --- | --- | --- | --- |
 | Grounding with Google Maps (Gemini API, Vertex AI) | A Gemini model answers from Google Maps data (places, reviews, photos, hours) and returns the text with Maps links and place IDs | Show it only "to the end user who initiated the prompt", with the Maps links; do not modify it or intersperse other content; keep it up to 90 days only to evaluate the display, or up to 6 months in that user's chat history; no scraping or training | 5,000 prompts a month free on Gemini 3, then $14 per 1,000, plus model tokens |
 | Maps Grounding Lite (MCP) | Any model that complies with the Maps terms gets an AI place summary with place IDs, coordinates and Maps links (no review text), plus weather and route distance and time. Generally available | The exception to "no creating content" holds if the Maps source links "immediately follow" the output (§10.2.1); cache up to 30 days only to evaluate and optimize the display (§10.2.2); do not separate Maps content from the output, train on it, or mix other content in (§10.3); the model must not cache, store or train on it | 10,000 requests a month free, then $7 per 1,000, down to $2.80 at volume |
-| Places UI Kit | Google renders place details, search results and lists, including photos and reviews, with or without a map, even a non-Google one (§15.1). The docs label it Experimental (pre-GA) | Coordinates up to 30 days (§15.2); the content still may not be cached or used to create content (§15.3) | Billed per element loaded, photos and reviews included: $1 per 1,000 (10,000 a month free); the Pro elements $5 per 1,000 (5,000 free) |
+| Places UI Kit | Google renders place details, search results and lists, including photos and reviews, with or without a map, even a non-Google one (§15.1). Place Details and Place Search are generally available; the Advanced (Pro) elements are in preview | Coordinates up to 30 days (§15.2); the content still may not be cached or used to create content (§15.3) | Billed per element loaded, photos and reviews included: $1 per 1,000 (10,000 a month free); the Pro elements $5 per 1,000 (5,000 free) |
 | Place IDs | Keep them; refresh any older than 12 months | Exempt from the caching limits | Free: Text Search and Place Details with the ID field only |
 
 For comparison, showing a place's name, rating and one photo through the Places API is about
@@ -135,6 +135,9 @@ $0.027 per view (Place Details Enterprise $20 per 1,000 plus a photo at $7 per 1
 with reviews (Enterprise + Atmosphere, $25 per 1,000). The UI Kit shows the same for $0.001.
 
 ## What it means for XPMatch
+
+The full redesign, with every table, screen and model path that changes, a build order and costs,
+is in `docs/PLACE_DATA_REDESIGN.md`.
 
 | Where we go beyond the terms | What competitors do | Compliant option |
 | --- | --- | --- |
@@ -145,7 +148,7 @@ with reviews (Enterprise + Atmosphere, $25 per 1,000). The UI Kit shows the same
 
 Cost: the compliant shape does not have to cost more than today. Resolving a name to a place ID is
 free (ID-only Text Search), and the UI Kit shows a place for $0.001 against the $0.027 the Places API
-charges for the same content. The trade-offs: the UI Kit is pre-GA; it draws Google's own layout
+charges for the same content. The trade-offs: the Pro elements are still in preview; it draws Google's own layout
 (style and content options only); every load of an element is billed, so tabs and reopened chats
 count again; and our server never sees what it shows, so rating filters and "why it fits" lines
 would come from our own data or from request-time reads that are never stored. `docs/COGS.md` needs

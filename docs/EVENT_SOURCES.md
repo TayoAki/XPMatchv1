@@ -42,7 +42,7 @@ ratings, photos and reviews from Google when a place is shown, and answer place 
 own reviews or through Google's grounding. Fetching through the Places API costs more per view (about
 $0.027 for a name, rating and photo), and much of the catalog's saving (about $1.20 instead of $8–10
 per active traveler a month) came from storing content; Google's Places UI Kit, which renders the
-details, photos and reviews itself, costs $0.001 a view (pre-GA). `docs/PLACE_DATA.md` has how
+details, photos and reviews itself, costs $0.001 a view. `docs/PLACE_DATA.md` has how
 competitors handle this, Google's routes and their prices, and the questions for the legal read;
 `docs/COGS.md` needs re-running once the display route is chosen. Nothing in the app has been
 changed yet; this is for a decision.
