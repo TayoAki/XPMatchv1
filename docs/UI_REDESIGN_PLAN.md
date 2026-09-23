@@ -537,5 +537,15 @@ overruled).
   240 px column on the left and the details beside it; names are one line with an ellipsis and the
   full name as the tooltip. The place panel's Rate, Save and Add to trip moved from its header to a
   bar at its very bottom (`place-actions`), on desktop and in the phone sheet; the next-question pill
-  floats above the bar, outlined. The flipped destination card no longer shows the photo credit
-  mirrored: every descendant of a face hides its back, and the credit chip lost its backdrop blur.
+  floats above the bar, outlined.
+- **The flipped card's mirrored credit, second pass** (reported again after the first fix):
+  `backface-visibility` alone cannot be relied on, because the spec tests a descendant against its own
+  transform, so a descendant a browser draws on its own layer (the photo credit, a blurred chip) can
+  show through the city profile mirrored. The face turned away is now hidden outright
+  (`visibility: hidden` 50 ms into the turn, once it is past edge-on); the face coming round shows at
+  once so focus can move to it. `destinations.spec` checks the credit is hidden while the profile shows.
+- **Side rail: one highlight, more room** (the open chat's fill ran into the Chats row's fill, and a long
+  title ran out to the rail's edge): while a conversation under Chats is highlighted, the Chats row keeps
+  its accent bar and color but no fill; the list sits 12 px below it with 6 px between rows and 4 px
+  between the rail's rows; titles truncate inside the rail (`minmax(0, 1fr)` column). `wave1.spec` checks
+  the long title stays inside the rail, the gap, and that only one of the two is filled.

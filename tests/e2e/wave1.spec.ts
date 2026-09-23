@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { eventually, sendChat, signup, uniqueEmail } from "./helpers";
+import { eventually, openChatHistory, sendChat, signup, uniqueEmail } from "./helpers";
 
 test("smart filters, heads-ups, comparison, remembered preferences and Explore parsing", async ({ page }) => {
   // page.request shares the browser's session cookie.
@@ -30,6 +30,25 @@ test("smart filters, heads-ups, comparison, remembered preferences and Explore p
     await page.keyboard.press("Escape");
     await expect(tip).toBeHidden();
     await page.mouse.move(8, 8);
+  });
+
+  await test.step("the side rail lists the long chat title on one line inside the rail, set off from Chats", async () => {
+    await openChatHistory(page);
+    const rail = page.getByTestId("side-rail");
+    const open = page.getByTestId("chat-nav-list").locator('a[aria-current="page"]');
+    await expect(open).toHaveCount(1);
+    const railBox = (await rail.boundingBox())!;
+    const openBox = (await open.boundingBox())!;
+    // The title is cut with an ellipsis inside the rail rather than running out to its edge.
+    expect(openBox.x + openBox.width).toBeLessThanOrEqual(railBox.x + railBox.width - 8);
+    expect(await open.locator("span").first().evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
+    // One fill only: the open chat is highlighted, the Chats row above it keeps its accent bar
+    // but no fill, and the two sit apart.
+    const chatsRow = rail.getByRole("link", { name: "Chats", exact: true }).locator("..");
+    const chatsBox = (await chatsRow.boundingBox())!;
+    expect(openBox.y - (chatsBox.y + chatsBox.height)).toBeGreaterThanOrEqual(10);
+    expect(await chatsRow.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe("rgba(0, 0, 0, 0)");
+    expect(await open.evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe("rgba(0, 0, 0, 0)");
   });
 
   await test.step("removing a chip searches again with the remaining filters", async () => {

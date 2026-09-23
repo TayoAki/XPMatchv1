@@ -36,14 +36,16 @@ function ChatHistory({ collapsed }: { collapsed: boolean }) {
   if (collapsed) return null;
   return (
     // Set off from the Chats row above it, so the open chat's highlight never runs into the row's.
-    <div className="mb-2 ml-[22px] mt-2 border-l border-border pl-2" data-testid="chat-nav-list">
+    // The single column is minmax(0, 1fr): a long title must truncate, not widen the rows past the
+    // Chats row and out to the rail's edge.
+    <div className="mb-3 ml-[22px] mt-3 border-l border-border pl-2" data-testid="chat-nav-list">
       {chats.length === 0 ? <p className="px-2 py-1.5 text-[12px] text-muted">No conversations yet.</p> : null}
-      <ul className="grid gap-1">
+      <ul className="grid grid-cols-[minmax(0,1fr)] gap-1.5">
         {visible.map((c) => {
           const active = c.id === threadId;
           const trip = c.tripId ? trips.find((t) => t.id === c.tripId) : undefined;
           return (
-            <li key={c.id} className="group relative">
+            <li key={c.id} className="group relative min-w-0">
               <Link
                 href={`/chat?thread=${encodeURIComponent(c.id)}`}
                 aria-current={active ? "page" : undefined}
@@ -85,11 +87,14 @@ function ChatHistory({ collapsed }: { collapsed: boolean }) {
  */
 export function SideRail() {
   const pathname = usePathname();
-  const { updates, user } = useTravelStore();
+  const { updates, user, chats } = useTravelStore();
   const { startNewChat } = useUiState();
+  const { threadId } = useMapView();
   const [collapsed, setCollapsed] = useRailCollapsed();
   const [chatsExpanded, setChatsExpanded] = useChatsExpanded();
   const unread = updates.filter((u) => !u.read).length;
+  // A conversation highlighted in the list under Chats.
+  const openChatListed = !collapsed && chatsExpanded && !!threadId && chats.some((c) => c.id === threadId);
   const nav = user?.admin ? [...NAV, { href: "/admin", label: "Admin", icon: ShieldCheck }] : NAV;
 
   return (
@@ -113,15 +118,18 @@ export function SideRail() {
         </button>
       </div>
 
-      <nav aria-label="Sections" className={clsx("xp-scroll mt-4 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto overflow-x-hidden", collapsed ? "px-2" : "px-3")}>
+      <nav aria-label="Sections" className={clsx("xp-scroll mt-4 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden", collapsed ? "px-2" : "px-3")}>
         {nav.map((item) => {
           const active = isActive(pathname, item.href);
           const Icon = item.icon;
           const badge = item.badge === "updates" ? unread : 0;
           const isChats = item.href === "/chat";
+          // With a conversation highlighted under Chats, the conversation carries the fill and the
+          // Chats row keeps only its accent bar and color, so two fills never sit against each other.
+          const filled = active && !(isChats && openChatListed);
           return (
             <div key={item.href}>
-              <div className={clsx("relative flex items-center rounded-xl transition-colors duration-150", active ? "bg-brand-soft" : "hover:bg-surface")}>
+              <div className={clsx("relative flex items-center rounded-xl transition-colors duration-150", filled ? "bg-brand-soft" : "hover:bg-surface")}>
                 {active ? <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-brand" aria-hidden="true" /> : null}
                 <Link
                   href={item.href}

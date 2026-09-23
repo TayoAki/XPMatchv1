@@ -11,9 +11,13 @@ test("destination cards: hover and click flip, quick facts, rows on the map, sav
   await expect(cards).toHaveCount(2, { timeout: 40_000 });
   const rome = cards.filter({ hasText: "Ancient streets" });
   const kyoto = cards.filter({ hasText: "Temples, gardens" });
+  // The photo's credit sits on the photo face; the turned face is hidden outright, so the credit
+  // can never show through the city profile, mirrored (some browsers draw parts of a back face).
+  const credit = rome.locator(".xp-flip__front").getByTestId("photo-credit");
 
   await test.step("the photo face carries the score and the thumbs, the footer the two actions", async () => {
     await expect(rome).toHaveAttribute("data-face", "photo");
+    await expect(credit).toBeVisible({ timeout: 20_000 });
     await expect(rome.getByTestId("destination-match").getByTestId("match-badge")).toBeVisible({ timeout: 20_000 });
     await expect(rome.getByRole("button", { name: "Miss: Rome" })).toBeVisible();
     await expect(rome.getByRole("button", { name: "Add Rome to trip" })).toBeEnabled({ timeout: 20_000 });
@@ -27,14 +31,19 @@ test("destination cards: hover and click flip, quick facts, rows on the map, sav
     await rome.hover();
     await expect(rome).toHaveAttribute("data-face", "profile", { timeout: 5_000 });
     await expect(rome).toHaveAttribute("data-reveal", "hover");
+    await expect(credit).toBeHidden();
     await page.mouse.move(2, 2);
     await expect(rome).toHaveAttribute("data-face", "photo", { timeout: 5_000 });
+    await expect(credit).toBeVisible();
   });
 
   await test.step("City profile pins the profile, shows the quick facts and selects the city on the map", async () => {
     await rome.getByRole("button", { name: "City profile of Rome" }).click();
     await expect(rome).toHaveAttribute("data-face", "profile");
     await expect(rome).toHaveAttribute("data-reveal", "pinned");
+    await expect(credit).toBeHidden();
+    // Focus moved to the profile's own control, on the face now showing.
+    await expect(rome.getByRole("button", { name: "Show the photo of Rome" })).toBeFocused();
     await expect(rome.getByTestId("quick-facts")).toContainText("3–4 nights");
     await expect(rome.getByTestId("quick-facts")).toContainText("Food & antiquity");
     await expect(rome.getByTestId("your-match")).toContainText("%");
@@ -88,6 +97,7 @@ test("destination cards: hover and click flip, quick facts, rows on the map, sav
   await test.step("Photo returns to the picture; a thumbs-down sends the other card to the end", async () => {
     await rome.getByRole("button", { name: "Show the photo of Rome" }).click();
     await expect(rome).toHaveAttribute("data-face", "photo");
+    await expect(credit).toBeVisible();
     await kyoto.getByRole("button", { name: "Miss: Kyoto" }).click();
     await page.getByRole("dialog", { name: "Why is Kyoto a miss?" }).getByRole("button", { name: "Too far" }).click();
     const wrappers = page.getByTestId("card-row").first().locator("[data-flip-key]");

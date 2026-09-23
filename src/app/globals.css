@@ -71,6 +71,21 @@
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
 }
+/* The face turned away is hidden outright once the turn is past 90° (the ease curve gets there
+   about 40 ms in). backface-visibility alone is not enough: by the spec a descendant is tested
+   against its own transform, so a descendant a browser draws on its own layer (the photo credit,
+   a blurred chip) can still show through the city profile, mirrored. visibility is inherited by
+   every layer. The face coming round shows at once, so focus can move to it; it is not set to
+   visible explicitly, so a hidden ancestor still hides the whole card. */
+.xp-flip__front,
+.xp-flip__back {
+  transition: visibility 0s linear 0s;
+}
+.xp-flip[data-face="profile"] .xp-flip__front,
+.xp-flip:not([data-face="profile"]) .xp-flip__back {
+  visibility: hidden;
+  transition-delay: 50ms;
+}
 .xp-flip__back {
   transform: rotateY(180deg);
 }
@@ -85,11 +100,14 @@
 }
 .xp-flip--fade .xp-flip__front,
 .xp-flip--fade .xp-flip__back {
-  transition: opacity 150ms var(--xp-ease);
+  transition:
+    opacity 150ms var(--xp-ease),
+    visibility 0s linear 0s;
 }
 .xp-flip--fade[data-face="profile"] .xp-flip__front,
 .xp-flip--fade:not([data-face="profile"]) .xp-flip__back {
   opacity: 0;
+  transition-delay: 0s, 150ms;
 }
 
 html,
