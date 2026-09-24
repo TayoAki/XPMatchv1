@@ -161,10 +161,7 @@ export function TravelChat({ threadId, initialPrompt, tripId }: { threadId?: str
       {/* Under the composer: the trip planner values as chips, then the disclaimer. */}
       <div className="mx-auto w-full max-w-[780px] shrink-0 px-4 pb-2 pt-1 sm:px-6" data-testid="chat-footer">
         <PlannerChips />
-        <p className="mt-1.5 text-center text-[11px] leading-4 text-muted">
-          XPMatch can make mistakes. Double-check prices, hours and availability before booking.
-          {config?.mode === "live" && config.model && config.model !== "unknown" ? ` · Model: ${config.model}` : ""}
-        </p>
+        <p className="mt-1.5 text-center text-[11px] leading-4 text-muted">XPMatch can make mistakes</p>
       </div>
     </div>
   );
