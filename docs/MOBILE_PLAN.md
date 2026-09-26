@@ -82,3 +82,6 @@ else opens over it.
 
 Installable PWA, offline trips, push notifications, camera-first import and share-sheet
 integration (Plan C).
+
+`docs/REACT_NATIVE_PLAN.md` plans the native route instead: an Expo (React Native) app beside the
+website, with push, links into the app and native maps.
