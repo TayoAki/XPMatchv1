@@ -71,11 +71,11 @@ however you talk. Without `RESEND_API_KEY` the form still answers normally but n
 Updates bell · the account menu · the teal **Create a trip** pill). Every page but Discover also has
 the side rail on the left (tablet and up): **New chat**, then **Chats** with the conversation list
 under it (newest first, trip labels, remove on hover, Show all, collapsible with the chevron), Trips,
-Explore, Saved, Updates (unread badge), Inspiration, Create and Admin; **Collapse** folds the rail to
+Saved, Updates (unread badge), Inspiration, Create and Admin; **Collapse** folds the rail to
 icons and the choice is remembered per browser. Phones keep the tab bar instead.
 
 **Discover** — `/` is the home page, under the header (wordmark · Discover, My trips, Saved · the
-Updates bell · the account menu with Update my assistant, Inspiration, Explore near you, Create a guide,
+Updates bell · the account menu with Update my assistant, Inspiration, Create a guide,
 Admin, Report a bug, Terms, Privacy, Log out · the teal **Create a trip** pill). Its hero carries the
 eyebrow, "Go somewhere that stays with you.", a serif prompt composer ("Describe your ideal escape",
 Ctrl/⌘ + Enter or the round send button hands the text to the concierge), three suggestion chips (Find
@@ -90,7 +90,7 @@ destination, the planner's Where, the home city, then Paros) with the motto, a c
 and the photo's author attribution, as the Places policies require. Below the hero: **Find your kind of
 extraordinary** (By the water, Close to nature, Immersed in culture: each a real destination's Places
 photo with a heart that saves the collection and a link to the matching Inspiration rows; "View all
-destinations" opens Explore), **For you in {city}** (three carousel rows of up to six picks each,
+destinations" opens Inspiration), **For you in {city}** (three carousel rows of up to six picks each,
 sorted best first, every card showing its match label and score, the two strongest reasons behind it
 as chips, a **Top pick** mark on the leader, thumbs, Save and Add to trip; a row whose picks the
 profile cannot tell apart says so and links to Update my assistant), **Jump back in** (trips, recent
@@ -426,7 +426,7 @@ things, so nothing competes for attention:
   price level, today's hours and phone (Place Details, cached 30 days), the editorial summary, address,
   Google Maps and website links, the match score with thumbs, and **Ask about it** (opens the trip chat
   with the question).
-- Tiles: **Ideas** (places added from chat, map, Explore or by searching here; each with note, Rate, Save,
+- Tiles: **Ideas** (places added from chat, map, a guide or by searching here; each with note, Rate, Save,
   Show on map, remove), **Itinerary** (read view: each stop with its photo, time, rating, category, price
   and note, with **Open the board**, **Edit as text**, or "Build it with the assistant"), **Bookings**
   (typed by hand: title, link, note; imported from a confirmation: kind
@@ -449,26 +449,17 @@ bookings, media or editing the plan notifies the other members.
 
 ## 5. Add to trip (everywhere)
 
-Every card, place sheet, Explore result, guide place and saved place has **Add to trip**. The picker
+Every card, place sheet, guide place and saved place has **Add to trip**. The picker
 lists the traveler's trips (upcoming first, current trip preselected when on a trip page or trip chat)
 plus **New trip** (title prefilled from the place's city), and an optional note. The place is added to
 the trip's Ideas and pinned on its map; the dialog offers **Open trip**.
 
-## 6. Explore
+## 6. Explore (off for now)
 
-`/explore` shows what is around the traveler:
-- **Location header** — defaults to the profile's home city ("Austell ⌄"); the menu offers Home,
-  **Use my location** (browser geolocation) or **another city**.
-- **Search** — free text near the location ("cheap sushi open now 4.5+ cozy"). The text is read
-  deterministically: price words and "under $30" become Places price levels, "4.5+" / "highly rated" a
-  minimum rating, "open now" an open-now filter; vibe words stay in the text query. An **Understood as** line
-  shows dark chips for applied filters, light chips for words searched in the text, and the remaining query.
-- **Tabs** — For you (experiences + restaurants), Restaurants, Experiences, Stays, Guides (community
-  guides nearest to the location).
-- **Cards** — photo, name, rating and review count, category, locality, price tier, the match score and
-  thumbs; **Save**, **Add to trip**; hovering highlights the pin, clicking the photo opens the place sheet
-  on the map.
-- **Map** — labeled markers for every card, synced with the list.
+Explore near you is switched off for now: the page and its links are gone and `/explore` redirects to
+Discover (307, so it can come back at the same address by reverting the "Remove Explore for now"
+commit). The nearby search it used still fills a destination's Stays, Restaurants and Things to do
+tabs on the map.
 
 ## 7. Create (guides and trips)
 
@@ -546,8 +537,8 @@ numbers (shown, travelers, swaps, locks, thumbs, trips, keep rate, trip rate, va
 **Seed city** form (`POST /api/admin/seed`: 19 list searches for a destination, about twenty places
 each, reported as stays / restaurants / things to do). It then lists reports newest first (open /
 resolved / all, mark resolved / reopen, show screenshot) and ends with the **Recommendation quality**
-summary: hit rate of thumbs across every traveler, by kind and by context (chat, home, explore,
-board), why picks miss, and the recent misses with the score that was shown. The same counts are printed once at boot (`[xpmatch] db ready (pg):
+summary: hit rate of thumbs across every traveler, by kind and by context (chat, home, board,
+sheet; older thumbs may say explore), why picks miss, and the recent misses with the score that was shown. The same counts are printed once at boot (`[xpmatch] db ready (pg):
 users=… trips=… chats=…`), so the Railway deploy log shows them without a database connection.
 
 ## 11. Routes
@@ -559,7 +550,7 @@ users=… trips=… chats=…`), so the Railway deploy log shows them without a 
 | `/` | Discover: hero with the composer and planner fields, collections, picks, Jump back in, community guides |
 | `/chat` (`?thread=`, `?trip=`, `?prompt=`) | The concierge: chat and map, history in the side rail; `/?thread=`, `/?prompt=` and `/chats` redirect here |
 | `/trips`, `/trips/[id]` (`?view=board`, `?rate=1`) | Trips list and trip page (board view, post-trip rating) |
-| `/explore` | Things near you |
+| `/explore` | Off for now: redirects to Discover |
 | `/create` (`?guide=`) | Guide editor / trip form |
 | `/inspiration` (`?collection=`), `/guides/[id]` | Community guides and the curated rows (narrowed to a Discover collection) |
 | `/saved`, `/updates` | Saved items, notifications |

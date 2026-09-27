@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { ChevronDown, Heart, LocateFixed, Map, MapPin, MessageCircle, Plus, Star } from "lucide-react";
@@ -276,9 +275,6 @@ export function HomePicks({ options, initialKey, compact = false }: { options: F
             </div>
           ) : null}
         </div>
-        <Link href="/explore" className="text-[14px] font-medium text-foreground underline-offset-4 hover:underline">
-          Explore
-        </Link>
       </div>
 
       {!destination ? (

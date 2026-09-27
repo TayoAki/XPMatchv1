@@ -50,7 +50,7 @@ export default function SavedPage() {
   return (
     <PageFrame
       title="Saved"
-      description="Places you hearted in chat, on the map or in Explore, collections and guides you saved, and links or screenshots you imported."
+      description="Places you hearted in chat or on the map, collections and guides you saved, and links or screenshots you imported."
       actions={
         places.length ? (
           <Button variant="outline" onClick={() => send("Look at my saved items and suggest how to turn them into a trip.")}>
@@ -77,7 +77,7 @@ export default function SavedPage() {
       {tab === "places" ? (
         places.length === 0 ? (
           <div className="mt-6">
-            <EmptyState title="Nothing saved yet" body="Tap the heart on any recommendation card, place sheet or Explore result to keep it here." />
+            <EmptyState title="Nothing saved yet" body="Tap the heart on any recommendation card or place sheet to keep it here." />
           </div>
         ) : (
           <div className="mt-6 grid gap-6">

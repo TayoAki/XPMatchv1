@@ -41,7 +41,7 @@ export function DiscoverPage() {
         <Reveal as="section" className="mt-10 md:mt-12" data-testid="collections">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <h2 className="text-[28px] font-semibold leading-[1.15] tracking-[-0.035em] md:text-[34px]">Find your kind of extraordinary</h2>
-            <Link href="/explore" className="group inline-flex items-center gap-1 text-[15px] font-medium text-foreground underline-offset-4 hover:underline">
+            <Link href="/inspiration" className="group inline-flex items-center gap-1 text-[15px] font-medium text-foreground underline-offset-4 hover:underline">
               View all destinations <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true" />
             </Link>
           </div>

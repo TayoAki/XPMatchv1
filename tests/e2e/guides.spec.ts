@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { eventually, login, signup, signupApi, uniqueEmail } from "./helpers";
 
-test("community guides and Explore near you", async ({ page, browser, request, baseURL }) => {
+test("community guides", async ({ page, browser, request, baseURL }) => {
   const author = uniqueEmail("ada");
   const reader = uniqueEmail("sam");
   const title = `Rome in 48 hours ${Date.now() % 10000}`;
@@ -38,25 +38,6 @@ test("community guides and Explore near you", async ({ page, browser, request, b
   await test.step("Inspiration lists the guide", async () => {
     await page.goto("/inspiration");
     await expect(page.getByTestId("guide-card").filter({ hasText: title })).toBeVisible();
-  });
-
-  await test.step("Explore shows places near the home city, saves one and switches tabs", async () => {
-    await page.goto("/explore");
-    await expect(page.getByRole("button", { name: /Austell/ }).first()).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByTestId("nearby-card").first()).toBeVisible({ timeout: 40_000 });
-    expect(await page.getByTestId("nearby-card").count()).toBeGreaterThanOrEqual(3);
-    await expect(page.getByTestId("explore-map")).toBeVisible();
-    await page.getByRole("button", { name: "Restaurants" }).click();
-    const firstCard = page.getByTestId("nearby-card").first();
-    await expect(firstCard).toBeVisible({ timeout: 40_000 });
-    await firstCard.getByRole("button", { name: /^Save / }).click();
-    await expect(firstCard.getByRole("button", { name: /^Remove .* from saved$/ })).toBeVisible();
-    expect(await page.getByRole("button", { name: /^Remove .* from saved$/ }).count()).toBe(1);
-    await page.getByLabel("Search nearby").fill("coffee");
-    await page.getByRole("button", { name: "Search", exact: true }).click();
-    await expect(page.getByTestId("nearby-card").first()).toBeVisible({ timeout: 40_000 });
-    await page.getByRole("button", { name: "Guides" }).click();
-    await expect(page.getByText(/No community guides near/)).toBeVisible();
   });
 
   const readerContext = await browser.newContext();

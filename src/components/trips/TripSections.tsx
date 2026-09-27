@@ -331,7 +331,7 @@ function IdeasSection(props: SectionProps) {
       {ideas.length === 0 ? (
         <EmptyState
           title="No ideas yet"
-          body="Places you add from chat, the map or Explore land here and on the trip map."
+          body="Places you add from chat, the map or a guide land here and on the trip map."
           action={
             <Button variant="outline" onClick={() => send(`Suggest things to do and places to eat in ${trip.destination} for this trip and add the best ones to my trip ideas.`)}>
               <Sparkles className="h-4 w-4" /> Ask the assistant for ideas

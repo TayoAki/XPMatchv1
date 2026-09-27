@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import clsx from "clsx";
-import { Bell, BookOpen, Briefcase, Bug, Compass, Heart, LogOut, MoreHorizontal, Search, ShieldCheck, SlidersHorizontal, Sparkles, SquarePlus, X } from "lucide-react";
+import { Bell, BookOpen, Briefcase, Bug, Compass, Heart, LogOut, MoreHorizontal, ShieldCheck, SlidersHorizontal, Sparkles, SquarePlus, X } from "lucide-react";
 import { useTravelStore, firstName } from "@/lib/store";
 import { useUiState } from "@/components/providers/UiState";
 
@@ -31,7 +31,7 @@ export function MobileTabBar() {
   const { openAssistant, openBugReport } = useUiState();
   const [moreOpen, setMoreOpen] = useState(false);
   const unread = updates.filter((u) => !u.read).length;
-  const moreActive = ["/explore", "/updates", "/inspiration", "/guides", "/create", "/admin"].some((p) => pathname.startsWith(p));
+  const moreActive = ["/updates", "/inspiration", "/guides", "/create", "/admin"].some((p) => pathname.startsWith(p));
   const close = () => setMoreOpen(false);
 
   useEffect(() => {
@@ -48,7 +48,6 @@ export function MobileTabBar() {
   const handle = user ? `@${user.handle}` : "";
 
   const moreLinks = [
-    { href: "/explore", label: "Explore", icon: Search },
     { href: "/inspiration", label: "Inspiration", icon: BookOpen },
     { href: "/updates", label: "Updates", icon: Bell, badge: unread },
     { href: "/create", label: "Create", icon: SquarePlus },

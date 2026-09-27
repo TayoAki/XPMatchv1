@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import clsx from "clsx";
-import { Bell, BookOpen, Briefcase, ChevronDown, Heart, MessageCircle, PanelLeftClose, PanelLeftOpen, Plus, Search, ShieldCheck, SquarePlus, Trash2, type LucideIcon } from "lucide-react";
+import { Bell, BookOpen, Briefcase, ChevronDown, Heart, MessageCircle, PanelLeftClose, PanelLeftOpen, Plus, ShieldCheck, SquarePlus, Trash2, type LucideIcon } from "lucide-react";
 import { useTravelStore } from "@/lib/store";
 import { useMapView } from "@/lib/map-store";
 import { useChatsExpanded, useRailCollapsed } from "@/lib/ui-prefs";
@@ -13,7 +13,6 @@ import { useUiState } from "@/components/providers/UiState";
 const NAV: { href: string; label: string; icon: LucideIcon; badge?: "updates" }[] = [
   { href: "/chat", label: "Chats", icon: MessageCircle },
   { href: "/trips", label: "Trips", icon: Briefcase },
-  { href: "/explore", label: "Explore", icon: Search },
   { href: "/saved", label: "Saved", icon: Heart },
   { href: "/updates", label: "Updates", icon: Bell, badge: "updates" },
   { href: "/inspiration", label: "Inspiration", icon: BookOpen },

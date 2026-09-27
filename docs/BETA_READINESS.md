@@ -54,9 +54,9 @@ catalog.
     (names, codes, dates, prices); that messages, the profile summary and pasted or uploaded content go
     to AI model providers (OpenRouter and the model behind it) to generate answers; that place searches
     and the map go to Google Maps Platform, which sets its own cookies (the "no third-party cookies"
-    line is no longer true on the app); the sign-in session cookie; "Use my location" on Explore sends
-    precise location for that search and is not stored (the policy says precise location is never
-    collected); guides are public under your name and trips are visible to members you add; the team
+    line is no longer true on the app); the sign-in session cookie; "I'm here: check in" on a place's
+    reviews sends precise location once to confirm the visit, and only the result is stored (the policy
+    says precise location is never collected); guides are public under your name and trips are visible to members you add; the team
     may read chats and bug reports during the beta to fix problems; a contact email, not only the
     contact page. The Terms need: "generated with AI" next to the recommendations disclaimer, chats,
     trips, guides and imports under "Your content" with guides public, the governing-law state named,
@@ -176,7 +176,7 @@ no invite code.
 - Bug reports from the sidebar with screenshots; `/admin` for the accounts in `ADMIN_EMAILS` with the
   reports, the recommendation hit rate, the beta numbers, the Members roster (with password reset
   links) and the quiz answers.
-- Explore near you, community guides, Saved (places, guides, imports), Updates.
+- Community guides, Saved (places, guides, imports), Updates. (Explore near you is off for now.)
 - A chat-first phone app (`docs/MOBILE_PLAN.md`): bottom tab bar and More sheet, the first run as
   three questions in the chat with the picks as the assistant's first message, card rows that swipe,
   the map, places and the itinerary board as sheets over the chat, trip pages as tabs with a board

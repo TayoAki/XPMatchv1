@@ -88,12 +88,15 @@ test("phone: quiz in the Discover hero, picks, tab bar, card rows, proposal, she
     await bar.getByRole("button", { name: "More" }).click();
     const sheet = page.getByTestId("more-sheet");
     await expect(sheet).toBeVisible();
-    await expect(sheet.getByRole("link", { name: "Inspiration" })).toBeVisible();
     await expect(sheet.getByRole("button", { name: "Report a bug" })).toBeVisible();
-    await sheet.getByRole("link", { name: "Explore" }).click();
-    await page.waitForURL(/\/explore/);
+    // Explore is off for now: no link, and an old /explore link lands on Discover.
+    await expect(sheet.getByRole("link", { name: "Explore" })).toHaveCount(0);
+    await sheet.getByRole("link", { name: "Inspiration" }).click();
+    await page.waitForURL(/\/inspiration/);
     await expect(sheet).toBeHidden();
-    await expectFits(page, "explore");
+    await expectFits(page, "inspiration");
+    await page.goto("/explore");
+    await page.waitForURL((u) => u.pathname === "/");
     await bar.getByRole("button", { name: "More" }).click();
     await sheet.getByRole("link", { name: "Updates" }).click();
     await page.waitForURL(/\/updates/);

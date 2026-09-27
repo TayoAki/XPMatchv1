@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 const PRICE_LEVELS = new Set(["PRICE_LEVEL_INEXPENSIVE", "PRICE_LEVEL_MODERATE", "PRICE_LEVEL_EXPENSIVE", "PRICE_LEVEL_VERY_EXPENSIVE"]);
 
 /**
- * Explore: places around a point.
+ * Places around a point (a destination's Stays / Restaurants / Things to do tabs).
  * `?lat&lng&category=for-you|restaurants|experiences|stays&q=&price=<budget tier>&levels=<PRICE_LEVEL_…,…>&minRating=4.5&openNow=1`
  */
 export const GET = route(async (request) => {

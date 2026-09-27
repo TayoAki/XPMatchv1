@@ -25,7 +25,7 @@ import {
 const PLACES_BASE = (process.env.PLACES_BASE_URL?.trim() || "https://places.googleapis.com/v1").replace(/\/$/, "");
 
 /**
- * List-search mask (Explore, home picks, seeding): what a card, a pin and the match score need.
+ * List-search mask (destination tabs, home picks, seeding): what a card, a pin and the match score need.
  * No editorial summary: that one field moved every search to the Enterprise + Atmosphere tier;
  * the place sheet still gets it from Place Details.
  */
@@ -435,7 +435,7 @@ const NEARBY_TYPES: Record<Exclude<NearbyCategory, "for-you">, { types: string[]
 const NEARBY_FIELDS = SEARCH_FIELDS;
 const NEARBY_RADIUS_M = 25000;
 const NEARBY_TTL_MS = 10 * 60_000;
-/** How long a list search (Explore, home picks) is served from the shared cache in Postgres. */
+/** How long a list search (destination tabs, home picks) is served from the shared cache in Postgres. */
 const LIST_CACHE_MS = 24 * 60 * 60_000;
 
 /** Cache key for a list search: the area is rounded to about a kilometer so neighbors share it. */
@@ -465,7 +465,7 @@ async function googleNearby(center: LatLng, types: string[], kind: PlaceKind, li
   return (data.places ?? []).map((p) => toResolved(p, kind)).filter(present).filter(notLocality);
 }
 
-/** Filters Places Text Search applies server-side (from Explore's parsed query or the traveler's budget). */
+/** Filters Places Text Search applies server-side (the traveler's budget, or explicit ones on the nearby API). */
 export interface NearbyFilters {
   priceLevels?: string[];
   /** 0-5 in half steps. */
@@ -520,11 +520,6 @@ function interleave(a: ResolvedPlace[], b: ResolvedPlace[]): ResolvedPlace[] {
   return out;
 }
 
-/**
- * Places around a point for the Explore page. Category tabs use Nearby Search (by type,
- * ranked by popularity); a free-text query uses Text Search biased to the area.
- * Results are cached for ten minutes per area/category/query.
- */
 /** Google price levels for a traveler budget tier (Text Search only). */
 export function priceLevelsFor(budgetTier?: string | null): string[] | undefined {
   switch (budgetTier) {
@@ -543,6 +538,11 @@ export function priceLevelsFor(budgetTier?: string | null): string[] | undefined
 
 const CATEGORY_TEXT: Record<NearbyCategory, string> = { "for-you": "things to do and restaurants", restaurants: "restaurants", experiences: "things to do", stays: "hotels" };
 
+/**
+ * Places around a point (a destination's Stays / Restaurants / Things to do tabs). Category
+ * tabs use Nearby Search (by type, ranked by popularity); a free-text query uses Text Search
+ * biased to the area. Results are cached for ten minutes per area/category/query.
+ */
 export async function searchNearby(
   center: LatLng,
   category: NearbyCategory,

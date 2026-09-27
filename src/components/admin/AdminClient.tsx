@@ -412,7 +412,7 @@ export function AdminClient() {
         {!quality ? (
           <p className="mt-2 text-[13px] text-muted">Loading…</p>
         ) : quality.total === 0 ? (
-          <p className="mt-2 text-[13px] text-muted">No thumbs yet. Every card, Explore result, home pick and board stop has thumbs up / down.</p>
+          <p className="mt-2 text-[13px] text-muted">No thumbs yet. Every card, home pick and board stop has thumbs up / down.</p>
         ) : (
           <div className="mt-3 grid gap-3 sm:grid-cols-3">
             <div className="rounded-2xl border border-border p-4">

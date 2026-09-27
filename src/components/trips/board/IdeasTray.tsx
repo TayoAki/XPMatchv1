@@ -152,7 +152,7 @@ export function IdeasTray({
             />
           ))}
           {ideas.length === 0 ? (
-            <li className="px-3 py-2 text-[13px] text-muted">Places you add from chat, Explore or the map wait here until you put them on a day.</li>
+            <li className="px-3 py-2 text-[13px] text-muted">Places you add from chat, a guide or the map wait here until you put them on a day.</li>
           ) : null}
         </ul>
       </SortableContext>

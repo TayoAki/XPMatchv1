@@ -11,7 +11,7 @@ export interface InspirationItem {
   wiki?: string;
 }
 
-/** Curated, static inspiration used on the home panel, Explore and Inspiration pages. */
+/** Curated, static inspiration used on the home panel and the Inspiration page. */
 export const INSPIRATION: InspirationItem[] = [
   {
     slug: "lisbon",

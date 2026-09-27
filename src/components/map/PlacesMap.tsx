@@ -24,7 +24,7 @@ export interface PlacesMapProps {
   children?: ReactNode;
 }
 
-/** Map of a set of places with the destination chip and the place sheet. Used by trips, guides and Explore. */
+/** Map of a set of places with the destination chip and the place sheet. Used by trips and guides. */
 export function PlacesMap({ focus, focusLabel, pins, routes, selectedKey, onSelect, highlightKey = null, hoveredKey, onHover, labels = true, className, testId, children }: PlacesMapProps) {
   const [localHovered, setLocalHovered] = useState<string | null>(null);
   const hovered = hoveredKey === undefined ? localHovered : hoveredKey;

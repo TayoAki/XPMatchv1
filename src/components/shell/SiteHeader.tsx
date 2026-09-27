@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
-import { Bell, BookOpen, Bug, ChevronDown, LogOut, Plus, Search, ShieldCheck, SlidersHorizontal, Sparkles, SquarePlus } from "lucide-react";
+import { Bell, BookOpen, Bug, ChevronDown, LogOut, Plus, ShieldCheck, SlidersHorizontal, Sparkles, SquarePlus } from "lucide-react";
 import { firstName, useTravelStore } from "@/lib/store";
 import { useUiState } from "@/components/providers/UiState";
 
@@ -14,9 +14,9 @@ const NAV = [
   { href: "/saved", label: "Saved" },
 ];
 
-/** Discover covers the browsing pages too (Explore, Inspiration, a guide), so one link stays lit. */
+/** Discover covers the browsing pages too (Inspiration, a guide), so one link stays lit. */
 function isActive(pathname: string, href: string): boolean {
-  if (href === "/") return pathname === "/" || ["/explore", "/inspiration", "/guides"].some((p) => pathname.startsWith(p));
+  if (href === "/") return pathname === "/" || ["/inspiration", "/guides"].some((p) => pathname.startsWith(p));
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -153,9 +153,6 @@ export function SiteHeader() {
               </button>
               <Link href="/inspiration" onClick={close} className={menuLink}>
                 <BookOpen className="h-4 w-4" aria-hidden="true" /> Inspiration
-              </Link>
-              <Link href="/explore" onClick={close} className={menuLink}>
-                <Search className="h-4 w-4" aria-hidden="true" /> Explore near you
               </Link>
               <Link href="/create" onClick={close} className={menuLink}>
                 <SquarePlus className="h-4 w-4" aria-hidden="true" /> Create a guide

@@ -59,7 +59,7 @@ Browser (desktop, or Safari on a phone)
   ▼
 Next.js server on Railway (one Node process, app.xpmatchme.com)
   ├── src/proxy.ts           no session cookie → /login for pages, 401 for /api/*
-  ├── pages (src/app)        Discover, Chat, Trips, Explore, Saved, Updates, Inspiration,
+  ├── pages (src/app)        Discover, Chat, Trips, Saved, Updates, Inspiration,
   │                          Create, Guides, Admin, and the sign-in pages
   ├── 56 API routes          profile, trips, saved, guides, places, itineraries, packages,
   │   (src/app/api)          imports, reservations, reviews, notifications, admin …
@@ -249,8 +249,8 @@ is pnpm workspaces, whose isolated installs Expo supports from SDK 54, with the 
 
 ### 7.2 The shared package
 
-- **Moved as they are** (34 files): `types.ts`, `match.ts`, `itinerary.ts`, `ranking.ts`,
-  `reviews.ts`, `search-parser.ts`, `travel/*` (schemas, prompt, links, collections, inspiration),
+- **Moved as they are** (33 files): `types.ts`, `match.ts`, `itinerary.ts`, `ranking.ts`,
+  `reviews.ts`, `travel/*` (schemas, prompt, links, collections, inspiration),
   `recs/types.ts`, `recs/verdict.ts`, `recs/why.ts`, `places/*` (types, names, kind, hours,
   gazetteer, facts, evidence), `feedback/*`, `profile/options.ts`, the `types.ts` files under
   `reservations/`, `import/`, `bugs/` and `admin/`, and the five per-chat stores.
@@ -556,7 +556,7 @@ tables (other than the added columns) or the Google server key.
 | F-018 | Operator | Minimum app version: the server can require an update | MVP | — | Planned | Given `minAppVersion` above the build, when the app opens, then it shows Update XPMatch | Pending |
 | F-019 | Traveler, operator | Report a bug from the app with a screenshot and the build number | MVP | F-001 | Planned | Given a report, when it is sent, then admins see it with platform and build | Pending |
 | F-020 | Operator | Store listings, privacy labels, data safety form, review notes with a demo account | MVP | F-003 | Planned | Given the checklist, when builds are submitted, then both stores accept them for testing | Pending |
-| F-021 | Traveler | Explore near you with the phone's location | Later | F-009 | Planned | Given location allowed, when Explore opens, then places near the traveler show on the map | Pending |
+| F-021 | Traveler | Explore near you with the phone's location (Explore is off on the web for now) | Later | F-009 | Planned | Given location allowed, when Explore opens, then places near the traveler show on the map | Pending |
 | F-022 | Traveler | Check in at a place and write a verified review | Later | F-010 | Planned | Given the traveler at the place, when they check in, then only the result is stored, not the coordinates | Pending |
 | F-023 | Traveler | Import from the share sheet (links, screenshots) and the photo library | Later | F-006 | Planned | Given a shared link, when XPMatch is picked in the share sheet, then the import card shows its places | Pending |
 | F-024 | Traveler | Import reservations (text, PDF, screenshot) into a trip | Later | F-013 | Planned | Given a confirmation, when it is imported, then the booking shows on its day | Pending |

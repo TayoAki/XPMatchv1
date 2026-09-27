@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { eventually, openChatHistory, sendChat, signup, uniqueEmail } from "./helpers";
 
-test("smart filters, heads-ups, comparison, remembered preferences and Explore parsing", async ({ page }) => {
+test("smart filters, heads-ups, comparison and remembered preferences", async ({ page }) => {
   // page.request shares the browser's session cookie.
   const preferences = async () => (await (await page.request.get("/api/me/preferences")).json()) as { preferences: { statement: string; polarity: string; tripId?: string }[] };
 
@@ -99,19 +99,5 @@ test("smart filters, heads-ups, comparison, remembered preferences and Explore p
 
   await test.step("follow-up suggestions come back once the card is answered", async () => {
     await expect(page.getByRole("button", { name: "Hotels in Rome" }).first()).toBeVisible({ timeout: 30_000 });
-  });
-
-  await test.step("Explore parses filters into Understood-as chips", async () => {
-    await page.goto("/explore");
-    const box = page.getByLabel("Search nearby");
-    await expect(box).toBeVisible({ timeout: 30_000 });
-    await box.fill("cheap sushi open now 4.5+ cozy");
-    await page.getByRole("button", { name: "Search", exact: true }).click();
-    const understood = page.getByTestId("explore-understood");
-    await expect(understood.getByText("Inexpensive", { exact: true })).toBeVisible();
-    await expect(understood.getByText("4.5★ and up", { exact: true })).toBeVisible();
-    await expect(understood.getByText("Open now", { exact: true })).toBeVisible();
-    await expect(understood.getByText("Cozy", { exact: true })).toBeVisible();
-    await expect(understood.getByText("· “sushi cozy”")).toBeVisible();
   });
 });

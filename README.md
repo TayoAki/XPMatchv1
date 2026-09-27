@@ -45,7 +45,7 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   three places to eat from Google Places, queried from the deep profile and scored by a deterministic
   **match model** (budget vs price, interests, stay types, must-haves, cuisines, dietary tags,
   companions, taste twins, learned preferences and dealbreakers, rating and review count). Every
-  recommendation card in chat, Explore, the home picks and the board's stop details shows the score
+  recommendation card in chat, the home picks and the board's stop details shows the score
   with a "Why this score" breakdown and **thumbs up / down**; judgments lower repeat offenders,
   recalibrate the factors that keep misleading that traveler, and reach the agent as recommendation
   feedback. Admins see the hit rate. Card sets in chat and the home picks are horizontal rows that
@@ -76,8 +76,7 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   switch; trip-scoped items show on the trip page.
 - **Smart filters you can see** — criteria in a request ("quiet, under $250 a night, pool") become an
   editable "Understood as" chip strip (`set_search_constraints`): must-haves vs preferences, "Not
-  applied" for what could not be mapped, and every edit re-runs the search. Explore parses price
-  words, ratings and "open now" into Google Places filters and shows the same kind of chips.
+  applied" for what could not be mapped, and every edit re-runs the search.
 - **Honest heads-ups** — every hotel, restaurant, attraction and flight card carries `tradeoffs`:
   the downsides for this traveler, including any conflict with a dealbreaker, folded into one amber
   "2 heads-ups" chip whose list opens as a tooltip (hover or focus on a desktop, a tap on a phone).
@@ -152,7 +151,7 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   `add_trip_ideas`.
 - **Add to trip** — every card and place sheet has an "Add to trip" picker (existing trip or a new
   one); ideas show up on the trip page and its map.
-- **Save anything** — heart any card, place sheet, Explore result or Discover collection; the Saved
+- **Save anything** — heart any card, place sheet or Discover collection; the Saved
   page has **Places** (grouped by type, collections first, with Add to trip) and **Guides** tabs, and
   saved items feed the agent's context.
 - **Community guides** — **Create** has a guide editor (title, destination, description, tags, an
@@ -160,10 +159,10 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   **Inspiration** lists published guides with search; a guide page shows the places, their map,
   Save guide, "Plan a trip from this guide" and author-only edit/delete. Saving someone's guide
   notifies them under **Updates**.
-- **Explore near you** — Mindtrip-style: location header (home city, current location or any place),
-  search, tabs **For you | Restaurants | Experiences | Stays | Guides**, photo cards with rating,
-  category, locality and price, Save and Add to trip, and a labeled map synced with the cards
-  (Google Places Nearby Search / Text Search, cached server-side).
+- **Explore near you is off for now** — the page, its links and its search parser are gone, and
+  `/explore` redirects to Discover (a temporary redirect in `next.config.ts`). Reverting the commit
+  "Remove Explore for now" brings it back. The nearby API it used (`/api/places/nearby`) stays: it
+  fills a destination's Stays, Restaurants and Things to do tabs.
 - **Live map with pinned recommendations** — as soon as the chat is about a place (the model calls
   `focus_map`, fixing typos like "roam" → Rome), the right panel becomes a Google Map centered on
   it. Every hotel, restaurant and attraction card is resolved through the Places API and pinned;
@@ -187,12 +186,12 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   conversation lives at `/chat` with the discovery feed or the live map beside it and the planner
   values as chips under the composer (Charleston · When · 2 travelers · Budget). Every page but
   Discover has a collapsible side rail (New chat, Chats with the conversation history, Trips,
-  Explore, Saved, Updates, Inspiration, Create, Admin); on Discover a floating **Your AI concierge**
+  Saved, Updates, Inspiration, Create, Admin); on Discover a floating **Your AI concierge**
   pill opens the chat. Motion is part of the design: sections lift in as they scroll into view,
   photos fade in, menus, sheets and dialogs pop, cards lift, the rail folds, every route fades in,
   all switched off for reduced-motion users. Old `/?thread=` and `/?prompt=` links redirect.
 - **A chat-first phone app** — below tablet width a bottom tab bar (Discover, Trips, Saved,
-  Concierge, More) carries navigation; the More sheet holds Explore, Inspiration, Updates (with the
+  Concierge, More) carries navigation; the More sheet holds Inspiration, Updates (with the
   unread badge), Create, Admin, Update my assistant, Report a bug and Log out. The first run is three
   questions asked as chat bubbles inside the Discover hero (where you start from and dream of going,
   what you love doing, how you spend); the Concierge tab's empty state then opens with the nine home
@@ -330,15 +329,13 @@ src/components/trips/*                       Trips list + calendar, trip page (s
 src/components/chat/TripChatScope.tsx        Trip context + update_trip_plan / add_trip_ideas inside a trip chat
 src/server/guides.ts + src/app/api/guides/*  Community guides: list/search/nearby, create, edit, delete, save
 src/components/guides/*                      Guide card, editor (Create page), guide page
-src/components/explore/ExploreClient.tsx     Explore near you (Nearby Search via /api/places/nearby) with map
-src/components/map/PlacesMap.tsx             Shared labeled map + place sheet used by trips, guides and Explore
+src/components/map/PlacesMap.tsx             Shared labeled map + place sheet used by trips and guides
 src/components/chat/TravelCopilot.tsx        useAgentContext / useFrontendTool / useHumanInTheLoop /
                                              useConfigureSuggestions registration
 src/components/chat/TravelChat.tsx           <CopilotChat> with the welcome hero and input slots
 src/components/chat/cards/*                  Destination, hotel, flight, restaurant, attraction,
                                              trip-proposal, constraint-chip, comparison and remember cards
 src/lib/constraints-store.ts, compare-store.ts, hitl-store.ts   Per-thread chips, compare selection, pending HITL cards
-src/lib/search-parser.ts                     Deterministic Explore query → Places filters + chips
 src/components/panel/RightPanel.tsx          Discovery feed ⇄ map switch, and a destination card open in full above its map
 src/components/map/detailSlot.ts             Where a card renders itself in full (the side panel, or the layer it expands into on smaller screens)
 src/components/panel/PlanOverlay.tsx         The layer an opened card expands into below 1280 px (grows out of the card, folds back)
