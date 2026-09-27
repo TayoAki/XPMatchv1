@@ -14,7 +14,6 @@ import {
   createTripSchema,
   focusMapSchema,
   importInspirationSchema,
-  importReservationSchema,
   recordFeedbackSchema,
   rememberPreferenceSchema,
   setSearchConstraintsSchema,
@@ -30,7 +29,6 @@ import {
   type CreateTripArgs,
   type FocusMapArgs,
   type ImportInspirationArgs,
-  type ImportReservationArgs,
   type RecordFeedbackArgs,
   type RememberPreferenceArgs,
   type SetSearchConstraintsArgs,
@@ -60,8 +58,6 @@ import { PlaceAnswerCard } from "@/components/chat/cards/PlaceAnswerCard";
 import { FeedbackChip } from "@/components/chat/cards/FeedbackChip";
 import { ImportToolCard } from "@/components/import/ImportToolCard";
 import type { ImportRecord } from "@/lib/import/types";
-import { ReservationToolCard } from "@/components/reservations/ReservationToolCard";
-import { reservationSummary, type Reservation } from "@/lib/reservations/types";
 import { tasteForContext } from "@/lib/feedback/taste";
 import { recQuality } from "@/lib/recs/types";
 import type { ResolvedPlace } from "@/lib/places/types";
@@ -128,9 +124,6 @@ const RememberRenderer = ({
 );
 const FeedbackRenderer = ({ args, status }: RenderProps<RecordFeedbackArgs>) => <FeedbackChip args={args as Streaming<RecordFeedbackArgs>} status={status} />;
 const ImportRenderer = ({ args, status, result }: RenderProps<ImportInspirationArgs>) => <ImportToolCard args={args as Streaming<ImportInspirationArgs>} status={status} result={result} />;
-const ReservationRenderer = ({ args, status, result }: RenderProps<ImportReservationArgs>) => (
-  <ReservationToolCard args={args as Streaming<ImportReservationArgs>} status={status} result={result} />
-);
 
 function nextMonthName(): string {
   const d = new Date();
@@ -607,34 +600,6 @@ export function TravelCopilot() {
         }
       },
       render: ImportRenderer,
-    },
-    [],
-  );
-
-  useFrontendTool(
-    {
-      name: "import_reservation",
-      description:
-        "Read a booking confirmation the traveler pasted (flight, hotel, restaurant, car, train, tickets) into structured reservations: kind, provider, confirmation code, dates and times, place, price, flight legs. The app shows cards with Add to trip; you get the summary back.",
-      parameters: importReservationSchema,
-      followUp: true,
-      handler: async ({ text }) => {
-        try {
-          const res = await api<{ reservations: Reservation[] }>("/api/reservations", { method: "POST", json: { text } });
-          return JSON.stringify({
-            reservations: res.reservations,
-            summary: res.reservations.map(reservationSummary),
-            guidance:
-              "Reservation cards with Add to trip are displayed. In one sentence, offer to add them to the trip in context or to a new trip; do not repeat codes or dates.",
-          });
-        } catch (err) {
-          return JSON.stringify({
-            error: err instanceof Error ? err.message : "Could not read the confirmation",
-            guidance: "Say briefly that the confirmation could not be read and suggest uploading the PDF or a screenshot through Import inspiration in the composer's + menu.",
-          });
-        }
-      },
-      render: ReservationRenderer,
     },
     [],
   );

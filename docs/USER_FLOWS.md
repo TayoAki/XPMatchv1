@@ -273,7 +273,8 @@ scheduling chip open the itinerary board as a full-height sheet (short map, then
      reading's own uncertainty up to 100 m; a reading rougher than 200 m, a place too far ("You're about
      1.2 km from Hotel Artemide. Check in when you're there."), or a check-in that would mean flying
      faster than a plane since the last one is refused; 20 a day at most. A booking of theirs for that
-     place (imported from a confirmation) whose date has come counts as proof too. Proof shows as a
+     place with structured details (imported from a confirmation before that import was switched off)
+     whose date has come counts as proof too. Proof shows as a
      **Checked in** or **Booked** badge on their review.
    - **Writing.** How was it (Loved it / It was fine / Not for me), a few words (up to 1,200
      characters) and "Share with other travelers (as your first name and last initial)", on by
@@ -342,13 +343,9 @@ scheduling chip open the itinerary board as a full-height sheet (short map, then
    did not resolve. Below: **Add all to a trip**, **Plan a trip from these** and **Save as a collection**
    (a private guide). Instagram and TikTok links cannot be read; the composer's **+** menu has **Import
    inspiration** for a screenshot instead (also on Create › Import).
-10. **Reservations** — paste a confirmation email (flight, hotel, restaurant, car, train, tickets) and the
-    assistant calls `import_reservation`: one structured model call reads it and **reservation cards**
-    appear (kind icon, provider, confirmation code, dates and times, place or address, travelers, price;
-    flights list their legs "ATL → FCO DL 1234"). Hotels, restaurants and venues that Google Places
-    recognizes show "Pinned: <name>" and get a pin. **Add to trip** stores the card under the trip's
-    Bookings with its details (see Trips). PDFs and screenshots go through Import inspiration › **A
-    reservation**.
+10. **Reservations (import off for now)** — the chat no longer reads pasted confirmations: the assistant
+    says in one sentence that it cannot read them yet and points to the trip's **Bookings** tile, where a
+    booking can be added by hand. Bookings imported earlier keep their details (see Trips).
 11. **Map tools** — hide the map (the discovery feed returns with a "Show map" button), search-and-pin
     any place near the destination, satellite toggle, weather chip.
 12. **Trip proposal** — when the traveler asks for a plan the assistant calls `create_trip` and a
@@ -429,9 +426,9 @@ things, so nothing competes for attention:
 - Tiles: **Ideas** (places added from chat, map, a guide or by searching here; each with note, Rate, Save,
   Show on map, remove), **Itinerary** (read view: each stop with its photo, time, rating, category, price
   and note, with **Open the board**, **Edit as text**, or "Build it with the assistant"), **Bookings**
-  (typed by hand: title, link, note; imported from a confirmation: kind
-  icon, provider, confirmation code, dates and times, travelers, price, flight legs, plus a pin when the
-  hotel or venue resolved) and **Media** (title, link, note; image links preview), **Trip preferences**
+  (typed by hand: title, link, note; imported from a confirmation before that import was switched off:
+  kind icon, provider, confirmation code, dates and times, travelers, price, flight legs, plus a pin when
+  the hotel or venue resolved) and **Media** (title, link, note; image links preview), **Trip preferences**
   (free text the assistant reads for this trip, plus **Learned for this trip**: the "For this trip"
   answers from its chats, each removable), **Calendar** (dates, travelers, budget plus a month view),
   **Members** (add by email, role Can edit / Can view; remove; leave).
@@ -483,14 +480,9 @@ cards as the chat, plus **Chat about these** and **Import another**. Instagram a
 screenshot hint before anything is fetched. A link imported within the last seven days is served from the
 traveler's history without a new fetch or model call.
 
-The tab's switch **Places from a post | A reservation** turns the same form into the confirmation
-importer: paste the confirmation text, or upload the PDF or a screenshot (PDF, PNG, JPEG, WebP up to 6 MB).
-PDFs are read as text on the server (no model sees the file), images go to the vision model, and one
-structured call extracts up to ten reservations (kind, provider, confirmation code, dates and times, place
-or address, travelers, price, flight legs); codes and dates are copied as written, hotels, restaurants and
-venues are verified through Google Places and pinned when the name matches. The result is the reservation
-cards from the chat with **Add to trip** on each and **Import another**. The same importer is behind the
-composer's **+** menu (Import inspiration).
+The same importer is behind the composer's **+** menu (Import inspiration). It reads places only: the
+**A reservation** switch (confirmation text, PDF or screenshot into bookings) is off for now, and
+reverting the "Remove reservation import for now" commit brings it back.
 
 ## 8. Inspiration and guide pages
 

@@ -44,8 +44,7 @@ checklist, data model, screens, connections, vertical slices, sample data, tests
 | Place data | Google Places API (New) on the server: Text Search, Place Details, Nearby Search, Place Photos (through our proxy); Routes API for travel times (server key) | — | Real places, photos, hours, reviews, legs |
 | Other data | Open-Meteo (weather), Wikipedia (destination facts, images) | — | Grounding for the agent |
 | Email | Resend | — | Password reset links |
-| Documents | `unpdf` | 1.8 | Reads PDF confirmations for reservations |
-| Tests | Vitest (14 files, 137 tests); Playwright (22 end-to-end specs) with stand-ins for the model, Places, Routes, Resend and a fixture website | 5.0 / 1.63 | No keys or network needed |
+| Tests | Vitest (13 files, 129 tests); Playwright (22 end-to-end specs) with stand-ins for the model, Places, Routes, Resend and a fixture website | 5.0 / 1.63 | No keys or network needed |
 | CI | GitHub Actions: lint, typecheck, unit tests, build, end-to-end suite | Node 22 | Every push |
 | Hosting | Railway: the app service builds `main` with Railpack and deploys on every push; Postgres as a second service with a volume; `app.xpmatchme.com` | — | Production |
 
@@ -61,8 +60,8 @@ Next.js server on Railway (one Node process, app.xpmatchme.com)
   ├── src/proxy.ts           no session cookie → /login for pages, 401 for /api/*
   ├── pages (src/app)        Discover, Chat, Trips, Saved, Updates, Inspiration,
   │                          Create, Guides, Admin, and the sign-in pages
-  ├── 56 API routes          profile, trips, saved, guides, places, itineraries, packages,
-  │   (src/app/api)          imports, reservations, reviews, notifications, admin …
+  ├── 55 API routes          profile, trips, saved, guides, places, itineraries, packages,
+  │   (src/app/api)          imports, reviews, notifications, admin …
   ├── /api/copilotkit        CopilotKit runtime → our agent → AI SDK → OpenRouter
   └── src/server/*           sign-in, database, place catalog, itinerary and package builders,
                              match and taste, reviews, imports, email
@@ -559,7 +558,7 @@ tables (other than the added columns) or the Google server key.
 | F-021 | Traveler | Explore near you with the phone's location (Explore is off on the web for now) | Later | F-009 | Planned | Given location allowed, when Explore opens, then places near the traveler show on the map | Pending |
 | F-022 | Traveler | Check in at a place and write a verified review | Later | F-010 | Planned | Given the traveler at the place, when they check in, then only the result is stored, not the coordinates | Pending |
 | F-023 | Traveler | Import from the share sheet (links, screenshots) and the photo library | Later | F-006 | Planned | Given a shared link, when XPMatch is picked in the share sheet, then the import card shows its places | Pending |
-| F-024 | Traveler | Import reservations (text, PDF, screenshot) into a trip | Later | F-013 | Planned | Given a confirmation, when it is imported, then the booking shows on its day | Pending |
+| F-024 | Traveler | Import reservations (text, PDF, screenshot) into a trip (off on the web for now) | Later | F-013 | Planned | Given a confirmation, when it is imported, then the booking shows on its day | Pending |
 | F-025 | Traveler | Read and save community guides | MVP | F-017 | Planned | Given a guide link, when it opens, then the places and the map show and Save guide works | Pending |
 | F-026 | Traveler | Create and edit guides | Later | F-025 | Planned | Given a draft, when published, then it shows under Inspiration | Pending |
 | F-027 | Traveler | Package and compare cards as native designs | Later | F-006 | Planned | Given a package request, when the card shows, then Swap and Lock work | Pending |
@@ -667,7 +666,7 @@ what was on screen) and long content (names that wrap, the largest text size).
 | C-011 | A link is tapped | Universal Link or App Link → the matching screen → its normal API call | — | The server's rules for that trip, guide or chat | — | Signed out: sign in, then continue to the link; not allowed: "not available" | — |
 | C-012 | App opens or returns | `GET /api/config` | — | Public | — | Offline: carry on with the last answer | — |
 | C-013 | Check in (later) | One location reading → `POST /api/places/{id}/checkin` | Server checks the distance | Session | One check-in per place per day | Denied permission: explain, offer the booking proof | Only the result is stored, never the coordinates |
-| C-014 | Import a screenshot or file (later) | Resize on the phone, then `POST /api/import` or `/api/reservations` (multipart) | Type and 6 MB limit on the server | Session | Imports are cached per link for seven days | Too large after resizing: say so | Import row |
+| C-014 | Import a screenshot or file (later) | Resize on the phone, then `POST /api/import` (multipart; `/api/reservations` is off for now) | Type and 6 MB limit on the server | Session | Imports are cached per link for seven days | Too large after resizing: say so | Import row |
 
 ### 9.6 Vertical slices
 

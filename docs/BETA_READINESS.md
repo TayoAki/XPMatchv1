@@ -50,8 +50,8 @@ catalog.
     website and the Fit Score; before the app beta the Privacy Policy needs an app section covering:
     chats, trips, saved places, itineraries, reactions and learned preferences; the in-depth profile
     (dietary needs and halal/kosher are health- and religion-adjacent, so name them and, where GDPR
-    applies, ask for explicit consent); bug reports with screenshots and uploaded confirmations
-    (names, codes, dates, prices); that messages, the profile summary and pasted or uploaded content go
+    applies, ask for explicit consent); bug reports with screenshots; bookings on trips (names, codes,
+    dates, prices; confirmation uploads are off for now); that messages, the profile summary and pasted or uploaded content go
     to AI model providers (OpenRouter and the model behind it) to generate answers; that place searches
     and the map go to Google Maps Platform, which sets its own cookies (the "no third-party cookies"
     line is no longer true on the app); the sign-in session cookie; "I'm here: check in" on a place's
@@ -74,8 +74,8 @@ catalog.
     admin; decide who checks it daily and where product feedback (not bugs) goes.
 
 **What to tell testers** is in the section further down; the short version: prices and hours are
-estimates, the match score is our estimate, use the thumbs, use the bug button, and confirmations you
-paste are sent to the model provider.
+estimates, the match score is our estimate, use the thumbs, use the bug button, and anything you paste
+in chat is sent to the model provider.
 
 ## Audit (September 19, 2026)
 
@@ -147,8 +147,8 @@ First week after inviting:
    and an Android phone; the things most likely to differ are the sheet drag, the viewport height
    with Safari's toolbar and the composer's focus zoom.
 9. **Terms and Privacy** in the sidebar footer are placeholder text, not pages. Testers' chats and
-   uploaded confirmations are sent to the model provider; a one-page privacy note and a retention
-   rule for screenshots and confirmations are due.
+   uploaded screenshots are sent to the model provider; a one-page privacy note and a retention
+   rule for screenshots are due.
 10. **Account deletion**: no self-service way to delete an account; handle requests by hand in Postgres
     until there is one.
 11. **Login throttling** (done September 20): ten sign-in tries per email and a hundred per network
@@ -162,8 +162,9 @@ no invite code.
 ## What is live
 
 - Chat with cards, map, place sheets, smart filters, comparison, heads-ups, remembered preferences,
-  questions answered from reviews, inspiration import (links and screenshots), reservation import (pasted
-  confirmations, PDFs, screenshots → reservation cards → Bookings).
+  questions answered from reviews, inspiration import (links and screenshots). Reservation import
+  (pasted confirmations, PDFs, screenshots → Bookings) is off for now; bookings imported earlier keep
+  their details.
 - Trips: proposal cards, trip pages with the Board (structured stops, drag-and-drop, per-day pins, travel
   legs by Walk / Drive / Transit from the Routes API with estimates as fallback, reservations on their
   day), tiles, members and notifications, trip chats with `update_trip_plan`, `add_trip_ideas` and
@@ -196,8 +197,8 @@ no invite code.
    enabled the board keeps straight-line estimates ("est.") and the logs show `[routes] computeRoutes 403`;
    `ROUTES_API_ENABLED=0` silences that deliberately.
 4. **Model.** `OPENROUTER_MODEL` on a tool-capable model (`openai/gpt-4o-mini` default). Helper calls
-   (review answers, imports, reservations) use the same model unless `HELPER_MODEL` is set; screenshots and
-   confirmation images use `HELPER_VISION_MODEL` (default `openai/gpt-4o-mini`).
+   (review answers, imports) use the same model unless `HELPER_MODEL` is set; screenshots use
+   `HELPER_VISION_MODEL` (default `openai/gpt-4o-mini`).
 5. **Spend guardrails.** Google Cloud budget alert on the Places project (see `docs/COGS.md`: about $10 per
    active user per month at list prices, dominated by Places and photos; the Routes API adds cents);
    OpenRouter spending limit on the key.
@@ -205,8 +206,7 @@ no invite code.
    pins and photos → Rate a card → Ask about a place on the sheet → Compare two → create a trip from the
    proposal → Board: add two ideas to Day 1, drag one, see the pins, check the leg reads "via Google" and
    switch Walk → Drive → paste a blog link in chat → Import cards → Add all to a trip → Saved › Imports →
-   Create › Import › **A reservation** with a real hotel confirmation → Add to trip → the Bookings tile
-   shows the code and dates and the board lists it on its day → Update my assistant › Your taste.
+   Update my assistant › Your taste.
 7. **Not set in production:** `IMPORT_ALLOW_LOOPBACK`, `PLACES_BASE_URL`, `ROUTES_BASE_URL`,
    `OPENROUTER_BASE_URL`, `RESEND_BASE_URL`.
 8. **Admins.** Set `ADMIN_EMAILS` on Railway to the team's account emails (comma-separated) so bug
@@ -222,9 +222,7 @@ no invite code.
 
 - Prices, hours and availability are estimates; every card links to the live source.
 - Instagram and TikTok links cannot be read; use a screenshot through Import inspiration.
-- Confirmations: paste the email text, or upload the PDF or a screenshot under Import › A reservation (or
-  paste it in chat). Codes and dates are copied as written; check them against the original, and know that
-  the text is sent to the model provider like any chat message.
+- Confirmations cannot be imported for now; add a booking by hand on the trip's Bookings tile.
 - "Not for me" hides a card; Undo is right there and Your taste lists every reaction.
 - The match score is XPMatch's own estimate from the profile, not a rating: tap it to see why, and use the
   thumbs on every card to say whether a pick was right. Thumbs are what teaches it.
@@ -255,9 +253,6 @@ no invite code.
 - Travel legs are routed by Google without live traffic (drive legs are traffic-unaware); transit is asked
   one leg at a time and falls back to an estimate where no transit route exists. A leg reads "est." whenever
   the Routes API is off, unreachable or rejects the request.
-- Reservation import reads what the model can extract from the text (up to 40k characters of a PDF, ten
-  reservations per import); it does not follow links in the email, and changes or cancellations are not
-  tracked. Reservations are stored on the trip only after Add to trip.
 - The match score is a heuristic over what the profile and Google Places expose (category, price level,
   rating, editorial summary, the card's own text); it cannot see amenities Google does not list, so a
   "Pool" must-have only scores when a description mentions it. Calibration needs three judgments per

@@ -343,11 +343,3 @@ export const importInspirationSchema = z.object({
 });
 
 export type ImportInspirationArgs = z.infer<typeof importInspirationSchema>;
-
-/* --------------------- Wave 3: reservation import --------------------- */
-
-export const importReservationSchema = z.object({
-  text: z.string().describe("The confirmation the traveler pasted (email body, booking summary, itinerary receipt), complete and unedited"),
-});
-
-export type ImportReservationArgs = z.infer<typeof importReservationSchema>;

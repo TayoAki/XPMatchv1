@@ -125,12 +125,13 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   the model, verified through Google Places and shown as cards with Add all to a trip, Plan a trip and
   Save as a collection; unverified mentions are listed honestly. SSRF-guarded fetching, seven-day
   cache per link, history under Saved › Imports.
-- **Reservations into the trip** — paste a confirmation email in chat (`import_reservation`) or use
-  Import inspiration › **A reservation** with the text, its PDF or a screenshot: flights, hotels,
-  restaurants, cars, trains and activities become reservation cards (provider, confirmation code,
-  dates and times, place, travelers, price, flight legs). Add to trip stores them under the trip's
-  Bookings with those details, pins hotels and venues that Google Places recognizes on the trip map,
-  and the Board shows each reservation on the day it starts.
+- **Reservation import is off for now** — the chat no longer reads pasted confirmations (the
+  `import_reservation` tool and its prompt section are gone; the assistant says it cannot read them
+  yet and points to the trip's Bookings tile), Import inspiration reads places only, and
+  `/api/reservations` with its PDF reader is removed. Bookings typed by hand still work, and bookings
+  imported earlier keep their details: the Bookings tile shows them, the trip map pins them and the
+  Board shows each on the day it starts. Reverting the commit "Remove reservation import for now"
+  brings the import back.
 - **Generative UI recommendations** — the agent calls frontend tools that render streaming cards:
   `show_destinations`, `show_hotels`, `show_flights`, `show_restaurants`, `show_attractions`.
 - **Actionable, not just descriptive** — every card links out to live inventory: Google Flights,
@@ -244,8 +245,8 @@ Without a model key the app starts in demo mode. Model selection lives in `src/s
 | `ANTHROPIC_API_KEY` | Enables Claude directly (`anthropic/claude-opus-5` by default). |
 | `OPENAI_API_KEY`, `GOOGLE_API_KEY` | Used when no Anthropic key is present (`openai/gpt-5`, `google/gemini-2.5-pro`). |
 | `COPILOT_MODEL` | Force a `provider/model` (any model the AI SDK knows) or `demo`. |
-| `HELPER_MODEL` | OpenRouter model for small structured jobs (review answers, import and reservation extraction); defaults to the agent's model. |
-| `HELPER_VISION_MODEL` | OpenRouter model that reads screenshots for imports and reservations (default `openai/gpt-4o-mini`). |
+| `HELPER_MODEL` | OpenRouter model for small structured jobs (review answers, place extraction for imports); defaults to the agent's model. |
+| `HELPER_VISION_MODEL` | OpenRouter model that reads screenshots for imports (default `openai/gpt-4o-mini`). |
 | `PLACES_BASE_URL` | Override the Places API base URL (the end-to-end suite points it at a stub). |
 | `ROUTES_API_ENABLED` | `0` skips the Routes API; board travel legs are then straight-line estimates labeled "est.". |
 | `ROUTES_BASE_URL` | Override the Routes API base URL (the end-to-end suite points it at a stub). |
