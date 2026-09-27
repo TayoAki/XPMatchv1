@@ -35,10 +35,11 @@ export function Thumb({ place, size = 56 }: { place: ResolvedPlace; size?: numbe
   return <img src={photoAtWidth(photo, size * 3)} alt="" title={photoCreditTitle(place.photoCredits?.[0])} loading="lazy" className="shrink-0 rounded-xl object-cover" style={{ width: size, height: size }} />;
 }
 
-export function Score({ pick, small = false }: { pick: DraftPick; small?: boolean }) {
+/** A pick's match score; `display` replaces the default `inline-flex` (for example to hide it on phones). */
+export function Score({ pick, display = "inline-flex" }: { pick: DraftPick; display?: string }) {
   return (
     <span
-      className={clsx("inline-flex shrink-0 items-center gap-0.5 rounded-full bg-brand-soft font-semibold text-brand", small ? "px-1.5 py-0.5 text-[11px]" : "px-2 py-0.5 text-[12px]")}
+      className={clsx("shrink-0 items-center gap-0.5 rounded-full bg-brand-soft px-2 py-0.5 text-[12px] font-semibold text-brand", display)}
       title={`${pick.match.label} · ${pick.match.score}%`}
     >
       <Sparkles className="h-3 w-3" aria-hidden="true" /> {pick.match.score}%
@@ -54,42 +55,26 @@ export function SwappedTag() {
 /**
  * A pick's swap list: its ready options (the place it replaced first, when it was swapped), each
  * with Use this, then "See all stays" (or things to do, restaurants) for every other place of its
- * kind in the city, to choose from on its tab.
+ * kind in the city, to choose from on its tab. On a phone the score joins the second line, so the
+ * name keeps its room.
  */
-export function SwapOptions({
-  pick,
-  kind,
-  options,
-  onSwap,
-  onSeeAll,
-  compact = false,
-}: {
-  pick: DraftPick;
-  kind: PlaceKind;
-  options: DraftPick[];
-  onSwap: (to: DraftPick) => void;
-  onSeeAll: () => void;
-  /** On the card (a phone, a narrow screen): smaller photos and type. */
-  compact?: boolean;
-}) {
+export function SwapOptions({ pick, kind, options, onSwap, onSeeAll }: { pick: DraftPick; kind: PlaceKind; options: DraftPick[]; onSwap: (to: DraftPick) => void; onSeeAll: () => void }) {
   return (
-    <div className={clsx("border-t border-border/70", compact ? "px-2.5 pb-2.5 pt-2" : "px-3 pb-3 pt-2")} data-testid="swap-options">
+    <div className="border-t border-border/70 px-2.5 pb-2.5 pt-2 sm:px-3 sm:pb-3" data-testid="swap-options">
       <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Swap {shortPlaceName(pick.place.name)} for</div>
       {options.length ? (
         <ul className="mt-2 grid grid-cols-[minmax(0,1fr)] gap-2">
           {options.map((alt) => (
-            <li key={alt.place.id} className={clsx("flex items-center rounded-xl border border-border bg-white", compact ? "gap-2 p-1.5" : "gap-3 p-2")}>
-              <Thumb place={alt.place} size={compact ? 36 : 44} />
+            <li key={alt.place.id} className="flex items-center gap-2 rounded-xl border border-border bg-white p-1.5 sm:gap-3 sm:p-2">
+              <Thumb place={alt.place} size={44} />
               <div className="min-w-0 flex-1">
-                <div className={clsx("truncate font-semibold", compact ? "text-[13px]" : "text-[14px]")} title={alt.place.name}>
+                <div className="truncate text-[13px] font-semibold sm:text-[14px]" title={alt.place.name}>
                   {shortPlaceName(alt.place.name)}
                 </div>
-                {/* On the card the score joins the second line, so the name keeps its room. */}
-                <div className={clsx("truncate text-muted", compact ? "text-[11px]" : "text-[12px]")}>
-                  {(compact ? [`${alt.match.score}% match`, alt.place.category] : [alt.place.category, alt.why]).filter(Boolean).join(" · ")}
-                </div>
+                <div className="truncate text-[11px] text-muted sm:hidden">{[`${alt.match.score}% match`, alt.place.category].filter(Boolean).join(" · ")}</div>
+                <div className="hidden truncate text-[12px] text-muted sm:block">{[alt.place.category, alt.why].filter(Boolean).join(" · ")}</div>
               </div>
-              {compact ? null : <Score pick={alt} />}
+              <Score pick={alt} display="hidden sm:inline-flex" />
               <button
                 type="button"
                 onClick={() => onSwap(alt)}

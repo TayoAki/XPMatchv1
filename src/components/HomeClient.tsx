@@ -7,6 +7,7 @@ import { MobileMapSheet } from "@/components/map/MobileMapSheet";
 import { PlaceDetailSheet } from "@/components/map/PlaceDetailSheet";
 import { TripBoardSheet } from "@/components/trips/TripBoardSheet";
 import { RightPanel } from "@/components/panel/RightPanel";
+import { PlanOverlay } from "@/components/panel/PlanOverlay";
 import { useUiState } from "@/components/providers/UiState";
 import { TripScopeProvider } from "@/components/trips/TripScope";
 import { useDetailCardMounted } from "@/components/map/detailSlot";
@@ -34,6 +35,8 @@ export function HomeClient({ threadId, initialPrompt, tripId }: { threadId?: str
   const view = useMapView();
   const cardOnScreen = useDetailCardMounted(view.detail);
   const workspace = wide && !!view.detail && cardOnScreen;
+  // Without the side column the card expands over the page instead; the chat waits underneath.
+  const expanded = !wide && !!view.detail && cardOnScreen;
   // A place picked in the plan (a stop, a pin on a day's map) opens in this column, over the
   // conversation, so the itinerary and the place are on screen together; Back returns to the chat,
   // which stays mounted underneath.
@@ -79,7 +82,7 @@ export function HomeClient({ threadId, initialPrompt, tripId }: { threadId?: str
           data-side={workspace || undefined}
           data-wide={chatWide || undefined}
         >
-          <div className="flex h-full min-h-0 flex-col" inert={!!sidePlace} aria-hidden={sidePlace ? true : undefined}>
+          <div className="flex h-full min-h-0 flex-col" inert={!!sidePlace || expanded} aria-hidden={sidePlace || expanded ? true : undefined}>
             <TravelChat key={chatKey} threadId={threadId} initialPrompt={initialPrompt} tripId={effectiveTripId ?? undefined} />
           </div>
           {sidePlace ? (
@@ -89,6 +92,7 @@ export function HomeClient({ threadId, initialPrompt, tripId }: { threadId?: str
           ) : null}
           <MobileMapSheet />
           <TripBoardSheet />
+          {wide ? null : <PlanOverlay />}
         </section>
         {wide ? (
           <aside

@@ -192,16 +192,18 @@ scheduling chip open the itinerary board as a full-height sheet (short map, then
    **Destination cards** are each a complete itinerary built for this traveler. The photo face (city
    name, region, a one-line tagline, the plan in a line such as "4-day itinerary · stay at Josun
    Palace", the plan's match badge and thumbs, "Curated for you" when the pick is tied to the profile)
-   flips to **Built for you**: "Your match" with the reasons most of the plan shares, why the city
-   fits, Itinerary / Stays / Activities / Dining tabs, then quick facts (suggested stay, city feel,
-   known for, best season); the back scrolls inside the card. The **Itinerary** tab is the plan: where
+   opens into the card in full, **Built for you**: "Your match" with the reasons most of the plan
+   shares, why the city fits, Itinerary / Stays / Activities / Dining tabs, then quick facts
+   (suggested stay, city feel, known for, best season). The **Itinerary** tab is the plan: where
    they'll stay, then Day 1…N, each stop with its time, photo, short name, category, a one-line why and
    its match score, lunch and dinner near that day's stops. The other tabs list this traveler's scored
-   picks for the city (three rows, then Show all). Below 1280 px wide, on a desktop the back appears
-   after a moment's hover and hides again on leaving, unless a click, a tab, a row or keyboard focus
-   pinned it; on a phone the **Itinerary** and **Photo** controls flip it. From 1280 px up the card
-   does not turn on hover: it says "Click to open your itinerary" and a click opens the plan workspace
-   (below).
+   picks for the city. Hover never changes the card. From 1280 px up it says "Click to open your
+   itinerary" and a click opens the plan workspace (below). Below 1280 px ("Tap to open your
+   itinerary" on a phone) a tap or click on the photo, the name or the **Itinerary** control expands
+   the card out over the whole page into the same full plan: day maps, swaps, Not a fit, moves, the
+   tabs and Make itinerary and Save. A place opened from it (a stop, a row, Explore city details) stacks
+   over the plan as a sheet, and closing that returns to the plan. The close button, or Escape, folds
+   the plan back into its card in the chat, with every change kept; the chat waits underneath.
    The **itinerary builder** (`POST /api/itineraries`, one lookup from the daily budget, built when the
    card scrolls into view and kept for the session) works from the place catalog, seeding a city it
    has never seen. It scores every stay, thing to do and place to eat with the match model (profile,

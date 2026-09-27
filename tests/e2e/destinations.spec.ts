@@ -3,9 +3,6 @@ import { goToChat, sendChat, signup, uniqueEmail } from "./helpers";
 
 const chatColumn = (page: Page) => page.getByTestId("chat-column");
 
-/** Waits for a card's turn to finish: mid-turn, neither face takes a click. */
-const turned = (card: Locator) => card.locator(".xp-flip").evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)).then(() => undefined));
-
 /** The destination cards: each a complete itinerary built for the traveler; opened, the plan becomes the workspace in the center with the chat beside it. */
 test("destination cards: an itinerary per city, opened as the plan workspace with day maps, swaps, place details, save and make itinerary", async ({ page }) => {
   await signup(page, { email: uniqueEmail("dest"), cuisines: ["Italian"] });
@@ -16,7 +13,7 @@ test("destination cards: an itinerary per city, opened as the plan workspace wit
   await expect(cards).toHaveCount(2, { timeout: 40_000 });
   const rome = cards.filter({ hasText: "Ancient streets" });
   const kyoto = cards.filter({ hasText: "Temples, gardens" });
-  const credit = rome.locator(".xp-flip__front").getByTestId("photo-credit");
+  const credit = rome.getByTestId("photo-credit");
   const workspace = page.getByTestId("plan-workspace");
   const detail = page.getByTestId("card-detail");
   const chat = page.getByTestId("chat-column");
@@ -25,7 +22,6 @@ test("destination cards: an itinerary per city, opened as the plan workspace wit
   const sheet = chat.getByTestId("side-place").getByTestId("place-sheet");
 
   await test.step("the photo face carries the itinerary, its score and the thumbs, the footer the two actions", async () => {
-    await expect(rome).toHaveAttribute("data-face", "photo");
     await expect(credit).toBeVisible({ timeout: 20_000 });
     await expect(rome.getByTestId("itinerary-summary")).toContainText(/\d-day itinerary · stay at /, { timeout: 40_000 });
     await expect(rome.getByTestId("destination-match").getByTestId("match-badge")).toBeVisible({ timeout: 20_000 });
@@ -41,7 +37,8 @@ test("destination cards: an itinerary per city, opened as the plan workspace wit
   await test.step("with room for the workspace, hovering leaves the card alone", async () => {
     await rome.hover();
     await page.waitForTimeout(700);
-    await expect(rome).toHaveAttribute("data-face", "photo");
+    await expect(rome).not.toHaveAttribute("data-detail", "open");
+    await expect(detail).toHaveCount(0);
     await page.mouse.move(2, 2);
   });
 
@@ -52,7 +49,8 @@ test("destination cards: an itinerary per city, opened as the plan workspace wit
     const [planBox, chatBox] = [await workspace.boundingBox(), await chat.boundingBox()];
     expect(planBox && chatBox ? planBox.x + planBox.width <= chatBox.x + 1 && planBox.width > chatBox.width : false).toBe(true);
     await expect(rome).toHaveAttribute("data-detail", "open");
-    await expect(rome).toHaveAttribute("data-face", "photo");
+    // Wide screens open the plan beside the chat, never the layer over the page.
+    await expect(page.getByTestId("plan-overlay")).toHaveCount(0);
     await expect(detail.getByRole("heading", { name: "Rome", level: 2 })).toBeVisible();
     await expect(detail.getByRole("button", { name: "Close Rome" })).toBeFocused();
     await expect(detail).toContainText("Curated for you");
@@ -326,7 +324,7 @@ test("destination cards: an itinerary per city, opened as the plan workspace wit
     await expect(wrappers.last()).toHaveAttribute("data-verdict", "down");
   });
 
-  await test.step("on a phone the itinerary turns over on tap, Photo turns it back, a row opens the map sheet", async () => {
+  await test.step("on a phone a tap expands the card over the page into the full plan: swap, move, a place over the plan, then it folds back", async () => {
     const phone = await page.context().browser()!.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, storageState: await page.context().storageState() });
     const p: Page = await phone.newPage();
     try {
@@ -334,34 +332,52 @@ test("destination cards: an itinerary per city, opened as the plan workspace wit
       await sendChat(p, "Where should we go this fall?");
       const card = p.getByTestId("destination-card").filter({ hasText: "Ancient streets" });
       await expect(card).toBeVisible({ timeout: 40_000 });
-      await expect(card).toContainText("Tap Itinerary");
+      await expect(card).toContainText("Tap to open your itinerary");
       await card.getByRole("button", { name: "Itinerary for Rome" }).tap();
-      await expect(card).toHaveAttribute("data-face", "profile");
-      await expect(p.getByTestId("card-detail")).toHaveCount(0);
-      await turned(card);
-      await card.getByRole("button", { name: "Show the photo of Rome" }).tap();
-      await expect(card).toHaveAttribute("data-face", "photo");
-      await card.getByRole("button", { name: "Itinerary for Rome" }).tap();
-      await turned(card);
-      // Swap works on the card too: the stay's list, then its first option.
-      const cardStay = card.locator('[data-testid="itinerary-stop"][data-kind="hotel"]');
-      await expect(cardStay).toHaveCount(1, { timeout: 40_000 });
-      const before = (await cardStay.getAttribute("data-place-id")) ?? "";
-      await cardStay.getByRole("button", { name: /^Swap / }).tap();
-      const option = cardStay.getByTestId("swap-options").getByRole("button", { name: /^Swap in / }).first();
+      const overlay = p.getByTestId("plan-overlay");
+      await expect(overlay).toBeVisible();
+      await expect(overlay).toHaveAttribute("aria-modal", "true");
+      await expect(card).toHaveAttribute("data-detail", "open");
+      const full = overlay.getByTestId("card-detail");
+      await expect(full.getByRole("button", { name: "Close Rome" })).toBeFocused();
+      // The whole plan, as on a wide screen: the stay, every day with its map, moves and swaps.
+      const plan = full.getByTestId("itinerary-plan");
+      await expect(plan.getByTestId("itinerary-day").first()).toContainText("Day 1", { timeout: 40_000 });
+      await expect(plan.getByTestId("day-map")).toHaveCount(1);
+      const fullStay = full.locator('[data-testid="itinerary-stop"][data-kind="hotel"]');
+      await expect(fullStay).toHaveCount(1);
+      const before = (await fullStay.getAttribute("data-place-id")) ?? "";
+      await fullStay.getByRole("button", { name: /^Swap / }).tap();
+      const option = fullStay.getByTestId("swap-options").getByRole("button", { name: /^Swap in / }).first();
       const pickName = ((await option.getAttribute("aria-label")) ?? "").replace(/^Swap in /, "");
       await option.tap();
-      await expect(cardStay).not.toHaveAttribute("data-place-id", before);
-      await expect(card.getByTestId("itinerary-summary")).toContainText(`stay at ${pickName}`);
-      await expect(cardStay.getByRole("button", { name: /^Swap / })).toBeVisible();
-      await card.getByRole("tab", { name: "Stays" }).tap();
-      const row = card.getByTestId("destination-reco-row").first();
+      await expect(fullStay).not.toHaveAttribute("data-place-id", before);
+      await expect(full.getByTestId("itinerary-summary")).toContainText(`stay at ${pickName}`);
+      const day1 = plan.getByTestId("itinerary-day").first().getByTestId("itinerary-stop");
+      const first = ((await day1.first().getByRole("button", { name: /^Details for / }).getAttribute("aria-label")) ?? "").replace(/^Details for /, "");
+      await day1.first().getByRole("button", { name: `Move ${first} later` }).tap();
+      await expect(day1.nth(1).getByRole("button", { name: `Details for ${first}` })).toBeVisible();
+      // A row opens its place over the plan (no map sheet in between); closing it returns to the plan.
+      await full.getByRole("tab", { name: "Stays" }).tap();
+      const row = full.getByTestId("destination-reco-row").first();
       await expect(row).toBeVisible({ timeout: 40_000 });
       await row.getByRole("button", { name: /^Show / }).tap();
       await expect(p.getByTestId("mobile-place-sheet")).toBeVisible();
+      await expect(p.getByTestId("mobile-map-sheet")).toHaveCount(0);
       await p.getByTestId("mobile-place-sheet").getByRole("button", { name: "Close" }).click();
-      await expect(p.getByTestId("mobile-map-sheet")).toBeVisible();
-      await expect(p.getByTestId("mobile-map-sheet")).toContainText("Explore Rome");
+      await expect(p.getByTestId("mobile-place-sheet")).toHaveCount(0);
+      await expect(overlay).toBeVisible();
+      await expect(p.getByTestId("mobile-map-sheet")).toHaveCount(0);
+      // Close folds it back into the card, which keeps the swap; Escape closes it too.
+      await full.getByRole("button", { name: "Close Rome" }).tap();
+      await expect(overlay).toHaveCount(0);
+      await expect(card).not.toHaveAttribute("data-detail", "open");
+      await expect(card.getByTestId("itinerary-summary")).toContainText(`stay at ${pickName}`);
+      await expect(card.getByRole("button", { name: "Itinerary for Rome" })).toBeFocused();
+      await card.getByRole("button", { name: "Itinerary for Rome" }).tap();
+      await expect(overlay).toBeVisible();
+      await p.keyboard.press("Escape");
+      await expect(overlay).toHaveCount(0);
     } finally {
       await phone.close();
     }

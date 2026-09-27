@@ -11,6 +11,7 @@ import { GoogleMap } from "./GoogleMap";
 import { MapFilters } from "./MapFilters";
 import { PinStrip } from "./PinStrip";
 import { PlaceDetailSheet } from "./PlaceDetailSheet";
+import { useDetailCardMounted } from "./detailSlot";
 import { iconSvg } from "./markerIcons";
 import { shortPlaceName } from "@/lib/places/names";
 
@@ -19,11 +20,13 @@ import { shortPlaceName } from "@/lib/places/names";
  * while the conversation has pins; the sheet holds the map with the shared category filter and
  * the pinned list under it, and a pin (or a recommendation row on a card) opens the place detail
  * as a second sheet stacked on top. Closing the place returns to the map, closing the map returns
- * to the same spot in the chat.
+ * to the same spot in the chat. With a destination card expanded over the page, a place opened
+ * from its plan stacks straight over the plan, and closing it returns there.
  */
 export function MobileMapSheet() {
   const wide = useMediaQuery("(min-width: 1280px)");
   const view = useMapView();
+  const planOpen = useDetailCardMounted(view.detail) && !!view.detail;
   const [opened, setOpened] = useState(false);
   const [snap, setSnap] = useState<SheetSnap>("half");
   const { threadId, focus, visiblePlaces, activeDestination, filter, selectedKey, hoveredKey, selected } = view;
@@ -35,7 +38,8 @@ export function MobileMapSheet() {
   const label = count ? `Map · ${count} pinned` : "Map";
   const cityName = activeDestination?.name ?? focus?.name;
   // Selecting a place from a card opens the sheets too; the map panel's own "hide" closes them.
-  const open = (opened || !!selected) && !view.collapsed;
+  // An expanded plan keeps the map sheet away (the plan has its own day maps).
+  const open = !planOpen && (opened || !!selected) && !view.collapsed;
 
   const show = () => {
     if (threadId) mapActions.setCollapsed(threadId, false);
@@ -47,7 +51,7 @@ export function MobileMapSheet() {
     if (threadId) mapActions.selectPlace(threadId, null);
   };
   const closePlace = () => {
-    setOpened(true);
+    if (!planOpen) setOpened(true);
     if (threadId) mapActions.selectPlace(threadId, null);
   };
 

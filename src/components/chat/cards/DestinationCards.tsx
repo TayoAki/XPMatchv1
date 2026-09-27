@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
-import { ArrowLeft, ArrowLeftRight, ArrowRight, Bed, CalendarDays, Heart, MapPin, PanelRightOpen, RefreshCw, Search, Sparkles, X } from "lucide-react";
+import { ArrowLeftRight, ArrowRight, Bed, CalendarDays, Heart, MapPin, Maximize2, PanelRightOpen, Search, Sparkles, X } from "lucide-react";
 import { ToolCallStatus } from "@copilotkit/core";
 import type { ShowDestinationsArgs, Streaming } from "@/lib/travel/schemas";
 import { googleMapsSearchUrl } from "@/lib/travel/links";
@@ -20,7 +20,7 @@ import { shortPlaceName } from "@/lib/places/names";
 import type { DraftPick, ItineraryDraft } from "@/server/itineraries";
 import type { MatchCandidate, MatchResult } from "@/lib/match";
 import { useCardThreadId, usePlacePin, useRegisterPlaces } from "@/components/map/useRegisterPlaces";
-import { useDetailCard, useDetailSlot, useHasSidePanel } from "@/components/map/detailSlot";
+import { clipTo, COLLAPSE_MS, EXPAND_EASE, onScreen, setExpandOrigin, useDetailCard, useDetailSlot, useHasOverlayHost, useHasSidePanel, useOverlaySlot } from "@/components/map/detailSlot";
 import { useSendMessage } from "@/components/chat/useSendMessage";
 import { draftMessage } from "@/components/chat/draft";
 import { HiddenPlaceCard, useReaction } from "@/components/feedback/ReactionControl";
@@ -28,15 +28,12 @@ import { MatchBadge, useMatch } from "@/components/recs/MatchBadge";
 import { RecThumbs } from "@/components/recs/RecThumbs";
 import { photoCreditTitle } from "@/components/ui/PhotoCredit";
 import { CardPhoto, CardRow, SectionHeader, Text } from "./shared";
-import { ItineraryPlan, MakeItineraryButton } from "./ItineraryPlan";
+import { MakeItineraryButton } from "./ItineraryPlan";
 import { ItineraryWorkspace, type PlanMoveProps } from "./ItineraryWorkspace";
 import type { PlanSwapProps } from "./PlanParts";
 
 type DestinationArgs = Streaming<ShowDestinationsArgs>["destinations"] extends (infer U)[] | undefined ? U : never;
 type Tab = "itinerary" | "stays" | "activities" | "dining";
-type Face = "photo" | "profile";
-/** How the profile came to be showing: a hover that will close by itself, or a choice that stays. */
-type Reveal = "closed" | "hover" | "pinned";
 
 const TABS: Tab[] = ["itinerary", "stays", "activities", "dining"];
 const TAB_LABEL: Record<Tab, string> = { itinerary: "Itinerary", stays: "Stays", activities: "Activities", dining: "Dining" };
@@ -64,8 +61,6 @@ interface RowPlan {
   onUse: (place: ResolvedPlace, match: MatchResult, kind: PlaceKind) => void;
   onCancel: () => void;
 }
-const HOVER_IN_MS = 250;
-const HOVER_OUT_MS = 300;
 const TAGLINE_MAX = 72;
 
 export function DestinationCards({ args, status, toolCallId }: { args: Streaming<ShowDestinationsArgs>; status: ToolCallStatus; toolCallId: string }) {
@@ -137,12 +132,12 @@ function picksToPins(picks: DestinationPicks, scope: string, toolCallId: string)
 
 /**
  * One destination as a complete itinerary built for this traveler: a photo face with the plan's
- * length, stay and match, that turns over to the itinerary (the match, the days with their stops,
- * tabs with more stays, activities and dining, quick facts), over a footer with the two actions
- * that never move: Make itinerary (saves the whole plan as a trip in one click) and Save.
- * With the side panel on screen (wide screens) a click opens the card in full there, above a
- * smaller map of its places, while the conversation steps back; hover still turns it over as a
- * preview. Without the panel the Itinerary control turns it over in place.
+ * length, stay and match, over a footer with the two actions that never move: Make itinerary
+ * (saves the whole plan as a trip in one click) and Save. Opening it shows the card in full (the
+ * match, the days with their stops, day maps, swaps and moves, tabs with more stays, activities and
+ * dining, quick facts): in the side panel on wide screens, where the plan takes the center and the
+ * chat moves beside it; on smaller screens the card expands out over the page and folds back into
+ * the chat when closed.
  */
 function DestinationCard({ destination: d, index, toolCallId }: { destination: DestinationArgs; index: number; toolCallId: string }) {
   const name = d.name ?? "";
@@ -157,30 +152,23 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
   const headingId = useId();
   const tabsId = useId();
 
-  // The card in full, in the side panel.
+  // The card in full: in the side panel, or expanded over the page where there is none.
   const detailKey = `${toolCallId}:${index}`;
   useDetailCard(detailKey);
   const sidePanel = useHasSidePanel();
-  const slot = useDetailSlot();
-  const detailOpen = sidePanel && view.detail === detailKey;
+  const overlayHost = useHasOverlayHost();
+  const panelSlot = useDetailSlot();
+  const overlaySlot = useOverlaySlot();
+  const expands = !sidePanel && overlayHost;
+  const slot = sidePanel ? panelSlot : expands ? overlaySlot : null;
+  const detailOpen = (sidePanel || expands) && view.detail === detailKey;
   // Shared by the card's Make itinerary and the full view's, so saving in one turns both.
   const [savedTripId, setSavedTripId] = useState<string | null>(null);
 
-  const [face, setFace] = useState<Face>("photo");
-  const [reveal, setReveal] = useState<Reveal>("closed");
   const [localTab, setLocalTab] = useState<Tab>("itinerary");
-  const [showAll, setShowAll] = useState(false);
-  // Mirrors `reveal` for the hover timers, which fire outside a render.
-  const revealRef = useRef<Reveal>("closed");
-  useEffect(() => {
-    revealRef.current = reveal;
-  }, [reveal]);
-  const inTimer = useRef<number | null>(null);
-  const outTimer = useRef<number | null>(null);
-  /** After an explicit "Photo", hover only reveals again once the pointer has left and returned. */
-  const armed = useRef(true);
-  const profileControl = useRef<HTMLButtonElement>(null);
-  const photoControl = useRef<HTMLButtonElement>(null);
+  const openControl = useRef<HTMLButtonElement>(null);
+  /** Set while the expanded card folds back, so a second close does not start another fold. */
+  const closing = useRef(false);
 
   const place = pin.place;
   const scopeId = place?.id ?? `name:${slug(name)}`;
@@ -240,15 +228,7 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
     else if (tab !== "itinerary" && picks) mapActions.setScopedPlaces(threadId, scopeId, picksToPins(picks, scopeId, toolCallId));
   }, [isActive, threadId, tab, shown, picks, scopeId, toolCallId]);
 
-  const clearTimers = useCallback(() => {
-    if (inTimer.current) window.clearTimeout(inTimer.current);
-    if (outTimer.current) window.clearTimeout(outTimer.current);
-    inTimer.current = null;
-    outTimer.current = null;
-  }, []);
-  useEffect(() => clearTimers, [clearTimers]);
-
-  const focusLater = (ref: typeof profileControl) => requestAnimationFrame(() => ref.current?.focus({ preventScroll: true }));
+  const focusLater = (ref: typeof openControl) => requestAnimationFrame(() => ref.current?.focus({ preventScroll: true }));
 
   const activate = useCallback(() => {
     if (!threadId || !name) return;
@@ -256,100 +236,68 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
     if (place) mapActions.setFocus(threadId, place);
   }, [threadId, name, scopeId, place]);
 
-  /** Opens the card in full in the side panel; the card itself shows its photo meanwhile. */
+  /** Opens the card in full: in the side panel, or grown out of the card over the page. */
   const openDetail = () => {
-    if (!threadId || !name) return;
-    clearTimers();
-    setFace("photo");
-    setReveal("closed");
-    if (detailOpen) return;
+    if (!threadId || !name || detailOpen || !(sidePanel || expands)) return;
+    // The layer reads where the card is to grow out of it.
+    if (expands) setExpandOrigin(articleRef.current?.getBoundingClientRect() ?? null);
     // A city already selected keeps its filter, so the full view opens on the tab the map shows.
     if (!isActive) activate();
     mapActions.openDetail(threadId, detailKey, name);
   };
 
+  /** Closes the full view; an expanded card folds back into its place in the chat first (or fades when that is off screen). */
   const closeDetail = () => {
-    if (threadId) mapActions.closeDetail(threadId);
-    focusLater(profileControl);
-  };
-
-  /** Keeps a hovered profile from closing by itself once the traveler has acted in it. */
-  const pinIfHover = () => {
-    if (revealRef.current === "hover") setReveal("pinned");
-  };
-
-  const openProfile = () => {
-    if (sidePanel) {
-      openDetail();
+    if (!threadId || closing.current) return;
+    const done = () => {
+      closing.current = false;
+      mapActions.closeDetail(threadId);
+      focusLater(openControl);
+    };
+    const layer = expands ? overlaySlot : null;
+    const to = articleRef.current?.getBoundingClientRect();
+    if (!layer?.animate) {
+      done();
       return;
     }
-    clearTimers();
-    setFace("profile");
-    setReveal("pinned");
-    activate();
-    focusLater(photoControl);
+    closing.current = true;
+    const fold = !reducedMotion && to && onScreen(to);
+    const animation = fold
+      ? layer.animate([{ clipPath: "inset(0px round 0px)" }, { clipPath: clipTo(to) }], { duration: COLLAPSE_MS, easing: EXPAND_EASE, fill: "forwards" })
+      : layer.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 150, easing: "ease-in", fill: "forwards" });
+    animation.finished.then(done, done);
   };
 
-  const backToPhoto = () => {
-    clearTimers();
-    setFace("photo");
-    setReveal("closed");
-    armed.current = false;
-    focusLater(profileControl);
-  };
+  // Expanded over the page, Escape folds the card back, unless a sheet, dialog or popover over the plan takes it.
+  const closeRef = useRef(closeDetail);
+  useEffect(() => {
+    closeRef.current = closeDetail;
+  });
+  const expanded = expands && detailOpen;
+  useEffect(() => {
+    if (!expanded) return;
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key !== "Escape" || e.defaultPrevented) return;
+      if (document.querySelector('[aria-modal="true"]:not([data-plan-overlay]), .xp-pop')) return;
+      closeRef.current();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [expanded]);
 
-  const onFacePointerEnter = () => {
-    // With the side panel a click opens the card there; hover leaves it be.
-    if (!finePointer || !armed.current || sidePanel) return;
-    if (outTimer.current) {
-      window.clearTimeout(outTimer.current);
-      outTimer.current = null;
-    }
-    if (face === "profile" || inTimer.current) return;
-    inTimer.current = window.setTimeout(() => {
-      inTimer.current = null;
-      if (revealRef.current !== "closed") return;
-      setFace("profile");
-      setReveal("hover");
-    }, HOVER_IN_MS);
-  };
-
-  const onCardPointerLeave = () => {
-    if (!finePointer) return;
-    if (inTimer.current) {
-      window.clearTimeout(inTimer.current);
-      inTimer.current = null;
-    }
-    armed.current = true;
-    if (revealRef.current !== "hover") return;
-    outTimer.current = window.setTimeout(() => {
-      outTimer.current = null;
-      if (revealRef.current !== "hover") return;
-      setFace("photo");
-      setReveal("closed");
-    }, HOVER_OUT_MS);
-  };
-
-  /** Brings the card to where the traveler acts in it: its full view with a side panel, else its pinned back. */
+  /** Brings the card to where the traveler acts in it: its full view. */
   const engage = () => {
-    if (sidePanel) {
-      const opening = !detailOpen;
-      openDetail();
-      // Opening from the back keeps the tab it was showing.
-      if (opening && threadId && tab !== "itinerary") mapActions.setFilter(threadId, TAB_FILTER[tab]);
-      return;
-    }
-    setReveal("pinned");
-    if (!isActive) activate();
+    const opening = !detailOpen;
+    openDetail();
+    // Opening from elsewhere keeps the tab it was showing.
+    if (opening && threadId && tab !== "itinerary") mapActions.setFilter(threadId, TAB_FILTER[tab]);
   };
 
   /** Shows a tab; leaving the tab being chosen from ends the choosing (unless `keepChoosing`, for "See all"). */
   const selectTab = (next: Tab, keepChoosing = false) => {
-    clearTimers();
     if (!keepChoosing && next !== tab) setChoosing(null);
     if (next !== "itinerary") setRecentId(null);
     setLocalTab(next);
-    setShowAll(false);
     engage();
     if (threadId) mapActions.setFilter(threadId, TAB_FILTER[next]);
   };
@@ -442,8 +390,7 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
 
   const showOnMap = (item: ResolvedPlace, kind: PlaceKind) => {
     if (!threadId) return;
-    clearTimers();
-    const shownFilter = sidePanel && !detailOpen ? TAB_FILTER[tab] : view.filter;
+    const shownFilter = !detailOpen ? TAB_FILTER[tab] : view.filter;
     engage();
     if (shownFilter !== "all" && shownFilter !== kind) mapActions.setFilter(threadId, kind as MapFilter);
     const key = `reco:${scopeId}:${item.id}`;
@@ -452,20 +399,16 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
   };
 
   const ask = (text: string) => {
-    pinIfHover();
     if (!draftMessage(text)) void send(text);
+    // The answer comes in the chat, so a card expanded over it folds back to show it.
+    if (expanded) closeDetail();
   };
 
   const save = () => {
-    pinIfHover();
     toggleSaved({ kind: "destination", title: name, subtitle: d.country, destination: name, url: place?.googleMapsUri ?? googleMapsSearchUrl(label), place, refId: place?.id });
   };
 
-  const getDraft = () => {
-    clearTimers();
-    if (revealRef.current === "hover") setReveal("pinned");
-    return shown ? Promise.resolve(shown) : loadItineraryDraft(label, days);
-  };
+  const getDraft = () => (shown ? Promise.resolve(shown) : loadItineraryDraft(label, days));
 
   // A card judged a miss folds away, and its full view with it.
   const hidden = reaction.current?.verdict === "disliked" && !!name;
@@ -489,18 +432,17 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
     : plan.loading
       ? "Building your itinerary…"
       : "";
-  const showingPhoto = face === "photo";
   // The place picked on the map, when it is one of this city's.
   const pickedPrefix = `reco:${scopeId}:`;
   const pickedId = view.selectedKey?.startsWith(pickedPrefix) ? view.selectedKey.slice(pickedPrefix.length) : null;
   const planTheDays = `Plan the days for ${label} yourself: a ${days}-day itinerary.`;
-  const hint = detailOpen ? "Open next to the chat" : sidePanel ? "Click to open your itinerary" : finePointer ? "Hover for your itinerary" : "Tap Itinerary for your days and picks";
+  const hint = detailOpen && sidePanel ? "Open next to the chat" : finePointer || sidePanel ? "Click to open your itinerary" : "Tap to open your itinerary";
 
-  // The tab's content, the same on the back of the card and in its full view.
-  const tabBody = (full: boolean) =>
+  // The tab's content in the card's full view.
+  const tabBody =
     tab === "itinerary" ? (
       <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
-        <p className={clsx("leading-snug text-neutral-800", full ? "text-[15px]" : "text-[14px]")}>
+        <p className="text-[15px] leading-snug text-neutral-800">
           <Text value={d.whyItFits} lines={2} />
         </p>
         {!plan.loading && !plan.error && !planDays && (d.highlights ?? []).filter(Boolean).length ? (
@@ -525,7 +467,7 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
                 ))}
             </ul>
           </div>
-        ) : full ? (
+        ) : (
           <ItineraryWorkspace
             draft={shown}
             loading={plan.loading || (!place && !!name)}
@@ -539,17 +481,6 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
             swap={swapProps}
             move={moveProps}
           />
-        ) : (
-          <ItineraryPlan
-            draft={shown}
-            loading={plan.loading || (!place && !!name)}
-            error={plan.error}
-            onRetry={plan.retry}
-            onAsk={() => ask(planTheDays)}
-            onShow={(item, kind) => showOnMap(item, kind)}
-            selectedId={pickedId}
-            swap={swapProps}
-          />
         )}
       </div>
     ) : (
@@ -558,13 +489,10 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
         items={rowsFor(tab)}
         loading={loading}
         error={error}
-        showAll={full || showAll || !!choosingNow}
-        onShowAll={() => setShowAll(true)}
         onRetry={retry}
         onAsk={() => ask(`Recommend ${TAB_LABEL[tab].toLowerCase()} in ${name} that fit me.`)}
         onShow={(item) => showOnMap(item, ROW_KIND[TAB_ROW[tab]])}
         selectedId={pickedId}
-        followSelection={full}
         plan={rowPlan}
       />
     );
@@ -650,113 +578,56 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
       ref={articleRef}
       aria-labelledby={headingId}
       data-testid="destination-card"
-      data-face={face}
-      data-reveal={reveal}
       data-active={isActive || undefined}
       data-detail={detailOpen ? "open" : undefined}
-      onPointerLeave={onCardPointerLeave}
       className={clsx(
         "flex h-[560px] w-full flex-col overflow-hidden rounded-[18px] border bg-white shadow-card transition-[border-color,box-shadow] duration-200",
         detailOpen ? "border-brand ring-2 ring-brand/30" : "border-border",
       )}
     >
-      <div className="relative min-h-0 flex-1 [perspective:1000px]" onPointerEnter={onFacePointerEnter}>
-        <div className={clsx("xp-flip", reducedMotion && "xp-flip--fade")} data-face={face}>
-          {/* Photo face */}
-          <section className="xp-flip__front absolute inset-0 flex flex-col bg-white" inert={!showingPhoto} aria-hidden={!showingPhoto}>
-            <CardPhoto place={place} queries={[name, label]} alt={label} className="min-h-0 flex-1" onOpen={openProfile}>
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-black/10" />
-              {d.whyItFits ? (
-                <span className="absolute left-3 top-3 rounded-full border border-white/70 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-white backdrop-blur-sm">Curated for you</span>
-              ) : null}
-              <button
-                ref={profileControl}
-                type="button"
-                onClick={openProfile}
-                aria-label={`Itinerary for ${name}`}
-                aria-expanded={sidePanel ? detailOpen : undefined}
-                className="absolute right-3 top-3 flex h-9 items-center gap-1.5 rounded-full border border-white/70 bg-black/25 px-3 text-[13px] font-semibold text-white backdrop-blur transition-colors hover:bg-black/45"
-              >
-                {sidePanel ? <PanelRightOpen className="h-3.5 w-3.5" aria-hidden="true" /> : <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />} Itinerary
-              </button>
-              <div className="absolute inset-x-0 bottom-0 px-4 pb-9 text-white drop-shadow">
-                <h3 id={headingId} className="font-serif text-[36px] leading-[1.05]">
-                  <button type="button" onClick={openProfile} className="text-left">
-                    {name}
-                  </button>
-                </h3>
-                {d.country ? (
-                  <p className="mt-1 flex items-center gap-1 text-[14px]">
-                    <MapPin className="h-3.5 w-3.5" aria-hidden="true" /> {d.country}
-                  </p>
-                ) : null}
-                {tagline ? <p className="mt-2 max-w-[30ch] text-[14px] leading-snug text-white/90">{tagline}</p> : null}
-                {planLine ? (
-                  <p className="mt-2 flex items-center gap-1.5 text-[13px] font-semibold" data-testid="itinerary-summary">
-                    <CalendarDays className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /> <span className="truncate">{planLine}</span>
-                  </p>
-                ) : null}
-                <p className="mt-1.5 text-[12px] text-white/75">{hint}</p>
-              </div>
-            </CardPhoto>
-            <div className="flex shrink-0 items-center justify-between gap-2 border-t border-border bg-white px-4 py-2.5" data-testid="destination-match">
-              {shownMatch ? <MatchBadge match={shownMatch} size="sm" /> : <Text value={undefined} className="h-4 w-28" />}
-              <RecThumbs name={name} kind="destination" place={place} destination={name} context="chat" match={match} size="sm" />
-            </div>
-          </section>
-
-          {/* Itinerary face */}
-          <section
-            className="xp-flip__back xp-scroll absolute inset-0 overflow-y-auto bg-surface-warm"
-            inert={showingPhoto}
-            aria-hidden={showingPhoto}
-            onFocusCapture={() => {
-              clearTimers();
-              pinIfHover();
-            }}
+      <section className="flex min-h-0 flex-1 flex-col bg-white">
+        <CardPhoto place={place} queries={[name, label]} alt={label} className="min-h-0 flex-1" onOpen={openDetail}>
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-black/10" />
+          {d.whyItFits ? (
+            <span className="absolute left-3 top-3 rounded-full border border-white/70 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-white backdrop-blur-sm">Curated for you</span>
+          ) : null}
+          <button
+            ref={openControl}
+            type="button"
+            onClick={openDetail}
+            aria-label={`Itinerary for ${name}`}
+            aria-expanded={detailOpen}
+            aria-haspopup={expands ? "dialog" : undefined}
+            className="absolute right-3 top-3 flex h-9 items-center gap-1.5 rounded-full border border-white/70 bg-black/25 px-3 text-[13px] font-semibold text-white backdrop-blur transition-colors hover:bg-black/45"
           >
-            <div className="min-w-0 px-4 pb-4 pt-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Built for you</span>
-                <button
-                  ref={photoControl}
-                  type="button"
-                  onClick={backToPhoto}
-                  aria-label={`Show the photo of ${name}`}
-                  className="flex h-8 items-center gap-1.5 rounded-full border border-border bg-white px-3 text-[12px] font-semibold transition-colors hover:bg-surface"
-                >
-                  <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" /> Photo
-                </button>
-              </div>
-              <h3 className="mt-2 font-serif text-[30px] leading-[1.1]">
-                <button type="button" onClick={sidePanel ? openDetail : activate} className="text-left">
-                  {name}
-                </button>
-              </h3>
-              {d.country ? (
-                <p className="mt-1 flex items-center gap-1 text-[13px] text-muted">
-                  <MapPin className="h-3.5 w-3.5" aria-hidden="true" /> {d.country}
-                </p>
-              ) : null}
-
-              {matchBox}
-              {tabBar(tabsId)}
-              <div id={`${tabsId}-panel`} role="tabpanel" className="pt-3">
-                {tabBody(false)}
-              </div>
-              {quickFacts("grid-cols-2")}
-
-              {place ? (
-                <button type="button" onClick={pin.open} className="mt-3 inline-flex items-center gap-1 text-[13px] font-semibold text-brand hover:underline">
-                  Explore city details <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-                </button>
-              ) : null}
-            </div>
-          </section>
+            {sidePanel ? <PanelRightOpen className="h-3.5 w-3.5" aria-hidden="true" /> : <Maximize2 className="h-3.5 w-3.5" aria-hidden="true" />} Itinerary
+          </button>
+          <div className="absolute inset-x-0 bottom-0 px-4 pb-9 text-white drop-shadow">
+            <h3 id={headingId} className="font-serif text-[36px] leading-[1.05]">
+              <button type="button" onClick={openDetail} className="text-left">
+                {name}
+              </button>
+            </h3>
+            {d.country ? (
+              <p className="mt-1 flex items-center gap-1 text-[14px]">
+                <MapPin className="h-3.5 w-3.5" aria-hidden="true" /> {d.country}
+              </p>
+            ) : null}
+            {tagline ? <p className="mt-2 max-w-[30ch] text-[14px] leading-snug text-white/90">{tagline}</p> : null}
+            {planLine ? (
+              <p className="mt-2 flex items-center gap-1.5 text-[13px] font-semibold" data-testid="itinerary-summary">
+                <CalendarDays className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /> <span className="truncate">{planLine}</span>
+              </p>
+            ) : null}
+            <p className="mt-1.5 text-[12px] text-white/75">{hint}</p>
+          </div>
+        </CardPhoto>
+        <div className="flex shrink-0 items-center justify-between gap-2 border-t border-border bg-white px-4 py-2.5" data-testid="destination-match">
+          {shownMatch ? <MatchBadge match={shownMatch} size="sm" /> : <Text value={undefined} className="h-4 w-28" />}
+          <RecThumbs name={name} kind="destination" place={place} destination={name} context="chat" match={match} size="sm" />
         </div>
-      </div>
+      </section>
 
-      {/* The two actions, outside the rotating faces so they never move. */}
       <footer className="flex h-[84px] shrink-0 items-center gap-3 border-t border-border bg-surface-warm px-4">
         {makeItinerary(primaryAction)}
         {saveButton}
@@ -777,7 +648,7 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
               matchBox={matchBox}
               tabBar={tabBar(`${tabsId}-full`)}
               tabPanelId={`${tabsId}-full-panel`}
-              tabBody={tabBody(true)}
+              tabBody={tabBody}
               quickFacts={quickFacts("grid-cols-2 sm:grid-cols-4")}
               makeItinerary={makeItinerary(primaryAction)}
               saveButton={saveButton}
@@ -790,9 +661,10 @@ function DestinationCard({ destination: d, index, toolCallId }: { destination: D
 }
 
 /**
- * The card in full, in the side panel above its map: a wide photo with the name, the plan in a
- * line, the match, the tabs with room for every row, the quick facts, and the same two actions.
- * Rendered by the card itself (through a portal), so it is the same plan, tab and saved state.
+ * The card in full (in the side panel, or expanded over the page on smaller screens): a wide photo
+ * with the name, the plan in a line, the match, the tabs with room for every row, the quick facts,
+ * and the same two actions. Rendered by the card itself (through a portal), so it is the same plan,
+ * tab and saved state.
  */
 function DestinationDetail({
   name,
@@ -837,8 +709,8 @@ function DestinationDetail({
   }, []);
   return (
     <section className="xp-detail flex h-full flex-col bg-surface-warm" data-testid="card-detail" aria-labelledby={headingId}>
-      <div className="xp-scroll min-h-0 flex-1 overflow-y-auto">
-        <CardPhoto place={place} queries={[name, label]} alt={label} className="h-[210px] shrink-0 [@media(max-height:860px)]:h-[160px]">
+      <div className="xp-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        <CardPhoto place={place} queries={[name, label]} alt={label} className="h-[240px] shrink-0 sm:h-[210px] xl:[@media(max-height:860px)]:h-[160px]">
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-black/10" />
           {curated ? (
             <span className="absolute left-4 top-4 rounded-full border border-white/70 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-white backdrop-blur-sm">Curated for you</span>
@@ -852,7 +724,7 @@ function DestinationDetail({
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
-          <div className="absolute inset-x-0 bottom-0 mx-auto w-full max-w-[860px] px-6 pb-8 text-white drop-shadow">
+          <div className="absolute inset-x-0 bottom-0 mx-auto w-full max-w-[860px] px-4 pb-8 text-white drop-shadow sm:px-6">
             <h2 id={headingId} className="font-serif text-[40px] leading-[1.05]">
               {name}
             </h2>
@@ -864,7 +736,7 @@ function DestinationDetail({
             {tagline ? <p className="mt-1.5 max-w-[48ch] text-[14px] leading-snug text-white/90">{tagline}</p> : null}
           </div>
         </CardPhoto>
-        <div className="mx-auto w-full min-w-0 max-w-[860px] px-6 pb-8 pt-5">
+        <div className="mx-auto w-full min-w-0 max-w-[860px] px-4 pb-8 pt-5 sm:px-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Built for you</span>
             {planLine ? (
@@ -886,8 +758,8 @@ function DestinationDetail({
           ) : null}
         </div>
       </div>
-      <footer className="shrink-0 border-t border-border bg-white">
-        <div className="mx-auto flex w-full max-w-[860px] items-center gap-3 px-6 py-3">
+      <footer className="shrink-0 border-t border-border bg-white pb-[env(safe-area-inset-bottom)]">
+        <div className="mx-auto flex w-full max-w-[860px] items-center gap-3 px-4 py-3 sm:px-6">
           {makeItinerary}
           {saveButton}
         </div>
@@ -911,26 +783,20 @@ function CategoryRows({
   items,
   loading,
   error,
-  showAll,
-  onShowAll,
   onRetry,
   onAsk,
   onShow,
   selectedId,
-  followSelection,
   plan,
 }: {
   tab: Exclude<Tab, "itinerary">;
   items: { place: ResolvedPlace; match: MatchResult }[];
   loading: boolean;
   error: string | null;
-  showAll: boolean;
-  onShowAll: () => void;
   onRetry: () => void;
   onAsk: () => void;
   onShow: (place: ResolvedPlace) => void;
   selectedId: string | null;
-  followSelection: boolean;
   /** The card's plan, when it has one: rows can go into it. */
   plan: RowPlan | null;
 }) {
@@ -1011,29 +877,14 @@ function CategoryRows({
       </div>
     );
   }
-  const visible = showAll ? items : items.slice(0, 3);
   return (
     <div>
       {banner}
       <ul className="grid gap-2">
-        {visible.map(({ place, match }) => (
-          <RecoRow
-            key={place.id}
-            place={place}
-            match={match}
-            kind={kind}
-            selected={place.id === selectedId}
-            followSelection={followSelection}
-            onShow={() => onShow(place)}
-            action={actionFor(place, match)}
-          />
+        {items.map(({ place, match }) => (
+          <RecoRow key={place.id} place={place} match={match} kind={kind} selected={place.id === selectedId} onShow={() => onShow(place)} action={actionFor(place, match)} />
         ))}
       </ul>
-      {!showAll && items.length > visible.length ? (
-        <button type="button" onClick={onShowAll} className="mt-2 text-[13px] font-semibold text-brand hover:underline">
-          Show all {items.length}
-        </button>
-      ) : null}
     </div>
   );
 }
@@ -1071,7 +922,6 @@ function RecoRow({
   match,
   kind,
   selected,
-  followSelection,
   onShow,
   action,
 }: {
@@ -1079,7 +929,6 @@ function RecoRow({
   match: MatchResult;
   kind: PlaceKind;
   selected: boolean;
-  followSelection: boolean;
   onShow: () => void;
   action?: ReactNode;
 }) {
@@ -1087,10 +936,10 @@ function RecoRow({
   const reason = topReason(match);
   const area = place.locality?.split(",")[0]?.trim();
   const ref = useRef<HTMLLIElement>(null);
-  // A place picked on the map brings its row into view (in the full view, not in the chat).
+  // A place picked on the map brings its row into view.
   useEffect(() => {
-    if (selected && followSelection) ref.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  }, [selected, followSelection]);
+    if (selected) ref.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [selected]);
   return (
     <li
       ref={ref}

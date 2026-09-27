@@ -131,7 +131,8 @@ function PlanItem({ pick, kind, badge, color, time, meal, selected, destination,
             <Bed className="h-3.5 w-3.5" />
           </span>
         )}
-        <button type="button" onClick={() => onOpen(pick.place, kind)} className="shrink-0" aria-label={`Show ${pick.place.name} on map`} tabIndex={-1}>
+        {/* On a phone the name keeps the room; the name and Details open the place too. */}
+        <button type="button" onClick={() => onOpen(pick.place, kind)} className="hidden shrink-0 sm:block" aria-label={`Show ${pick.place.name} on map`} tabIndex={-1}>
           <Thumb place={pick.place} />
         </button>
         <div className="min-w-0 flex-1">

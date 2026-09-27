@@ -64,8 +64,9 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   as my stay on every hotel row and hotel panel), marked Not a fit (it swaps out on the spot),
   moved (dragged by its handle, a step with the arrows, or to another day; the day re-times itself)
   or opened in full in the right column beside the plan, with Back to chat. The chat column widens
-  while you're in it and narrows when you work on the plan. On smaller screens the card turns over instead (hover on a
-  desktop, the Itinerary control on phones). Every card ends in **Make itinerary** and Save: one click saves the
+  while you're in it and narrows when you work on the plan. On smaller screens a tap or click expands the card out over
+  the page into the same full plan (days, day maps, swaps, moves; a place opens over it as a sheet), and closing folds it
+  back into the chat. Every card ends in **Make itinerary** and Save: one click saves the
   plan as a trip ("4 days in Seoul") and turns into Open itinerary; a trip tray on the map keeps the
   trip in view. Cards, pins and stops show short place names ("Josun Palace", the full listing name
   as the tooltip).
@@ -339,7 +340,8 @@ src/components/chat/cards/*                  Destination, hotel, flight, restaur
 src/lib/constraints-store.ts, compare-store.ts, hitl-store.ts   Per-thread chips, compare selection, pending HITL cards
 src/lib/search-parser.ts                     Deterministic Explore query → Places filters + chips
 src/components/panel/RightPanel.tsx          Discovery feed ⇄ map switch, and a destination card open in full above its map
-src/components/map/detailSlot.ts             Where a card renders itself in full (portal target) and whether a side panel is on screen
+src/components/map/detailSlot.ts             Where a card renders itself in full (the side panel, or the layer it expands into on smaller screens)
+src/components/panel/PlanOverlay.tsx         The layer an opened card expands into below 1280 px (grows out of the card, folds back)
 src/components/panel/DiscoveryPanel.tsx      Discovery feed (proactive card, Jump back in, picks, Get inspired)
 src/components/discover/*                    Discover home: hero, prompt composer, planner fields and editors,
                                              hero photo, collection cards, community guides row
@@ -354,7 +356,7 @@ src/server/packages.ts + src/app/api/packages/*   Package builder (variants, alt
 src/server/package-learning.ts               Calibration from package events and the admin package numbers
 src/components/chat/cards/PackageCard.tsx    The package card (on request): variants, swap, lock, narrowing, Make itinerary
 src/server/itineraries.ts + src/app/api/itineraries   Itinerary builder: a day-by-day plan per destination for this traveler
-src/components/chat/cards/ItineraryPlan.tsx  The plan on a destination card and the Make itinerary button
+src/components/chat/cards/ItineraryPlan.tsx  The Make itinerary button (saves a card's plan as a trip)
 src/components/chat/cards/ItineraryWorkspace.tsx   The plan in the workspace: day cards with their own maps, Swap, Not a fit
 src/components/chat/cards/PlanParts.tsx      A pick's swap list (ready options, See all), shared by the workspace and the card
 src/lib/plan-picker.ts + src/components/place/UseInPlan.tsx   A place's panel acting on its card's plan (Use as my stay)
