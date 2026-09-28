@@ -245,6 +245,26 @@ export function swapsForMisses(draft: ItineraryDraft, swaps: Swaps, missed: Read
   return out;
 }
 
+/**
+ * A saved plan as the new "as built": the places it holds stay, but none of them counts as swapped
+ * in any more, so later swaps and moves are keyed by the places on show. Their options (the place
+ * each replaced, then the others) stay, so a swap can still be undone.
+ */
+export function asBuilt(draft: ItineraryDraft): ItineraryDraft {
+  const clear = <T extends DraftPick>(p: T): T => {
+    if (!p.swappedFrom) return p;
+    const copy = { ...p };
+    delete copy.swappedFrom;
+    return copy;
+  };
+  return { ...draft, stay: draft.stay ? clear(draft.stay) : null, days: draft.days.map((d) => ({ ...d, stops: d.stops.map(clear) })) };
+}
+
+/** What makes two plans the same for the traveler: the stay, and every day's stops in order with their times. */
+export function planSignature(draft: ItineraryDraft): string {
+  return [draft.stay?.place.id ?? "", ...draft.days.map((d) => d.stops.map((s) => `${s.place.id}@${s.startTime}`).join(","))].join("|");
+}
+
 /** Every place the itinerary uses, the stay first. */
 export function draftPicks(draft: ItineraryDraft) {
   return [...(draft.stay ? [draft.stay] : []), ...draft.days.flatMap((d) => d.stops)];

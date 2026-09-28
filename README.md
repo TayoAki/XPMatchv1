@@ -51,25 +51,25 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   feedback. Admins see the hit rate. Card sets in chat and the home picks are horizontal rows that
   the thumbs reorder: a thumbs-down slides the card to the end of the row and greys it out, a
   thumbs-up brings it to the front, the same thumb again undoes it.
-- **Every destination card is a complete itinerary** — the server's itinerary builder
+- **The itinerary on one page, saved with the chat** — the server's itinerary builder
   (`src/server/itineraries.ts`, `POST /api/itineraries`) plans the days from the place catalog for
   this traveler: the best-matched stay, things to do grouped by area into days by their pace, lunch
   and dinner near each day's stops (the local food nudged up), times by their day rhythm, a match
-  score per stop and for the plan. Every trip request answers with these cards: a country with three
-  or four cities, a city by name with its own card. The photo face says "4-day itinerary · stay at
-  Josun Palace"; from 1280 px a click opens the **plan workspace**: the plan in the center and the
-  chat in a column on the right, with "Where you'll stay" and a card per day whose **Map** opens that
-  day's own map (one at a time) above its stops, numbered like the pins. Every place can be swapped
-  for one of three ready alternates or, through See all, for any place of its kind on its tab (Use
-  as my stay on every hotel row and hotel panel), marked Not a fit (it swaps out on the spot),
-  moved (dragged by its handle, a step with the arrows, or to another day; the day re-times itself)
-  or opened in full in the right column beside the plan, with Back to chat. The chat column widens
-  while you're in it and narrows when you work on the plan. On smaller screens a tap or click expands the card out over
-  the page into the same full plan (days, day maps, swaps, moves; a place opens over it as a sheet), and closing folds it
-  back into the chat. Every card ends in **Make itinerary** and Save: one click saves the
-  plan as a trip ("4 days in Seoul") and turns into Open itinerary; a trip tray on the map keeps the
-  trip in view. Cards, pins and stops show short place names ("Josun Palace", the full listing name
-  as the tooltip).
+  score per stop and for the plan. Every trip request answers with it right in the chat: a city by
+  name gets one card, a country a row of three or four city cards (thumbs order them) above the
+  itinerary of the one picked. The card is the whole plan: the city's photo, "Your Rome itinerary"
+  with the plan's match, "3 days · 2 travelers", **Where you'll stay**, and a tab per day with its
+  stops in order (number, photo, time, name, what it is, **Details & reviews**). A day's tab puts
+  that day on the map beside the chat (the stay and the stops numbered, with the day's route); a
+  place's details open there too (over the chat on phones). **Click to edit** turns every place into
+  something to swap (three ready alternates, or See all for any place of its kind, listed on the
+  card; Use as my stay on every hotel's panel), mark Not a fit (it swaps out on the spot) or move
+  (dragged by its handle, onto another day's tab, a step with the arrows, or with the day picker;
+  the day re-times itself). **Save** keeps the plan as it stands with the chat
+  (`chat_plans`, `GET/PUT /api/chats/[threadId]/plans`) and as a trip ("3 days in Rome"): the chat
+  is filed under the trip in the side rail, reopening it shows the saved plan, and a change after
+  saving turns the button into Save changes, which updates the same trip. Cards, pins and stops
+  show short place names ("Josun Palace", the full listing name as the tooltip).
 - **Learns tastes with your say-so** — when you mention a lasting preference in chat, a "Remember
   this?" card offers **Always / For this trip / No thanks** (`remember_preference`, human-in-the-loop).
   "Update my assistant" lists everything learned with delete buttons and a "Learn from our chats"
@@ -337,9 +337,7 @@ src/components/chat/TravelChat.tsx           <CopilotChat> with the welcome hero
 src/components/chat/cards/*                  Destination, hotel, flight, restaurant, attraction,
                                              trip-proposal, constraint-chip, comparison and remember cards
 src/lib/constraints-store.ts, compare-store.ts, hitl-store.ts   Per-thread chips, compare selection, pending HITL cards
-src/components/panel/RightPanel.tsx          Discovery feed ⇄ map switch, and a destination card open in full above its map
-src/components/map/detailSlot.ts             Where a card renders itself in full (the side panel, or the layer it expands into on smaller screens)
-src/components/panel/PlanOverlay.tsx         The layer an opened card expands into below 1280 px (grows out of the card, folds back)
+src/components/panel/RightPanel.tsx          Discovery feed ⇄ map switch
 src/components/panel/DiscoveryPanel.tsx      Discovery feed (proactive card, Jump back in, picks, Get inspired)
 src/components/discover/*                    Discover home: hero, prompt composer, planner fields and editors,
                                              hero photo, collection cards, community guides row
@@ -354,11 +352,12 @@ src/server/packages.ts + src/app/api/packages/*   Package builder (variants, alt
 src/server/package-learning.ts               Calibration from package events and the admin package numbers
 src/components/chat/cards/PackageCard.tsx    The package card (on request): variants, swap, lock, narrowing, Make itinerary
 src/server/itineraries.ts + src/app/api/itineraries   Itinerary builder: a day-by-day plan per destination for this traveler
-src/components/chat/cards/ItineraryPlan.tsx  The Make itinerary button (saves a card's plan as a trip)
-src/components/chat/cards/ItineraryWorkspace.tsx   The plan in the workspace: day cards with their own maps, Swap, Not a fit
-src/components/chat/cards/PlanParts.tsx      A pick's swap list (ready options, See all), shared by the workspace and the card
+src/components/chat/cards/DestinationCards.tsx   The itinerary card (and the city row): plan, edits, Save with the chat, map sync
+src/components/chat/cards/ItineraryDays.tsx  The card's stay and day tabs: rows as they read, and the edit rows (Swap, Not a fit, moves)
+src/components/chat/cards/ItineraryPlan.tsx  The Make itinerary button of the package card (saves its plan as a trip)
+src/components/chat/cards/PlanParts.tsx      A pick's swap list (ready options, See all)
+src/server/chat-plans.ts + src/lib/chat-plans.ts   Plans saved from a chat's cards, with the trip they were saved as
 src/lib/plan-picker.ts + src/components/place/UseInPlan.tsx   A place's panel acting on its card's plan (Use as my stay)
-src/components/panel/RightPanel.tsx          Map / discovery column, or the plan workspace when a card is opened
 src/server/reviews.ts + src/app/api/places/[id]/{reviews,checkin}   Traveler reviews, check-ins, proof, travelers like you
 src/components/place/TravelerReviews.tsx     Reviews line and tab on a place's panel (check in, write, read)
 src/components/map/PinStrip.tsx              Mini cards under the map, in step with the pins

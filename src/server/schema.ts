@@ -356,4 +356,21 @@ export const MIGRATIONS: Migration[] = [
       `CREATE INDEX IF NOT EXISTS place_visits_place_idx ON place_visits(place_id)`,
     ],
   },
+  {
+    id: "0010_chat_plans",
+    statements: [
+      // An itinerary saved from a chat's destination card, as the traveler shaped it, so reopening the
+      // chat shows that plan; it goes with the trip it was saved as.
+      `CREATE TABLE IF NOT EXISTS chat_plans (
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        thread_id text NOT NULL,
+        plan_key text NOT NULL,
+        trip_id uuid NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+        draft jsonb NOT NULL,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        updated_at timestamptz NOT NULL DEFAULT now(),
+        PRIMARY KEY (user_id, thread_id, plan_key)
+      )`,
+    ],
+  },
 ];

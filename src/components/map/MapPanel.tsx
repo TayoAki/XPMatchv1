@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Layers, MapPin, PanelLeftClose, Search, Sun, X } from "lucide-react";
 import { FOCUS_KEY, mapActions, useMapView } from "@/lib/map-store";
 import { fetchWeather, resolvePlaces, type CurrentWeather } from "@/lib/places/client";
@@ -14,12 +14,12 @@ import { TripTray } from "./TripTray";
 
 /**
  * Chat companion map: "Explore {city}" with the shared category filter, the pins from the
- * conversation (or the selected city's recommendation set), a destination chip, search,
- * weather, the trip so far, and the place sheet.
+ * conversation (or the selected city's itinerary: its stay and the day on show, numbered, with
+ * the day's route), a destination chip, search, weather, the trip so far, and the place sheet.
  */
 export function MapPanel() {
   const view = useMapView();
-  const { threadId, focus, visiblePlaces, scopedCount, activeDestination, filter, selectedKey, hoveredKey, selected } = view;
+  const { threadId, focus, visiblePlaces, scopedCount, activeDestination, filter, selectedKey, hoveredKey, selected, route } = view;
   const tripScope = useTripScope();
   const [status, setStatus] = useState<MapStatus>("loading");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -41,6 +41,20 @@ export function MapPanel() {
       active = false;
     };
   }, [focus]);
+
+  // Escape closes an open place (unless a dialog or popover takes it, or the traveler is typing).
+  const placeOpen = !!selected;
+  useEffect(() => {
+    if (!placeOpen || !threadId) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.defaultPrevented) return;
+      if (document.querySelector('[aria-modal="true"], .xp-pop')) return;
+      if ((e.target as HTMLElement | null)?.closest?.("textarea, input, select")) return;
+      mapActions.selectPlace(threadId, null);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [placeOpen, threadId]);
 
   const onStatusChange = useCallback((next: MapStatus) => setStatus(next), []);
   const onSelect = useCallback((key: string) => threadId && mapActions.selectPlace(threadId, key), [threadId]);
@@ -64,12 +78,17 @@ export function MapPanel() {
 
   const collapse = () => threadId && mapActions.setCollapsed(threadId, true);
   const cityName = activeDestination?.name ?? focus?.name;
-  const subtitle = activeDestination
+  const planDay = route && activeDestination?.id === route.scope ? route.label : null;
+  const subtitle = planDay
+    ? planDay
+    : activeDestination
     ? `${scopedCount} recommended place${scopedCount === 1 ? "" : "s"}`
     : visiblePlaces.length
       ? "Places from our conversation"
       : "Places we talk about show up here";
   const stripVisible = visiblePlaces.length > 0 && !selected;
+  // The itinerary day the active city's card shows, as a line through its numbered stops (all categories only).
+  const routes = useMemo(() => (route && activeDestination?.id === route.scope && filter === "all" ? [route] : undefined), [route, activeDestination, filter]);
 
   return (
     <div className="flex h-full w-full flex-col" data-testid="map-panel">
@@ -96,6 +115,7 @@ export function MapPanel() {
         <GoogleMap
           focus={focus}
           pins={visiblePlaces}
+          routes={routes}
           selectedKey={selectedKey}
           hoveredKey={hoveredKey}
           onSelect={onSelect}

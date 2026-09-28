@@ -269,13 +269,13 @@ const server = http.createServer((req, res) => {
         return streamReply(res, { text: "Three places in Korea that fit you.", toolCall: { name: "show_destinations", args: KOREA } });
       }
       if (toolName === "show_destinations" && /korea/.test(text)) {
-        return streamReply(res, { text: "Assuming about a week for two with flexible dates. Each card is a full plan built for you; tap Make itinerary to save one." });
+        return streamReply(res, { text: "Assuming about a week for two with flexible dates. Each city has a full plan built for you: pick one, edit it, and tap Save to keep it." });
       }
       if (toolName === "focus_map" && /plan me a trip to rome/.test(text) && tools.includes("show_destinations")) {
         return streamReply(res, { text: "", toolCall: { name: "show_destinations", args: ROME_TRIP } });
       }
       if (toolName === "show_destinations" && /plan me a trip to rome/.test(text)) {
-        return streamReply(res, { text: "Assuming a long weekend for two with flexible dates. Open the card for the days and the map, or tap Make itinerary to save it." });
+        return streamReply(res, { text: "Assuming a long weekend for two with flexible dates. The days are on the card: Click to edit to change them, or Save to keep the plan." });
       }
       if (toolName === "set_search_constraints" && tools.includes("show_hotels")) {
         return streamReply(res, { text: "Here are two stays that fit.", toolCall: { name: "show_hotels", args: HOTELS } });

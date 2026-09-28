@@ -5,10 +5,10 @@ import type { MapPlace, PlaceKind, ResolvedPlace } from "@/lib/places/types";
 
 /**
  * Per-thread map state: the destination in focus, the places pinned from the
- * assistant's cards, the selected place, the city a destination card selected
- * (whose recommendations then own the map), the shared category filter, the
- * trip the conversation adds to, the card open in full next to the chat, and
- * whether the map is collapsed.
+ * assistant's cards, the selected place (and whether an itinerary card opened
+ * it), the city a destination card selected (whose itinerary then owns the map,
+ * with the day on show drawn as a route), the shared category filter, the trip
+ * the conversation adds to, and whether the map is collapsed.
  * Session-only (rebuilt from the thread's messages when a chat is reopened).
  */
 
@@ -22,20 +22,32 @@ export interface ActiveDestination {
   lng?: number;
 }
 
+/** The line through an itinerary day on the map: the stay, then the day's stops in order. */
+export interface PlanRoute {
+  /** The city (active destination) whose card drew it. */
+  scope: string;
+  key: string;
+  /** What the map says it shows, e.g. "Day 2 of your itinerary · 5 stops". */
+  label: string;
+  color: string;
+  path: { lat: number; lng: number }[];
+}
+
 export interface ThreadMapState {
   focus: ResolvedPlace | null;
   places: Record<string, MapPlace>;
   order: string[];
   selectedKey: string | null;
+  /** Set when an itinerary card opened the selected place (on phones it opens alone, without the map sheet). */
+  selectedFrom: "card" | null;
   collapsed: boolean;
   registered: Record<string, true>;
   activeDestination: ActiveDestination | null;
   filter: MapFilter;
   /** The trip this conversation adds to: its scope, or the one chosen in Add to trip. */
   tripId: string | null;
-  /** The destination card open in full as the plan workspace (its card key), and its city's name. */
-  detail: string | null;
-  detailName: string | null;
+  /** The itinerary day the active city's card shows. */
+  route: PlanRoute | null;
 }
 
 interface MapStoreState {
@@ -54,13 +66,13 @@ const EMPTY_THREAD: ThreadMapState = {
   places: {},
   order: [],
   selectedKey: null,
+  selectedFrom: null,
   collapsed: false,
   registered: {},
   activeDestination: null,
   filter: "all",
   tripId: null,
-  detail: null,
-  detailName: null,
+  route: null,
 };
 
 let state: MapStoreState = { activeThreadId: null, threads: {}, hoveredKey: null };
@@ -134,9 +146,8 @@ export const mapActions = {
       nextPlaces[p.key] = p;
     }
     // A new answer's pins mean the conversation moved on: a selected city no longer owns the map.
-    // A plan open in the workspace stays open (the chat beside it is how the traveler works on it).
     const activeDestination = places.some((p) => !p.scope) ? null : t.activeDestination;
-    patchThread(threadId, { places: nextPlaces, order, collapsed: false, activeDestination, filter: activeDestination ? t.filter : "all" });
+    patchThread(threadId, { places: nextPlaces, order, collapsed: false, activeDestination, filter: activeDestination ? t.filter : "all", route: activeDestination ? t.route : null });
   },
   /** Replaces every pin a tool call put on the map (a package that was swapped or rebuilt), keeping the order of pins that stay. */
   replacePlaces(threadId: string, toolCallId: string, places: MapPlace[]) {
@@ -178,9 +189,13 @@ export const mapActions = {
     const selectedKey = t.selectedKey && !nextPlaces[t.selectedKey] && t.selectedKey !== FOCUS_KEY ? null : t.selectedKey;
     patchThread(threadId, { places: nextPlaces, order, selectedKey });
   },
-  /** A destination card was selected: its recommendations own the map. Selecting it again resets the filter. */
+  /** A destination card was selected: its itinerary owns the map (the card draws its day). Selecting it again resets the filter. */
   setActiveDestination(threadId: string, destination: ActiveDestination | null) {
-    patchThread(threadId, { activeDestination: destination, filter: "all", selectedKey: null, collapsed: false });
+    patchThread(threadId, { activeDestination: destination, filter: "all", selectedKey: null, selectedFrom: null, collapsed: false, route: null });
+  },
+  /** The line through the itinerary day the active city's card shows (or none). */
+  setRoute(threadId: string, route: PlanRoute | null) {
+    patchThread(threadId, { route });
   },
   setFilter(threadId: string, filter: MapFilter) {
     const t = threadOf(threadId);
@@ -188,21 +203,12 @@ export const mapActions = {
     const selectedKey = selected && filter !== "all" && selected.kind !== filter ? null : t.selectedKey;
     patchThread(threadId, { filter, selectedKey });
   },
-  /** Opens a destination card in full as the plan workspace (the chat moves beside it). */
-  openDetail(threadId: string, key: string, name: string) {
-    const t = threadOf(threadId);
-    if (t.detail === key) return;
-    patchThread(threadId, { detail: key, detailName: name, selectedKey: null, collapsed: false });
-  },
-  closeDetail(threadId: string) {
-    if (!threadOf(threadId).detail) return;
-    patchThread(threadId, { detail: null, detailName: null, selectedKey: null });
-  },
   setThreadTrip(threadId: string, tripId: string | null) {
     patchThread(threadId, { tripId });
   },
-  selectPlace(threadId: string, key: string | null) {
-    patchThread(threadId, { selectedKey: key, collapsed: false });
+  /** Selects a place (its panel opens); `from: "card"` when an itinerary card opened it. */
+  selectPlace(threadId: string, key: string | null, from: "card" | null = null) {
+    patchThread(threadId, { selectedKey: key, selectedFrom: key ? from : null, collapsed: false });
   },
   setCollapsed(threadId: string, collapsed: boolean) {
     patchThread(threadId, { collapsed });

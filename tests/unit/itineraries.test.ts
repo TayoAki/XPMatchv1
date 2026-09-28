@@ -3,7 +3,8 @@ import { DEFAULT_PROFILE, type TravelerProfile } from "@/lib/types";
 import type { ResolvedPlace } from "@/lib/places/types";
 import { candidateFromPlace, scoreMatch } from "@/lib/match";
 import { daysFromStay, localCuisine, planItinerary, visitMinutes, type ItineraryDraft, type ScoredPools } from "@/server/itineraries";
-import { applyOrder, applySwaps, draftPicks, moveStopTo, planPick, stopKey, swapsForMisses } from "@/lib/recs/itinerary-draft";
+import { applyOrder, applySwaps, asBuilt, draftPicks, moveStopTo, planPick, planSignature, stopKey, swapsForMisses } from "@/lib/recs/itinerary-draft";
+import { placeLine } from "@/components/chat/cards/ItineraryDays";
 
 const profile: TravelerProfile = { ...DEFAULT_PROFILE, pace: "balanced", dayRhythm: "balanced", walking: "moderate" };
 const destination: ResolvedPlace = { id: "city", name: "Rome", kind: "destination", lat: 41.9, lng: 12.5, photos: [], source: "google" };
@@ -271,6 +272,56 @@ describe("reordering", () => {
     for (const key of keys(plan, 1)) emptied = applyOrder(plan, moveStopTo(emptied, key, 2, 99));
     expect(emptied.days[0].stops).toHaveLength(0);
     expect(emptied.days[0].title).toBe("Free day");
+  });
+});
+
+describe("saved plans", () => {
+  /** A one-day plan, so every stop has ready alternates. */
+  function draft(): ItineraryDraft {
+    const p = pools();
+    p.hotel.push(scored("hotel", 60, 41.9, 12.5));
+    return { ...planItinerary(p, destination, profile, 1), destination, basedOn: [], provider: "google", generatedAt: "2026-09-01T00:00:00Z" };
+  }
+
+  it("tells a changed plan from the one saved: the stay, the stops, their order and times", () => {
+    const plan = draft();
+    const stop = plan.days[0].stops.find((s) => s.kind === "attraction")!;
+    expect(planSignature(applySwaps(plan, {}))).toBe(planSignature(plan));
+    expect(planSignature(applySwaps(plan, { [stop.place.id]: stop.alternates![0] }))).not.toBe(planSignature(plan));
+    expect(planSignature(applySwaps(plan, { [plan.stay!.place.id]: plan.stay!.alternates![0] }))).not.toBe(planSignature(plan));
+    const [a, b] = plan.days[0].stops.map(stopKey);
+    const moved = applyOrder(plan, moveStopTo(plan, a, plan.days[0].day, 1));
+    expect(moved.days[0].stops.map(stopKey).slice(0, 2)).toEqual([b, a]);
+    expect(planSignature(moved)).not.toBe(planSignature(plan));
+  });
+
+  it("makes a saved plan the new plan as built: its places stay, later swaps key on them, and a swap can still be undone", () => {
+    const plan = draft();
+    const stop = plan.days[0].stops.find((s) => s.kind === "attraction")!;
+    const to = stop.alternates![0];
+    const saved = asBuilt(applySwaps(plan, { [stop.place.id]: to }));
+    const now = saved.days[0].stops.find((s) => s.place.id === to.place.id)!;
+    expect(now.swappedFrom).toBeUndefined();
+    expect(now.alternates?.[0].place.id).toBe(stop.place.id);
+    expect(planSignature(saved)).toBe(planSignature(applySwaps(plan, { [stop.place.id]: to })));
+    // A swap on the saved plan is keyed by the place now in it, and back is the saved plan again.
+    const back = applySwaps(saved, { [to.place.id]: now.alternates![0] });
+    expect(back.days[0].stops.find((s) => s.startTime === now.startTime)?.place.id).toBe(stop.place.id);
+    expect(applySwaps(saved, { [to.place.id]: now })).toBe(saved);
+    // Nothing swapped: the plan comes back as it was.
+    expect(asBuilt(plan).days[0].stops[0]).toBe(plan.days[0].stops[0]);
+  });
+});
+
+describe("placeLine", () => {
+  const at = (over: Partial<ResolvedPlace>): ResolvedPlace => ({ ...destination, id: "p", name: "Somewhere", ...over });
+  it("says what a stop is and why it is there, as the card's rows read", () => {
+    expect(placeLine(at({ kind: "attraction", category: "Garden", name: "Cascade of Time Garden" }), "attraction")).toBe("Garden · Nature & hiking");
+    expect(placeLine(at({ kind: "attraction", category: "Museum", name: "Banff Park Museum" }), "attraction")).toBe("Museum · Museums & art");
+    expect(placeLine(at({ kind: "restaurant", category: "Italian restaurant", name: "Castello Italiana" }), "restaurant", "lunch")).toBe("Lunch · Italian");
+    expect(placeLine(at({ kind: "restaurant", category: "Steak house", name: "Grizzly House" }), "restaurant", "dinner")).toBe("Dinner · Steakhouse");
+    expect(placeLine(at({ kind: "hotel", category: "Hotel", name: "Fairmont Banff Springs", summary: "A grand luxury resort" }), "hotel")).toBe("Luxury resort");
+    expect(placeLine(at({ kind: "hotel", category: "Hotel", name: "Moose Hotel" }), "hotel")).toBe("Hotel");
   });
 });
 

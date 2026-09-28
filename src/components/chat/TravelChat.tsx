@@ -159,7 +159,7 @@ export function TravelChat({ threadId, initialPrompt, tripId }: { threadId?: str
         <div className="min-h-0 flex-1" aria-busy="true" />
       )}
       {/* Under the composer: the trip planner values as chips, then the disclaimer. */}
-      <div className="mx-auto w-full max-w-[780px] shrink-0 px-4 pb-2 pt-1 sm:px-6" data-testid="chat-footer">
+      <div className="mx-auto w-full max-w-[864px] shrink-0 px-4 pb-2 pt-1 sm:px-6" data-testid="chat-footer">
         <PlannerChips />
         <p className="mt-1.5 text-center text-[11px] leading-4 text-muted">XPMatch can make mistakes</p>
       </div>

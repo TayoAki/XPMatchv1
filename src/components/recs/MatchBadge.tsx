@@ -24,7 +24,7 @@ const TONE: Record<MatchResult["label"], string> = {
 };
 
 /** "Great match · 87%" pill with a "Why this score" panel listing every reason and its points. */
-export function MatchBadge({ match, size = "md", className }: { match: MatchResult; size?: "sm" | "md"; className?: string }) {
+export function MatchBadge({ match, size = "md", className }: { match: MatchResult; size?: "sm" | "md" | "lg"; className?: string }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -36,9 +36,13 @@ export function MatchBadge({ match, size = "md", className }: { match: MatchResu
         aria-expanded={open}
         aria-label={`${match.score}% match, ${match.label}. Why this score`}
         title="Why this score"
-        className={clsx("inline-flex items-center gap-1 whitespace-nowrap rounded-full border font-semibold transition-transform duration-200 hover:scale-105 active:scale-95", size === "sm" ? "h-6 px-2 text-[11px]" : "h-7 px-2.5 text-[12px]", TONE[match.label])}
+        className={clsx(
+          "inline-flex items-center whitespace-nowrap rounded-full border font-semibold transition-transform duration-200 hover:scale-105 active:scale-95",
+          size === "sm" ? "h-6 gap-1 px-2 text-[11px]" : size === "lg" ? "h-9 gap-1.5 px-3.5 text-[14px]" : "h-7 gap-1 px-2.5 text-[12px]",
+          TONE[match.label],
+        )}
       >
-        <Sparkles className={size === "sm" ? "h-3 w-3" : "h-3.5 w-3.5"} />
+        <Sparkles className={size === "sm" ? "h-3 w-3" : size === "lg" ? "h-4 w-4" : "h-3.5 w-3.5"} />
         {/* The label leads; the number is the detail. */}
         {match.label} · {match.score}%
       </button>

@@ -11,14 +11,12 @@ const HOTELS: Record<string, { latitude: number; longitude: number }> = {
 /** Two travelers who like the same things: the second sees the first as "travels like you". */
 const PROFILE = { interests: ["Museums & art", "History & architecture"], cuisines: ["Italian"] };
 
-/** Asks for Rome, opens its plan in the workspace and returns the stay's name and row. */
+/** Asks for Rome and returns its card with the stay's name and row (the plan is on the card in the chat). */
 async function openRomePlan(page: Page) {
   await goToChat(page);
   await sendChat(page, "Plan me a trip to Rome");
   const card = page.getByTestId("destination-card").first();
-  await expect(card.getByTestId("itinerary-summary")).toContainText(/\d-day itinerary · stay at /, { timeout: 40_000 });
-  await card.getByRole("button", { name: "Itinerary for Rome" }).click();
-  const stay = page.getByTestId("card-detail").getByTestId("itinerary-stay").getByTestId("itinerary-stop");
+  const stay = card.getByTestId("itinerary-stay").getByTestId("itinerary-stop");
   await expect(stay).toHaveCount(1, { timeout: 40_000 });
   const name = ((await stay.getByRole("button", { name: /^Details for / }).getAttribute("aria-label")) ?? "").replace(/^Details for /, "");
   return { card, stay, name, id: (await stay.getAttribute("data-place-id")) ?? "" };
@@ -30,8 +28,8 @@ test("traveler reviews: check in on the spot, review, and the next traveler sees
   const a = await openRomePlan(page);
   const spot = HOTELS[a.name];
   expect(spot, `the stay is one of the stand-in hotels (got ${a.name})`).toBeTruthy();
-  // A place picked in the plan opens in the chat's column, beside the plan.
-  const sheet = page.getByTestId("side-place").getByTestId("place-sheet");
+  // A place picked in the plan opens beside the chat, where the map is.
+  const sheet = page.getByTestId("side-panel").getByTestId("place-sheet");
   const text = `Quiet room over the courtyard, a rooftop breakfast and ten minutes on foot to the Forum. ${Date.now()}`;
   let privateId = "";
 
@@ -102,7 +100,7 @@ test("traveler reviews: check in on the spot, review, and the next traveler sees
     await signup(pageB, { email: uniqueEmail("rev-b"), name: "Ada Lovelace", ...PROFILE });
     const b = await openRomePlan(pageB);
     expect(b.name).toBe(a.name);
-    const sheetB = pageB.getByTestId("side-place").getByTestId("place-sheet");
+    const sheetB = pageB.getByTestId("side-panel").getByTestId("place-sheet");
 
     await test.step("the next traveler sees the review verified, from someone who travels like them", async () => {
       await b.stay.getByRole("button", { name: `Details for ${b.name}` }).click();
@@ -132,8 +130,8 @@ test("traveler reviews: check in on the spot, review, and the next traveler sees
       await expect(b.stay).not.toHaveAttribute("data-place-id", b.id);
       await expect(b.stay).not.toContainText(b.name);
       const next = ((await b.stay.getByRole("button", { name: /^Details for / }).getAttribute("aria-label")) ?? "").replace(/^Details for /, "");
-      await expect(pageB.getByTestId("card-detail").getByTestId("itinerary-summary")).toContainText(`stay at ${next}`);
-      await expect(b.card.getByTestId("itinerary-summary")).toContainText(`stay at ${next}`);
+      expect(next).not.toBe(b.name);
+      await expect(b.card.getByTestId("itinerary-stay")).toContainText("Swapped in");
     });
   } finally {
     await second.close();

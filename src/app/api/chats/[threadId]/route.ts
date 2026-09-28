@@ -3,6 +3,7 @@ import type { ResolvedPlace } from "@/lib/places/types";
 import { queryAll } from "@/server/db";
 import { json, parseBody, requireUser, resolveParams, route } from "@/server/http";
 import { upsertChat } from "@/server/models";
+import { deleteChatPlans } from "@/server/chat-plans";
 
 const schema = z.object({
   title: z.string().trim().min(1).max(120).default("New chat"),
@@ -30,5 +31,6 @@ export const DELETE = route(async (request, ctx: Ctx) => {
   const { threadId } = await resolveParams(ctx);
   await queryAll("DELETE FROM chats WHERE thread_id = $1 AND user_id = $2", [threadId, user.id]);
   await queryAll("DELETE FROM chat_messages WHERE thread_id = $1 AND user_id = $2", [threadId, user.id]);
+  await deleteChatPlans(user.id, threadId);
   return json({ ok: true });
 });

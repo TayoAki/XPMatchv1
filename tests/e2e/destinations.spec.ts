@@ -1,138 +1,129 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { goToChat, sendChat, signup, uniqueEmail } from "./helpers";
+import { goToChat, openChatHistory, sendChat, signup, uniqueEmail } from "./helpers";
 
 const chatColumn = (page: Page) => page.getByTestId("chat-column");
+const nameOf = async (stop: Locator) => ((await stop.getByRole("button", { name: /^Details for / }).first().getAttribute("aria-label")) ?? "").replace(/^Details for /, "");
+const timeOf = async (stop: Locator) => (await stop.getByRole("button", { name: /^Details for / }).first().textContent())?.match(/\d{2}:\d{2}/)?.[0] ?? "";
 
-/** The destination cards: each a complete itinerary built for the traveler; opened, the plan becomes the workspace in the center with the chat beside it. */
-test("destination cards: an itinerary per city, opened as the plan workspace with day maps, swaps, place details, save and make itinerary", async ({ page }) => {
+/** Where an element is once the chat has stopped scrolling (it keeps to the bottom as the card grows). */
+async function settledBox(page: Page, loc: Locator) {
+  let last = await loc.boundingBox();
+  for (let i = 0; i < 30; i++) {
+    await page.waitForTimeout(100);
+    const next = await loc.boundingBox();
+    if (last && next && Math.abs(last.x - next.x) < 0.5 && Math.abs(last.y - next.y) < 0.5) return next;
+    last = next;
+  }
+  return last;
+}
+
+/** Drags a stop by its handle onto another element (a stop, or a day's tab), with both in view. */
+async function dragTo(page: Page, handle: Locator, target: Locator) {
+  await target.evaluate((el) => el.scrollIntoView({ block: "center" }));
+  const from = await settledBox(page, handle);
+  const to = await settledBox(page, target);
+  if (!from || !to) throw new Error("no boxes to drag between");
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(from.x + from.width / 2 + 10, from.y + from.height / 2 + 10, { steps: 4 });
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 3, { steps: 20 });
+  await page.mouse.up();
+}
+
+/** The itinerary lives on the card in the chat: a tab per day, the map beside it, edits in place, saved with the chat. */
+test("destination cards: the whole itinerary on the card, day by day with the map, details, edits, and saved with the chat", async ({ page }) => {
+  test.setTimeout(240_000);
   await signup(page, { email: uniqueEmail("dest"), cuisines: ["Italian"] });
   await goToChat(page);
   await sendChat(page, "Where should we go this fall?");
 
-  const cards = page.getByTestId("destination-card");
-  await expect(cards).toHaveCount(2, { timeout: 40_000 });
-  const rome = cards.filter({ hasText: "Ancient streets" });
-  const kyoto = cards.filter({ hasText: "Temples, gardens" });
-  const credit = rome.getByTestId("photo-credit");
-  const workspace = page.getByTestId("plan-workspace");
-  const detail = page.getByTestId("card-detail");
-  const chat = page.getByTestId("chat-column");
-  const stay = detail.getByTestId("itinerary-stay").getByTestId("itinerary-stop");
-  // A place picked in the plan opens in the chat's column, beside the plan.
-  const sheet = chat.getByTestId("side-place").getByTestId("place-sheet");
+  const cities = page.getByTestId("city-card");
+  const rome = page.getByTestId("destination-card").filter({ hasText: "Your Rome itinerary" });
+  const kyoto = page.getByTestId("destination-card").filter({ hasText: "Your Kyoto itinerary" });
+  const stay = rome.getByTestId("itinerary-stay").getByTestId("itinerary-stop");
+  const day = rome.getByTestId("itinerary-day");
+  const stops = day.getByTestId("itinerary-stop");
+  // A place opens beside the chat, where the map is.
+  const place = page.getByTestId("side-panel").getByTestId("place-sheet");
+  const pins = page.getByTestId("side-panel").getByTestId("map-pin-list").locator("li");
+  const names = async () => Promise.all((await stops.all()).map(nameOf));
+  const times = async () => Promise.all((await stops.all()).map(timeOf));
+  let savedStayId = "";
 
-  await test.step("the photo face carries the itinerary, its score and the thumbs, the footer the two actions", async () => {
-    await expect(credit).toBeVisible({ timeout: 20_000 });
-    await expect(rome.getByTestId("itinerary-summary")).toContainText(/\d-day itinerary · stay at /, { timeout: 40_000 });
-    await expect(rome.getByTestId("destination-match").getByTestId("match-badge")).toBeVisible({ timeout: 20_000 });
-    await expect(rome.getByRole("button", { name: "Miss: Rome" })).toBeVisible();
-    await expect(rome.getByRole("button", { name: "Make Rome itinerary" })).toBeEnabled({ timeout: 20_000 });
-    await expect(rome.getByRole("button", { name: "Save Rome" })).toBeVisible();
-    await expect(rome).toContainText("Click to open your itinerary");
-    // The two cards sit side by side in a row.
-    const tops = await cards.evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().top)));
+  await test.step("two cities: a row to pick from, and the picked city's whole itinerary on its card", async () => {
+    await expect(cities).toHaveCount(2, { timeout: 40_000 });
+    const tops = await cities.evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().top)));
     expect(new Set(tops).size).toBe(1);
-  });
-
-  await test.step("with room for the workspace, hovering leaves the card alone", async () => {
-    await rome.hover();
-    await page.waitForTimeout(700);
-    await expect(rome).not.toHaveAttribute("data-detail", "open");
-    await expect(detail).toHaveCount(0);
-    await page.mouse.move(2, 2);
-  });
-
-  await test.step("a click opens the plan in the center, the chat moves to the right", async () => {
-    await rome.getByRole("button", { name: "Itinerary for Rome" }).click();
-    await expect(workspace).toBeVisible();
-    await expect(chat).toHaveAttribute("data-side", "true");
-    const [planBox, chatBox] = [await workspace.boundingBox(), await chat.boundingBox()];
-    expect(planBox && chatBox ? planBox.x + planBox.width <= chatBox.x + 1 && planBox.width > chatBox.width : false).toBe(true);
-    await expect(rome).toHaveAttribute("data-detail", "open");
-    // Wide screens open the plan beside the chat, never the layer over the page.
-    await expect(page.getByTestId("plan-overlay")).toHaveCount(0);
-    await expect(detail.getByRole("heading", { name: "Rome", level: 2 })).toBeVisible();
-    await expect(detail.getByRole("button", { name: "Close Rome" })).toBeFocused();
-    await expect(detail).toContainText("Curated for you");
-    await expect(detail.getByTestId("itinerary-summary")).toContainText(/\d-day itinerary · stay at /);
-    await expect(detail.getByTestId("quick-facts")).toContainText("3–4 nights");
-    await expect(detail.getByTestId("your-match")).toContainText("%");
-    const plan = detail.getByTestId("itinerary-plan");
-    await expect(plan).toContainText("Where you'll stay");
+    await expect(page.getByRole("button", { name: "Show the Rome itinerary" })).toHaveAttribute("aria-pressed", "true");
+    await expect(rome).toBeVisible();
+    await expect(kyoto).toBeHidden();
+    await expect(rome.getByTestId("photo-credit")).toBeVisible({ timeout: 20_000 });
+    await expect(rome.getByRole("heading", { name: "Your Rome itinerary", level: 3 })).toBeVisible();
+    await expect(rome.getByTestId("destination-match").getByTestId("match-badge")).toBeVisible({ timeout: 40_000 });
+    await expect(rome.getByRole("button", { name: "Miss: Rome" })).toBeVisible();
+    await expect(rome.getByTestId("itinerary-meta")).toContainText(/^\d+ days?/);
+    await expect(rome.getByTestId("itinerary-stay")).toContainText("Where you'll stay");
     await expect(stay).toHaveCount(1);
-    await expect(plan.getByTestId("itinerary-day").first()).toContainText("Day 1");
-    await expect(plan.getByTestId("itinerary-day").first().getByTestId("itinerary-stop").first()).toContainText(/\d{2}:\d{2}/);
-    await expect(plan.getByTestId("itinerary-stop").filter({ hasText: "Dinner" }).first()).toBeVisible();
-    // The chat stays readable beside the plan.
-    const opacity = await page.getByTestId("copilot-user-message").first().evaluate((el) => Number(getComputedStyle(el).opacity));
-    expect(opacity).toBe(1);
+    await expect(rome.getByRole("tab", { name: "Day 1" })).toHaveAttribute("aria-selected", "true");
+    await expect(day).toContainText("Day 1");
+    await expect(stops.first()).toContainText(/\d{2}:\d{2}/);
+    await expect(stops.first().getByRole("button", { name: /^Details for / })).toContainText("Details & reviews");
+    await expect(rome.getByRole("button", { name: "Click to edit" })).toBeEnabled();
+    await expect(rome.getByRole("button", { name: "Save the Rome itinerary" })).toBeEnabled();
+    // Nothing opens over the chat: the plan is in it, the conversation around it.
+    await expect(page.getByTestId("copilot-user-message").first()).toBeVisible();
+    await expect(page.getByTestId("plan-overlay")).toHaveCount(0);
   });
 
-  await test.step("beside the plan the chat widens while it is in use and narrows again when the plan is", async () => {
-    await expect(chat).not.toHaveAttribute("data-wide", "true");
-    const narrow = (await chat.boundingBox())?.width ?? 0;
-    await page.getByPlaceholder("Ask your concierge").click();
-    await expect(chat).toHaveAttribute("data-wide", "true");
-    await expect.poll(async () => (await chat.boundingBox())?.width ?? 0).toBeGreaterThan(narrow + 40);
-    await detail.getByRole("heading", { name: "Rome", level: 2 }).click();
-    await expect(chat).not.toHaveAttribute("data-wide", "true");
-    await expect.poll(async () => (await chat.boundingBox())?.width ?? 0).toBeLessThan(narrow + 2);
+  await test.step("picking the other city shows its plan instead (the stand-in has no places there) and the map follows", async () => {
+    await page.getByRole("button", { name: "Show the Kyoto itinerary" }).click();
+    await expect(kyoto).toBeVisible();
+    await expect(rome).toBeHidden();
+    await expect(kyoto.getByTestId("itinerary-empty")).toContainText("Not enough places here yet", { timeout: 40_000 });
+    await expect(kyoto.getByRole("button", { name: "Click to edit" })).toHaveCount(0);
+    await expect(page.getByTestId("map-header")).toContainText("Explore Kyoto");
+    await page.getByRole("button", { name: "Show the Rome itinerary" }).click();
+    await expect(rome).toBeVisible();
   });
 
-  await test.step("each day opens its own map above its stops, one at a time", async () => {
-    const days = detail.getByTestId("itinerary-day");
-    const firstMap = days.first().getByTestId("day-map");
-    await expect(firstMap).toBeVisible();
-    // Its pins: the stay and the day's stops, numbered like the list.
-    const stops = await days.first().getByTestId("itinerary-stop").count();
-    await expect(firstMap.getByTestId("map-pin-list").locator("li")).toHaveCount(stops + 1);
-    await expect(firstMap.getByTestId("map-pin-list")).toContainText("1.");
-    if ((await days.count()) > 1) {
-      await days.nth(1).getByRole("button", { name: "Show the map of day 2" }).click();
-      await expect(days.nth(1).getByTestId("day-map")).toBeVisible();
-      await expect(firstMap).toHaveCount(0);
-    }
+  await test.step("a day's tab shows its stops, and the map shows that day numbered, with the stay", async () => {
+    await rome.getByRole("tab", { name: "Day 2" }).click();
+    await expect(rome.getByRole("tab", { name: "Day 2" })).toHaveAttribute("aria-selected", "true");
+    await expect(day).toContainText("Day 2");
+    await expect(page.getByTestId("map-header")).toContainText("Day 2 of your itinerary");
+    const count = await stops.count();
+    await expect(pins.filter({ hasText: "· Day 2" })).toHaveCount(count);
+    await expect(pins.filter({ hasText: /^1\. / })).toHaveCount(1);
+    await expect(pins.filter({ hasText: "· Where you'll stay" })).toHaveCount(1);
+    // Arrow keys move between the days.
+    await rome.getByRole("tab", { name: "Day 2" }).press("ArrowLeft");
+    await expect(rome.getByRole("tab", { name: "Day 1" })).toHaveAttribute("aria-selected", "true");
+    await expect(rome.getByRole("tab", { name: "Day 1" })).toBeFocused();
+    await expect(page.getByTestId("map-header")).toContainText("Day 1 of your itinerary");
   });
 
-  await test.step("a stop opens beside the plan, in the chat's column; the plan stays usable and another pick switches the place", async () => {
-    const day = detail.getByTestId("itinerary-day").filter({ has: page.getByTestId("day-map") }).first();
-    const stops = day.getByTestId("itinerary-stop");
-    const nameOf = async (stop: Locator) => ((await stop.getByRole("button", { name: /^Details for / }).getAttribute("aria-label")) ?? "").replace(/^Details for /, "");
+  await test.step("Details & reviews opens a stop's place beside the chat and marks its pin; another switches it; Escape closes", async () => {
     const [first, second] = [stops.first(), stops.nth(1)];
     const [firstName, secondName] = [await nameOf(first), await nameOf(second)];
-    await first.getByRole("button", { name: /^Details for / }).click();
-    await expect(sheet.getByRole("heading", { name: firstName })).toBeVisible({ timeout: 20_000 });
+    await first.getByRole("button", { name: `Details for ${firstName}` }).click();
+    await expect(place.getByRole("heading", { name: firstName })).toBeVisible({ timeout: 20_000 });
     await expect(first).toHaveAttribute("data-selected", "true");
-    // Side by side: the plan in the center, the place on the right where the chat was.
-    await expect(detail.getByTestId("itinerary-plan")).toBeVisible();
-    const [planBox, placeBox] = [await workspace.boundingBox(), await sheet.boundingBox()];
-    expect(planBox && placeBox ? planBox.x + planBox.width <= placeBox.x + 1 : false).toBe(true);
-    // The day's map marks the same place.
-    await expect(day.getByTestId("day-map").getByTestId("map-pin-list").locator('li[data-selected="true"]')).toContainText(firstName);
-    await second.getByRole("button", { name: /^Details for / }).click();
-    await expect(sheet.getByRole("heading", { name: secondName })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId("side-panel").getByTestId("map-pin-list").locator('li[data-selected="true"]')).toContainText(firstName);
+    await second.getByRole("button", { name: `Details for ${secondName}` }).click();
+    await expect(place.getByRole("heading", { name: secondName })).toBeVisible({ timeout: 20_000 });
     await expect(second).toHaveAttribute("data-selected", "true");
     await expect(first).not.toHaveAttribute("data-selected", "true");
-    await sheet.getByRole("button", { name: "Back to chat" }).click();
-    await expect(sheet).toHaveCount(0);
     await expect(page.getByPlaceholder("Ask your concierge")).toBeVisible();
-    await expect(page.getByTestId("copilot-user-message").first()).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(place).toHaveCount(0);
   });
 
-  await test.step("a day's stops move: a step later and back, to another day, and dragged back; times, numbers and the map follow", async () => {
-    const days = detail.getByTestId("itinerary-day");
-    const day1 = days.first();
-    const stops = day1.getByTestId("itinerary-stop");
-    const nameOf = async (stop: Locator) => ((await stop.getByRole("button", { name: /^Details for / }).getAttribute("aria-label")) ?? "").replace(/^Details for /, "");
-    const timeOf = async (stop: Locator) => (await stop.getByRole("button", { name: /^Details for / }).textContent())?.match(/\d{2}:\d{2}/)?.[0] ?? "";
-    const names = async () => Promise.all((await stops.all()).map(nameOf));
-    const times = async () => Promise.all((await stops.all()).map(timeOf));
+  await test.step("Click to edit: stops move a step and back, to another day and back by dragging onto its tab; times and pins follow", async () => {
+    await rome.getByRole("button", { name: "Click to edit" }).click();
+    await expect(rome.getByRole("button", { name: "Done editing" })).toHaveAttribute("aria-pressed", "true");
     const before = await names();
     const beforeTimes = await times();
     const [first, second] = before;
-    if (!(await day1.getByTestId("day-map").count())) await day1.getByRole("button", { name: "Show the map of day 1" }).click();
-    const pins = day1.getByTestId("day-map").getByTestId("map-pin-list").locator("li");
-
     // A step later: the two trade places, the times run forward in the new order (a meal is never
     // moved earlier than planned), and the day's pins renumber.
     await stops.first().getByRole("button", { name: `Move ${first} later` }).click();
@@ -140,275 +131,215 @@ test("destination cards: an itinerary per city, opened as the plan workspace wit
     const moved = await times();
     expect([...moved].sort()).toEqual(moved);
     expect(moved[1] > moved[0]).toBe(true);
-    await expect(pins.nth(1)).toContainText(`1. ${second}`);
-    await expect(pins.nth(2)).toContainText(`2. ${first}`);
+    await expect(pins.filter({ hasText: `1. ${second}` })).toHaveCount(1);
+    await expect(pins.filter({ hasText: `2. ${first}` })).toHaveCount(1);
     // A step back is the plan as built, times and all.
     await stops.nth(1).getByRole("button", { name: `Move ${first} earlier` }).click();
     await expect.poll(names).toEqual(before);
     expect(await times()).toEqual(beforeTimes);
     await expect(stops.first().getByRole("button", { name: `Move ${first} earlier` })).toBeDisabled();
-
-    if ((await days.count()) > 1) {
-      // To another day with the day picker: it goes to the end of that day.
-      await stops.first().getByRole("combobox", { name: `Day for ${first}` }).selectOption("2");
-      await expect.poll(names).toEqual(before.slice(1));
-      const day2 = days.nth(1).getByTestId("itinerary-stop");
-      await expect(day2.last().getByRole("button", { name: `Details for ${first}` })).toBeVisible();
-      // Back to day 1 the same way (at its end), then dragged by its handle onto the day's first stop, it takes that slot.
-      await day2.last().getByRole("combobox", { name: `Day for ${first}` }).selectOption("1");
-      await expect.poll(names).toEqual([...before.slice(1), first]);
-      await day1.getByRole("button", { name: "Hide the map of day 1" }).click();
-      await day1.evaluate((el) => el.scrollIntoView({ block: "start" }));
-      const handle = stops.last().getByRole("button", { name: `Drag ${first}` });
-      const from = await handle.boundingBox();
-      const to = await stops.first().boundingBox();
-      if (!from || !to) throw new Error("no boxes to drag between");
-      await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
-      await page.mouse.down();
-      await page.mouse.move(from.x + from.width / 2 + 10, from.y + from.height / 2 + 10, { steps: 4 });
-      await page.mouse.move(to.x + to.width / 2, to.y + to.height / 3, { steps: 20 });
-      await page.mouse.up();
-      await expect.poll(names).toEqual(before);
-      expect(await times()).toEqual(beforeTimes);
-    }
+    // To another day with its picker: the tabs follow it there, at the end of that day.
+    await stops.first().getByRole("combobox", { name: `Day for ${first}` }).selectOption("2");
+    await expect(rome.getByRole("tab", { name: "Day 2" })).toHaveAttribute("aria-selected", "true");
+    await expect(stops.last().getByRole("button", { name: `Details for ${first}` })).toBeVisible();
+    // Up to the top of that day with its arrows.
+    for (let i = 0; i < 10 && (await nameOf(stops.first())) !== first; i++) await stops.getByRole("button", { name: `Move ${first} earlier` }).click();
+    await expect.poll(async () => nameOf(stops.first())).toBe(first);
+    // Dragged onto Day 1's tab, it goes back to the end of day 1, and the tabs follow it again.
+    await dragTo(page, stops.first().getByRole("button", { name: `Drag ${first}` }), rome.getByRole("tab", { name: "Day 1" }));
+    await expect(rome.getByRole("tab", { name: "Day 1" })).toHaveAttribute("aria-selected", "true");
+    await expect.poll(names).toEqual([...before.slice(1), first]);
+    // Dragged onto the day's first stop, it takes that slot: the plan as built again.
+    await dragTo(page, stops.last().getByRole("button", { name: `Drag ${first}` }), stops.first());
+    await expect.poll(names).toEqual(before);
+    expect(await times()).toEqual(beforeTimes);
   });
 
-  await test.step("the stay swaps for a ready alternate, the plan and the card follow, and swaps back", async () => {
+  await test.step("the stay swaps for a ready alternate and back", async () => {
     const original = (await stay.getAttribute("data-place-id")) ?? "";
     await stay.getByRole("button", { name: /^Swap / }).click();
-    const options = stay.getByTestId("swap-options");
-    await expect(options.getByRole("button", { name: /^Swap in / }).first()).toBeVisible();
-    const pickName = ((await options.getByRole("button", { name: /^Swap in / }).first().getAttribute("aria-label")) ?? "").replace(/^Swap in /, "");
-    await options.getByRole("button", { name: /^Swap in / }).first().click();
+    const option = stay.getByTestId("swap-options").getByRole("button", { name: /^Swap in / }).first();
+    const pickName = ((await option.getAttribute("aria-label")) ?? "").replace(/^Swap in /, "");
+    await option.click();
     await expect(stay).not.toHaveAttribute("data-place-id", original);
     await expect(stay).toContainText(pickName);
-    await expect(detail.getByTestId("itinerary-summary")).toContainText(`stay at ${pickName}`);
-    await expect(rome.getByTestId("itinerary-summary")).toContainText(`stay at ${pickName}`);
+    await expect(stay).toContainText("Swapped in");
     // The place it replaced is now one of its alternates.
     await stay.getByRole("button", { name: /^Swap / }).click();
     await stay.getByTestId("swap-options").getByRole("button", { name: /^Swap in Hotel Artemide/ }).click();
     await expect(stay).toHaveAttribute("data-place-id", original);
   });
 
-  await test.step("See all stays opens the Stays tab to choose from every hotel; the one chosen becomes the stay", async () => {
+  await test.step("See all stays lists every hotel on the card to choose from; the one chosen becomes the stay", async () => {
     const original = (await stay.getAttribute("data-place-id")) ?? "";
     await stay.getByRole("button", { name: /^Swap / }).click();
     await stay.getByTestId("swap-options").getByRole("button", { name: "See all stays" }).click();
-    await expect(detail.getByRole("tab", { name: "Stays" })).toHaveAttribute("aria-selected", "true");
-    await expect(detail.getByTestId("choose-banner")).toContainText("Choose a stay to replace Hotel Artemide");
-    await expect(detail.locator(`[data-testid="destination-reco-row"][data-place-id="${original}"]`)).toContainText("Your stay", { timeout: 40_000 });
-    const use = detail.getByRole("button", { name: /^Use .+ as my stay$/ }).first();
+    const chooser = rome.getByTestId("itinerary-chooser");
+    await expect(chooser.getByTestId("choose-banner")).toContainText("Choose a stay to replace Hotel Artemide");
+    await expect(day).toHaveCount(0);
+    await expect(chooser.locator(`[data-testid="destination-reco-row"][data-place-id="${original}"]`)).toContainText("Your stay", { timeout: 40_000 });
+    const use = chooser.getByRole("button", { name: /^Use .+ as my stay$/ }).first();
     const chosen = ((await use.getAttribute("aria-label")) ?? "").replace(/^Use /, "").replace(/ as my stay$/, "");
     await use.click();
-    await expect(detail.getByRole("tab", { name: "Itinerary" })).toHaveAttribute("aria-selected", "true");
-    await expect(detail.getByTestId("choose-banner")).toHaveCount(0);
+    await expect(chooser).toHaveCount(0);
+    await expect(day).toBeVisible();
     await expect(stay).not.toHaveAttribute("data-place-id", original);
     await expect(stay).toHaveAttribute("data-recent", "true");
-    await expect(stay).toContainText("Swapped in");
     await expect(stay.getByRole("button", { name: `Details for ${chosen}` })).toBeVisible();
-    await expect(detail.getByTestId("itinerary-summary")).not.toContainText("Hotel Artemide");
     // The stay as built is the first option to go back to.
     await stay.getByRole("button", { name: /^Swap / }).click();
     await stay.getByTestId("swap-options").getByRole("button", { name: /^Swap in / }).first().click();
     await expect(stay).toHaveAttribute("data-place-id", original);
-    await expect(stay).not.toContainText("Swapped in");
   });
 
   await test.step("a hotel's own panel makes it the stay, and the stay's panel says it is", async () => {
     const original = (await stay.getAttribute("data-place-id")) ?? "";
-    await detail.getByRole("tab", { name: "Stays" }).click();
-    const current = detail.locator(`[data-testid="destination-reco-row"][data-place-id="${original}"]`);
-    await current.getByRole("button", { name: /^Show / }).click();
-    await expect(sheet.getByTestId("plan-stay")).toContainText("Your stay in the Rome plan");
-    await expect(sheet.getByRole("button", { name: "Use as my stay" })).toHaveCount(0);
-    await sheet.getByRole("button", { name: "Back to chat" }).click();
-    const other = detail.locator(`[data-testid="destination-reco-row"]:not([data-place-id="${original}"])`).first();
+    await stay.getByRole("button", { name: /^Details for / }).first().click();
+    await expect(place.getByTestId("plan-stay")).toContainText("Your stay in the Rome plan");
+    await expect(place.getByRole("button", { name: "Use as my stay" })).toHaveCount(0);
+    await place.getByRole("button", { name: "Close" }).click();
+    await stay.getByRole("button", { name: /^Swap / }).click();
+    await stay.getByTestId("swap-options").getByRole("button", { name: "See all stays" }).click();
+    const chooser = rome.getByTestId("itinerary-chooser");
+    const other = chooser.locator(`[data-testid="destination-reco-row"]:not([data-place-id="${original}"])`).first();
+    await expect(other).toBeVisible({ timeout: 40_000 });
     const otherId = (await other.getAttribute("data-place-id")) ?? "";
     await other.getByRole("button", { name: /^Show / }).click();
-    await sheet.getByRole("button", { name: "Use as my stay" }).click();
-    await expect(sheet).toHaveCount(0);
-    await expect(detail.getByRole("tab", { name: "Itinerary" })).toHaveAttribute("aria-selected", "true");
+    await place.getByRole("button", { name: "Use as my stay" }).click();
+    await expect(place).toHaveCount(0);
+    await expect(chooser).toHaveCount(0);
     await expect(stay).toHaveAttribute("data-place-id", otherId);
     await stay.getByRole("button", { name: /^Swap / }).click();
     await stay.getByTestId("swap-options").getByRole("button", { name: /^Swap in / }).first().click();
     await expect(stay).toHaveAttribute("data-place-id", original);
   });
 
-  await test.step("a stop's See all opens its tab to choose from; the plan's own places are marked; Cancel returns", async () => {
-    const stop = detail.getByTestId("itinerary-day").first().locator('[data-testid="itinerary-stop"][data-kind="attraction"]').first();
+  await test.step("a stop's See all lists every place of its kind; the plan's own are marked; Cancel returns", async () => {
+    const stop = day.locator('[data-testid="itinerary-stop"][data-kind="attraction"]').first();
     await stop.getByRole("button", { name: /^Swap / }).click();
     await stop.getByTestId("swap-options").getByRole("button", { name: "See all things to do" }).click();
-    await expect(detail.getByRole("tab", { name: "Activities" })).toHaveAttribute("aria-selected", "true");
-    const banner = detail.getByTestId("choose-banner");
-    await expect(banner).toContainText("Choose something to do to replace");
-    const rows = detail.getByTestId("destination-reco-row");
+    const chooser = rome.getByTestId("itinerary-chooser");
+    await expect(chooser.getByTestId("choose-banner")).toContainText("Choose something to do to replace");
+    const rows = chooser.getByTestId("destination-reco-row");
     await expect(rows.first()).toBeVisible({ timeout: 40_000 });
     for (const row of await rows.all()) {
       await expect(row.getByRole("button", { name: /^Use .+ instead of / }).or(row.getByText("In your plan"))).toBeVisible();
     }
-    await banner.getByRole("button", { name: "Cancel" }).click();
-    await expect(detail.getByRole("tab", { name: "Itinerary" })).toHaveAttribute("aria-selected", "true");
-    await expect(detail.getByTestId("choose-banner")).toHaveCount(0);
+    await chooser.getByRole("button", { name: "Cancel" }).click();
+    await expect(chooser).toHaveCount(0);
+    await expect(day).toBeVisible();
   });
 
-  await test.step("the Stays tab lists every pick; a row opens its place beside the list, Back returns to the chat", async () => {
-    await detail.getByRole("tab", { name: "Stays" }).click();
-    const rows = detail.getByTestId("destination-reco-row");
-    await expect(rows.first()).toBeVisible({ timeout: 40_000 });
-    await expect(rows.first()).toHaveAttribute("data-kind", "hotel");
-    await expect(detail.getByRole("button", { name: /^Show all/ })).toHaveCount(0);
-    const show = rows.first().getByRole("button", { name: /^Show / });
-    const name = (await show.getAttribute("aria-label"))?.replace(/^Show /, "").replace(/ on map$/, "") ?? "";
-    await show.click();
-    await expect(sheet.getByRole("heading", { name })).toBeVisible({ timeout: 20_000 });
-    await expect(sheet.getByRole("button", { name: "Add to trip" })).toBeVisible();
-    await expect(sheet.getByRole("button", { name: `Not a fit: ${name}` })).toBeVisible();
-    await expect(sheet.getByRole("button", { name: "Hide map" })).toHaveCount(0);
-    await expect(rows.first()).toBeVisible();
-    await sheet.getByRole("button", { name: "Back to chat" }).click();
-    await expect(sheet).toHaveCount(0);
-    await expect(detail.getByRole("tab", { name: "Stays" })).toHaveAttribute("aria-selected", "true");
-    await detail.getByRole("tab", { name: "Itinerary" }).click();
-  });
-
-  await test.step("Escape goes back from a place, from the plan or the place itself, then closes the plan; typing in the chat leaves it open", async () => {
-    await stay.getByRole("button", { name: /^Details for / }).click();
-    await expect(sheet).toBeVisible();
-    await page.keyboard.press("Escape");
-    await expect(sheet).toHaveCount(0);
-    await stay.getByRole("button", { name: /^Details for / }).click();
-    await sheet.getByRole("button", { name: "Back to chat" }).focus();
-    await page.keyboard.press("Escape");
-    await expect(sheet).toHaveCount(0);
-    await page.getByPlaceholder("Ask your concierge").focus();
-    await page.keyboard.press("Escape");
-    await expect(workspace).toBeVisible();
-    await detail.getByRole("tab", { name: "Itinerary" }).focus();
-    await page.keyboard.press("Escape");
-    await expect(page.getByTestId("plan-workspace")).toHaveCount(0);
-    await expect(chat).not.toHaveAttribute("data-side", "true");
-    await expect(rome).not.toHaveAttribute("data-detail", "open");
-    await expect(page.getByTestId("map-header")).toContainText("Explore Rome");
-  });
-
-  await test.step("Save saves only the city; Make itinerary saves the whole plan and turns both buttons", async () => {
-    await rome.getByRole("button", { name: "Itinerary for Rome" }).click();
-    await detail.getByRole("button", { name: "Save Rome" }).click();
-    await expect(detail.getByRole("button", { name: "Remove Rome from saved" })).toHaveAttribute("aria-pressed", "true");
-    await expect(rome.getByRole("button", { name: "Remove Rome from saved" })).toHaveAttribute("aria-pressed", "true");
-    const stayName = ((await stay.getByRole("button", { name: /^Details for / }).getAttribute("aria-label")) ?? "").replace(/^Details for /, "");
-    await detail.getByRole("button", { name: "Make Rome itinerary" }).click();
-    const open = detail.getByRole("link", { name: "Open Rome itinerary" });
-    await expect(open).toBeVisible({ timeout: 30_000 });
-    await expect(rome.getByRole("link", { name: "Open Rome itinerary" })).toBeVisible();
-    // The trip holds every day of the plan, each stop with its place, time and why it fits.
-    const tripId = (await open.getAttribute("href"))?.split("/trips/")[1] ?? "";
-    const trip = (await (await page.request.get(`/api/trips/${tripId}`)).json()) as { title: string; itinerary: { stops: { title: string; kind?: string; startTime?: string; note: string; place?: { name: string } }[] }[] };
-    expect(trip.title).toMatch(/\d days? in Rome/);
-    const stops = trip.itinerary.flatMap((d) => d.stops);
-    expect(stops[0].kind).toBe("hotel");
-    expect(stops[0].place?.name).toBe(stayName);
-    expect(stops.every((s) => !!s.place)).toBe(true);
-    expect(stops.some((s) => s.kind === "restaurant" && /^Dinner · /.test(s.note))).toBe(true);
-    expect(stops.filter((s) => s.kind === "attraction").every((s) => /^\d{2}:\d{2}$/.test(s.startTime ?? ""))).toBe(true);
-    await detail.getByRole("button", { name: "Close Rome" }).click();
+  await test.step("Save keeps the plan with this chat and as a trip; an edit after it saves as changes to the same trip", async () => {
+    await rome.getByRole("button", { name: "Done editing" }).click();
+    const stayName = await nameOf(stay);
+    savedStayId = (await stay.getAttribute("data-place-id")) ?? "";
+    await rome.getByRole("button", { name: "Save the Rome itinerary" }).click();
+    await expect(rome.getByRole("button", { name: "Rome itinerary saved" })).toBeVisible({ timeout: 30_000 });
+    const tripLink = rome.getByTestId("itinerary-meta").getByRole("link", { name: "In your trips" });
+    await expect(tripLink).toBeVisible();
+    // The chat is filed under its trip in the side rail, and the trip is on the map's tray.
+    await openChatHistory(page);
+    await expect(page.getByTestId("chat-nav-list").locator('a[aria-current="page"]')).toContainText(/\d days? in Rome/);
     await expect(page.getByTestId("trip-tray")).toContainText(/\d days? in Rome/);
     await expect(page.getByTestId("trip-tray")).toContainText("Dates flexible");
+    // The trip holds every day of the plan, each stop with its place, time and why it fits.
+    const tripId = ((await tripLink.getAttribute("href")) ?? "").split("/trips/")[1];
+    type TripJson = { title: string; itinerary: { stops: { title: string; kind?: string; startTime?: string; note: string; place?: { name: string } }[] }[] };
+    const trip = (await (await page.request.get(`/api/trips/${tripId}`)).json()) as TripJson;
+    expect(trip.title).toMatch(/\d days? in Rome/);
+    const tripStops = trip.itinerary.flatMap((d) => d.stops);
+    expect(tripStops[0].kind).toBe("hotel");
+    expect(tripStops[0].place?.name).toBe(stayName);
+    expect(tripStops.every((s) => !!s.place)).toBe(true);
+    expect(tripStops.some((s) => s.kind === "restaurant" && /^Dinner · /.test(s.note))).toBe(true);
+    expect(tripStops.filter((s) => s.kind === "attraction").every((s) => /^\d{2}:\d{2}$/.test(s.startTime ?? ""))).toBe(true);
+
+    // A change after saving: the button offers to save it, and saving updates the same trip.
+    await rome.getByRole("button", { name: "Click to edit" }).click();
+    await stay.getByRole("button", { name: /^Swap / }).click();
+    const option = stay.getByTestId("swap-options").getByRole("button", { name: /^Swap in / }).first();
+    const newStay = ((await option.getAttribute("aria-label")) ?? "").replace(/^Swap in /, "");
+    await option.click();
+    await rome.getByRole("button", { name: "Save changes to the Rome itinerary" }).click();
+    await expect(rome.getByRole("button", { name: "Rome itinerary saved" })).toBeVisible({ timeout: 30_000 });
+    savedStayId = (await stay.getAttribute("data-place-id")) ?? "";
+    const updated = (await (await page.request.get(`/api/trips/${tripId}`)).json()) as TripJson;
+    expect(updated.itinerary[0].stops[0].place?.name).toBe(newStay);
+    const trips = (await (await page.request.get("/api/trips")).json()) as { trips: { title: string }[] };
+    expect(trips.trips.filter((t) => / in Rome$/.test(t.title))).toHaveLength(1);
+    await rome.getByRole("button", { name: "Done editing" }).click();
   });
 
-  await test.step("a thumbs-down sends the other card to the end", async () => {
-    await kyoto.getByRole("button", { name: "Miss: Kyoto" }).click();
+  await test.step("reopening the chat shows the saved plan, as it was saved", async () => {
+    const href = (await page.getByTestId("chat-nav-list").locator('a[aria-current="page"]').getAttribute("href")) ?? "";
+    await page.goto("/");
+    await page.goto(href);
+    const again = page.getByTestId("destination-card").filter({ hasText: "Your Rome itinerary" });
+    await expect(again.getByRole("button", { name: "Rome itinerary saved" })).toBeVisible({ timeout: 40_000 });
+    await expect(again.getByTestId("itinerary-stay").getByTestId("itinerary-stop")).toHaveAttribute("data-place-id", savedStayId);
+  });
+
+  await test.step("a thumbs-down sends the other city to the end of the row", async () => {
+    const kyotoCard = page.getByTestId("city-card").filter({ hasText: "Kyoto" });
+    await kyotoCard.getByRole("button", { name: "Miss: Kyoto" }).click();
     await page.getByRole("dialog", { name: "Why is Kyoto a miss?" }).getByRole("button", { name: "Too far" }).click();
     const wrappers = page.getByTestId("card-row").first().locator("[data-flip-key]");
     await expect(wrappers.last()).toContainText("Kyoto");
     await expect(wrappers.last()).toHaveAttribute("data-verdict", "down");
   });
 
-  await test.step("on a phone a tap expands the card over the page into the full plan: swap, move, a place over the plan, then it folds back", async () => {
+  await test.step("on a phone the itinerary fits the chat; a stop's details open over it and close back to it; edits work", async () => {
     const phone = await page.context().browser()!.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, storageState: await page.context().storageState() });
     const p: Page = await phone.newPage();
     try {
       await p.goto("/chat");
-      await sendChat(p, "Where should we go this fall?");
-      const card = p.getByTestId("destination-card").filter({ hasText: "Ancient streets" });
-      await expect(card).toBeVisible({ timeout: 40_000 });
-      await expect(card).toContainText("Tap to open your itinerary");
-      await card.getByRole("button", { name: "Itinerary for Rome" }).tap();
-      const overlay = p.getByTestId("plan-overlay");
-      await expect(overlay).toBeVisible();
-      await expect(overlay).toHaveAttribute("aria-modal", "true");
-      await expect(card).toHaveAttribute("data-detail", "open");
-      const full = overlay.getByTestId("card-detail");
-      await expect(full.getByRole("button", { name: "Close Rome" })).toBeFocused();
-      // The whole plan, as on a wide screen: the stay, every day with its map, moves and swaps.
-      const plan = full.getByTestId("itinerary-plan");
-      await expect(plan.getByTestId("itinerary-day").first()).toContainText("Day 1", { timeout: 40_000 });
-      await expect(plan.getByTestId("day-map")).toHaveCount(1);
-      const fullStay = full.locator('[data-testid="itinerary-stop"][data-kind="hotel"]');
-      await expect(fullStay).toHaveCount(1);
-      const before = (await fullStay.getAttribute("data-place-id")) ?? "";
-      await fullStay.getByRole("button", { name: /^Swap / }).tap();
-      const option = fullStay.getByTestId("swap-options").getByRole("button", { name: /^Swap in / }).first();
-      const pickName = ((await option.getAttribute("aria-label")) ?? "").replace(/^Swap in /, "");
-      await option.tap();
-      await expect(fullStay).not.toHaveAttribute("data-place-id", before);
-      await expect(full.getByTestId("itinerary-summary")).toContainText(`stay at ${pickName}`);
-      const day1 = plan.getByTestId("itinerary-day").first().getByTestId("itinerary-stop");
-      const first = ((await day1.first().getByRole("button", { name: /^Details for / }).getAttribute("aria-label")) ?? "").replace(/^Details for /, "");
-      await day1.first().getByRole("button", { name: `Move ${first} later` }).tap();
-      await expect(day1.nth(1).getByRole("button", { name: `Details for ${first}` })).toBeVisible();
-      // A row opens its place over the plan (no map sheet in between); closing it returns to the plan.
-      await full.getByRole("tab", { name: "Stays" }).tap();
-      const row = full.getByTestId("destination-reco-row").first();
-      await expect(row).toBeVisible({ timeout: 40_000 });
-      await row.getByRole("button", { name: /^Show / }).tap();
+      await sendChat(p, "Plan me a trip to Rome");
+      const card = p.getByTestId("destination-card").filter({ hasText: "Your Rome itinerary" });
+      await expect(card.getByTestId("day-tabs")).toBeVisible({ timeout: 40_000 });
+      const box = await card.boundingBox();
+      expect(box && box.width <= 390).toBe(true);
+      expect(await card.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
+      const phoneStops = card.getByTestId("itinerary-day").getByTestId("itinerary-stop");
+      await phoneStops.first().getByRole("button", { name: /^Details for / }).tap();
       await expect(p.getByTestId("mobile-place-sheet")).toBeVisible();
       await expect(p.getByTestId("mobile-map-sheet")).toHaveCount(0);
       await p.getByTestId("mobile-place-sheet").getByRole("button", { name: "Close" }).click();
       await expect(p.getByTestId("mobile-place-sheet")).toHaveCount(0);
-      await expect(overlay).toBeVisible();
       await expect(p.getByTestId("mobile-map-sheet")).toHaveCount(0);
-      // Close folds it back into the card, which keeps the swap; Escape closes it too.
-      await full.getByRole("button", { name: "Close Rome" }).tap();
-      await expect(overlay).toHaveCount(0);
-      await expect(card).not.toHaveAttribute("data-detail", "open");
-      await expect(card.getByTestId("itinerary-summary")).toContainText(`stay at ${pickName}`);
-      await expect(card.getByRole("button", { name: "Itinerary for Rome" })).toBeFocused();
-      await card.getByRole("button", { name: "Itinerary for Rome" }).tap();
-      await expect(overlay).toBeVisible();
-      await p.keyboard.press("Escape");
-      await expect(overlay).toHaveCount(0);
+      await card.getByRole("button", { name: "Click to edit" }).tap();
+      const first = await nameOf(phoneStops.first());
+      await phoneStops.first().getByRole("button", { name: `Move ${first} later` }).tap();
+      await expect(phoneStops.nth(1).getByRole("button", { name: `Details for ${first}` })).toBeVisible();
     } finally {
       await phone.close();
     }
   });
 });
 
-/** A city asked for by name gets its own curated card, like a country's cities, not a package or a written itinerary. */
-test("a city trip request answers with that city's curated card, opened as the plan workspace", async ({ page }) => {
+/** A city asked for by name gets its own itinerary card, not a package or a written itinerary. */
+test("a city trip request answers with that city's itinerary on its card, and the chat keeps working under it", async ({ page }) => {
   await signup(page, { email: uniqueEmail("city"), cuisines: ["Italian"] });
   await goToChat(page);
   await sendChat(page, "Plan me a trip to Rome");
 
   const cards = page.getByTestId("destination-card");
   await expect(cards).toHaveCount(1, { timeout: 40_000 });
+  await expect(page.getByTestId("city-card")).toHaveCount(0);
   const rome = cards.first();
-  await expect(rome).toContainText("Curated for you");
-  await expect(rome.getByTestId("itinerary-summary")).toContainText(/\d-day itinerary · stay at /, { timeout: 40_000 });
-  await expect(page.getByText(/Open the card for the days and the map/)).toBeVisible({ timeout: 30_000 });
+  await expect(rome.getByRole("heading", { name: "Your Rome itinerary", level: 3 })).toBeVisible();
+  await expect(rome.getByTestId("itinerary-day")).toContainText("Day 1", { timeout: 40_000 });
+  await expect(page.getByText(/The days are on the card/)).toBeVisible({ timeout: 30_000 });
   await expect(page.getByTestId("package-card")).toHaveCount(0);
   await expect(page.getByTestId("trip-proposal")).toHaveCount(0);
 
-  // Clicking the photo opens it, like the Itinerary control.
+  // The photo puts the city's plan on the map.
   await rome.getByRole("button", { name: "Open Rome, Italy" }).click();
-  const detail = page.getByTestId("card-detail");
-  await expect(detail.getByRole("heading", { name: "Rome", level: 2 })).toBeVisible();
-  await expect(detail.getByTestId("itinerary-plan")).toContainText("Day 1", { timeout: 40_000 });
+  await expect(page.getByTestId("map-header")).toContainText("Day 1 of your itinerary");
 
-  // The chat beside the plan keeps working, and the plan stays open while it answers.
+  // The chat keeps working under the card, and the card stays as it was.
   await sendChat(page, "Find hotels in Rome for me");
   await expect(chatColumn(page).getByText("Where to stay in Rome")).toBeVisible({ timeout: 40_000 });
   await expect(chatColumn(page).getByRole("button", { name: "Rate Hotel Artemide" })).toBeVisible();
-  await expect(page.getByTestId("plan-workspace")).toBeVisible();
-  await expect(detail.getByTestId("itinerary-plan")).toBeVisible();
+  await expect(rome.getByTestId("itinerary-day")).toBeVisible();
 });

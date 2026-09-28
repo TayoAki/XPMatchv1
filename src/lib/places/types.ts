@@ -67,6 +67,12 @@ export interface MapPlace extends ResolvedPlace {
   toolCallId: string;
   /** The destination whose recommendation set this pin belongs to (a city selected from a card). */
   scope?: string;
+  /** An itinerary stop's number on its day, drawn inside the pin. */
+  badge?: string;
+  /** The day's color for a numbered stop. */
+  color?: string;
+  /** Group name for the accessible pin list ("Day 2", "Where you'll stay"). */
+  group?: string;
 }
 
 export interface ResolveRequestItem {

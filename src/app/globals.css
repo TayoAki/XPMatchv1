@@ -88,6 +88,8 @@ body {
 /* Chat surface tweaks so the CopilotKit chat blends with the shell: its dark accents take the brand teal. */
 .xp-chat [data-copilotkit] {
   --cpk-default-font-family: var(--font-app);
+  /* The conversation and the composer run wider than CopilotKit's 48rem, so an itinerary card has room for its header on one line. */
+  --cpk-container-3xl: 54rem;
   --cpk-color-zinc-900: var(--xp-brand);
   --cpk-color-zinc-800: var(--xp-brand-hover);
   --cpk-color-gray-800: var(--xp-brand);

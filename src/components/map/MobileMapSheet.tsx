@@ -1,7 +1,7 @@
 "use client";
 
 import { photoCreditTitle } from "@/components/ui/PhotoCredit";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import clsx from "clsx";
 import { Map as MapIcon, Star } from "lucide-react";
 import { mapActions, useMapView } from "@/lib/map-store";
@@ -11,7 +11,6 @@ import { GoogleMap } from "./GoogleMap";
 import { MapFilters } from "./MapFilters";
 import { PinStrip } from "./PinStrip";
 import { PlaceDetailSheet } from "./PlaceDetailSheet";
-import { useDetailCardMounted } from "./detailSlot";
 import { iconSvg } from "./markerIcons";
 import { shortPlaceName } from "@/lib/places/names";
 
@@ -20,26 +19,27 @@ import { shortPlaceName } from "@/lib/places/names";
  * while the conversation has pins; the sheet holds the map with the shared category filter and
  * the pinned list under it, and a pin (or a recommendation row on a card) opens the place detail
  * as a second sheet stacked on top. Closing the place returns to the map, closing the map returns
- * to the same spot in the chat. With a destination card expanded over the page, a place opened
- * from its plan stacks straight over the plan, and closing it returns there.
+ * to the same spot in the chat. A place opened from an itinerary card opens on its own, and
+ * closing it returns to the card.
  */
 export function MobileMapSheet() {
   const wide = useMediaQuery("(min-width: 1280px)");
   const view = useMapView();
-  const planOpen = useDetailCardMounted(view.detail) && !!view.detail;
   const [opened, setOpened] = useState(false);
   const [snap, setSnap] = useState<SheetSnap>("half");
-  const { threadId, focus, visiblePlaces, activeDestination, filter, selectedKey, hoveredKey, selected } = view;
+  const { threadId, focus, visiblePlaces, activeDestination, filter, selectedKey, hoveredKey, selected, route } = view;
   const onSelect = useCallback((key: string) => threadId && mapActions.selectPlace(threadId, key), [threadId]);
   const onHover = useCallback((key: string | null) => mapActions.setHovered(key), []);
+  const routes = useMemo(() => (route && activeDestination?.id === route.scope && filter === "all" ? [route] : undefined), [route, activeDestination, filter]);
   if (wide || !view.hasContent) return null;
 
   const count = visiblePlaces.length;
   const label = count ? `Map · ${count} pinned` : "Map";
   const cityName = activeDestination?.name ?? focus?.name;
   // Selecting a place from a card opens the sheets too; the map panel's own "hide" closes them.
-  // An expanded plan keeps the map sheet away (the plan has its own day maps).
-  const open = !planOpen && (opened || !!selected) && !view.collapsed;
+  // A place opened from an itinerary card comes up alone, over the card.
+  const fromCard = !!selected && view.selectedFrom === "card";
+  const open = (opened || (!!selected && !fromCard)) && !view.collapsed;
 
   const show = () => {
     if (threadId) mapActions.setCollapsed(threadId, false);
@@ -51,7 +51,7 @@ export function MobileMapSheet() {
     if (threadId) mapActions.selectPlace(threadId, null);
   };
   const closePlace = () => {
-    if (!planOpen) setOpened(true);
+    if (!fromCard) setOpened(true);
     if (threadId) mapActions.selectPlace(threadId, null);
   };
 
@@ -69,7 +69,7 @@ export function MobileMapSheet() {
       <BottomSheet open={open} onClose={close} snap={snap} onSnapChange={setSnap} testId="mobile-map-sheet" label="Map" title={cityName ? `Explore ${cityName} · ${count} pinned` : label}>
         <div className="flex h-full min-h-0 flex-col">
           <div className={clsx("shrink-0", snap === "full" ? "h-[40dvh]" : "h-[200px]")} data-testid="map-panel">
-            <GoogleMap focus={focus} pins={visiblePlaces} selectedKey={selectedKey} hoveredKey={hoveredKey} onSelect={onSelect} onHover={onHover} />
+            <GoogleMap focus={focus} pins={visiblePlaces} routes={routes} selectedKey={selectedKey} hoveredKey={hoveredKey} onSelect={onSelect} onHover={onHover} />
           </div>
           {threadId ? (
             <div className="flex shrink-0 items-center gap-2 overflow-x-auto px-3 pt-2 xp-no-scrollbar">

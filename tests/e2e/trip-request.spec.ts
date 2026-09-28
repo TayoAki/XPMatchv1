@@ -38,9 +38,12 @@ test("trip request: a country answers with city cards; the Where chip belongs to
 
   await test.step("a trip to a country answers with its cities as cards, and the chip follows", async () => {
     await sendChat(page, "plan me a trip to korea");
-    const cards = page.getByTestId("destination-card");
-    await expect(cards).toHaveCount(3, { timeout: 40_000 });
-    for (const city of ["Seoul", "Busan", "Jeju"]) await expect(cards.filter({ hasText: city })).toHaveCount(1);
+    const cities = page.getByTestId("city-card");
+    await expect(cities).toHaveCount(3, { timeout: 40_000 });
+    for (const city of ["Seoul", "Busan", "Jeju"]) await expect(cities.filter({ hasText: city })).toHaveCount(1);
+    // The first city's itinerary shows under the row; the others wait until picked.
+    await expect(page.getByTestId("destination-card").filter({ hasText: "Your Seoul itinerary" })).toBeVisible();
+    await expect(page.getByTestId("destination-card").filter({ hasText: "Your Busan itinerary" })).toBeHidden();
     await expect(where).toHaveText("South Korea", { timeout: 20_000 });
     await expect(page.getByTestId("map-header")).toContainText("Explore South Korea");
     await expect(page.locator(".xp-chat").getByText(/Assuming about a week/)).toBeVisible({ timeout: 30_000 });

@@ -36,6 +36,7 @@ export function CardRow({
   label,
   className,
   wide = false,
+  compact = false,
 }: {
   items: CardRowItem[];
   kind?: PlaceKind;
@@ -43,6 +44,8 @@ export function CardRow({
   className?: string;
   /** Twice the width from tablet up (capped at the row), for cards that lay the photo beside the details. */
   wide?: boolean;
+  /** Narrow cards that pick one of a set (a city whose itinerary shows below the row). */
+  compact?: boolean;
 }) {
   const { recFeedback } = useTravelStore();
   const ordered = useMemo(
@@ -58,7 +61,7 @@ export function CardRow({
   return (
     <Carousel label={label} className={clsx("mt-2", className)} itemGap="gap-3" bleed={false} testId="card-row" flipKey={ordered.map((o) => o.item.id).join("|")}>
       {ordered.map(({ item, verdict }) => (
-        <div key={item.id} data-flip-key={item.id} data-verdict={verdict ?? ""} className={clsx("flex w-[300px] shrink-0 snap-start", wide ? "sm:w-[min(680px,100%)]" : "sm:w-[340px]")}>
+        <div key={item.id} data-flip-key={item.id} data-verdict={verdict ?? ""} className={clsx("flex shrink-0 snap-start", compact ? "w-[210px]" : clsx("w-[300px]", wide ? "sm:w-[min(680px,100%)]" : "sm:w-[340px]"))}>
           <div className={clsx("flex w-full transition-[opacity,filter] duration-500 [&>*]:w-full", verdict === "down" && "opacity-55 saturate-50")}>{item.node}</div>
         </div>
       ))}
@@ -132,6 +135,7 @@ export function CardPhoto({
   className,
   children,
   onOpen,
+  creditClassName,
 }: {
   place?: ResolvedPlace;
   queries: string[];
@@ -139,6 +143,8 @@ export function CardPhoto({
   className?: string;
   children?: ReactNode;
   onOpen?: () => void;
+  /** Where the photo's author credit sits (bottom left by default). */
+  creditClassName?: string;
 }) {
   const [failed, setFailed] = useState<string | null>(null);
   const src = place?.photos?.[0];
@@ -152,7 +158,7 @@ export function CardPhoto({
       <div {...openProps} className={clsx("relative overflow-hidden bg-neutral-200", onOpen && "cursor-pointer", className)}>
         {/* eslint-disable-next-line @next/next/no-img-element -- proxied Places photo */}
         <img src={src} alt={alt} onError={() => setFailed(src)} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
-        <PhotoCredit credit={place?.photoCredits?.[0]} />
+        <PhotoCredit credit={place?.photoCredits?.[0]} className={creditClassName} />
         {children}
       </div>
     );

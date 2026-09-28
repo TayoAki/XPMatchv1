@@ -131,9 +131,9 @@ scheduling chip open the itinerary board as a full-height sheet (short map, then
    to Korea" plans Korea whatever the planner or an upcoming trip says. The assistant answers with cards, not questions: what is missing
    (dates, length, who is going) it assumes from the planner and the profile, then says so in one
    sentence under the cards ("Assuming about a week for two with flexible dates"). Every trip request
-   answers with the same **Curated for you** destination cards, each a complete itinerary (below): a
-   country or a large region comes back as three or four city cards at once (Seoul, Busan, Jeju), and
-   a city asked for by name ("plan me a trip to Dallas", "4 days in Lisbon") as that one city's card.
+   answers with its itinerary right in the chat (below): a country or a large region comes back as a
+   row of three or four city cards (Seoul, Busan, Jeju) above the itinerary of the one picked, and a
+   city asked for by name ("plan me a trip to Dallas", "4 days in Lisbon") as that city's itinerary card.
    The assistant writes the days itself (`create_trip`, a proposal to confirm) only when the traveler
    asks it to write or change them, or when a card could not build an itinerary.
 2a. **The package** — asked for by name ("build me a package for Rome"), the assistant shows one
@@ -189,21 +189,27 @@ scheduling chip open the itinerary board as a full-height sheet (short map, then
    Judgments are stored per place, lower the score of a pick the traveler already passed on, dampen
    factors that keep misleading them (calibration), and reach the assistant as "Recommendation
    feedback" so it never re-recommends a recent miss and corrects for repeated reasons.
-   **Destination cards** are each a complete itinerary built for this traveler. The photo face (city
-   name, region, a one-line tagline, the plan in a line such as "4-day itinerary · stay at Josun
-   Palace", the plan's match badge and thumbs, "Curated for you" when the pick is tied to the profile)
-   opens into the card in full, **Built for you**: "Your match" with the reasons most of the plan
-   shares, why the city fits, Itinerary / Stays / Activities / Dining tabs, then quick facts
-   (suggested stay, city feel, known for, best season). The **Itinerary** tab is the plan: where
-   they'll stay, then Day 1…N, each stop with its time, photo, short name, category, a one-line why and
-   its match score, lunch and dinner near that day's stops. The other tabs list this traveler's scored
-   picks for the city. Hover never changes the card. From 1280 px up it says "Click to open your
-   itinerary" and a click opens the plan workspace (below). Below 1280 px ("Tap to open your
-   itinerary" on a phone) a tap or click on the photo, the name or the **Itinerary** control expands
-   the card out over the whole page into the same full plan: day maps, swaps, Not a fit, moves, the
-   tabs and Make itinerary and Save. A place opened from it (a stop, a row, Explore city details) stacks
-   over the plan as a sheet, and closing that returns to the plan. The close button, or Escape, folds
-   the plan back into its card in the chat, with every change kept; the chat waits underneath.
+   **Destination cards: the itinerary on one page.** Each is the complete itinerary built for this
+   traveler, shown whole in the chat. On top, the city's photo with its name and country (and the
+   thumbs); then **Your {city} itinerary** with the plan's match badge ("Good match · 79%", its "Why
+   this score" panel listing the reasons most of the plan shares), a line with the plan's length, the
+   planner's dates and travelers ("5 days · 2 travelers"), and two actions, **Click to edit** and
+   **Save**. Under them, **Where you'll stay** (photo, short name, what it is, **Details & reviews**),
+   then a tab per day (**Day 1**, **Day 2**…; the arrow keys move between them) and the day on show:
+   "Day 1 · Colosseum · Roman Forum", its number of stops, and each stop in order with its number,
+   photo, time, short name and what it is ("Garden · Nature & hiking", "Lunch · Italian"), with
+   **Details & reviews**. When several cities come back, they sit in a row above as small cards
+   (photo, name, tagline, match, thumbs, ordered by the thumbs); the first one's itinerary shows, and
+   picking another shows its itinerary instead (each is built only once it is picked).
+   Choosing a day, opening a place, Click to edit or the photo makes the city the one on the map
+   beside the chat: "Explore {city}", "Day 2 of your itinerary · 3 stops", the stay and that day's
+   stops as numbered pins with the day's route through them (phones show the same in the map sheet).
+   **Details & reviews** opens the place there, over the map (on a phone, as a sheet over the chat
+   that closes back to the card): photos, rating, its match score with **Good fit / Not a fit**, the
+   overview with the traveler reviews line, the Reviews and Location tabs, Save and Add to trip. The
+   stop and its pin are marked, another stop switches the place, and the close button or Escape
+   closes it. A city the catalog cannot fill yet says "Not enough places here yet to plan the days"
+   with its three highlights to search for and **Ask the concierge**.
    The **itinerary builder** (`POST /api/itineraries`, one lookup from the daily budget, built when the
    card scrolls into view and kept for the session) works from the place catalog, seeding a city it
    has never seen. It scores every stay, thing to do and place to eat with the match model (profile,
@@ -214,54 +220,39 @@ scheduling chip open the itinerary board as a full-height sheet (short map, then
    and sets times by the day rhythm (early days start 08:30, late ones 10:30). The days are the
    planner's dates when set, otherwise the card's suggested stay, at most a week; the card's score is
    the plan's average.
-   **The plan workspace** (from 1280 px wide): clicking a card (its photo, name or Itinerary) puts its
-   plan in the center of the screen and moves the chat into a column on the right, where it stays
-   readable and keeps working (typing there, or the next answer's cards, leave the plan open). The
-   chat column widens while the traveler is in it (a click or the focus in the conversation or its
-   composer) and narrows again as soon as they work on the plan; a plan opens with it narrow, and a
-   place open in it keeps it narrow. The
-   workspace has a wide photo with the name, tagline and "Curated for you", the plan in a line, Your
-   match, the tabs, quick facts, then **Make itinerary** and **Save**; the card in the chat gets a teal
-   outline and "Open next to the chat". On the **Itinerary** tab come "Where you'll stay" and then a
-   card per day ("Day 2 · Vatican Museums · St. Peter's Basilica", its number of stops, **Map**).
-   A day's Map opens that day's own map on top of its stops: the stay and the day's stops numbered like
-   the list, with the walk between them. One day's map is open at a time (Day 1 to begin with), so the
-   plan loads one map, not one per day. Every place in the plan shows its time, photo, short name,
-   category, rating, why it fits and its match score, with three things to do:
+   **Click to edit** (it turns into **Done editing**) makes every place of the plan something to work
+   on, each showing its time, photo, short name, category, rating, why it fits and its match score:
    - **Swap**: three ready alternates of the same kind that the plan does not use yet (near that stop,
      each with its photo, category, reason and score); **Use this** puts one in that slot, at the same
      time, and the place it replaced becomes the first option, so a swap can be undone. A place the
      plan already has elsewhere or one marked not a fit is never offered. Under the options, **See all
-     stays** (or things to do, restaurants) opens that tab to choose from every place of its kind:
-     "Choose a stay to replace Hotel Artemide · Cancel", with **Use as my stay** (or **Use this**) on
-     each row, "Your stay" on the current one and "In your plan" on places the plan already has.
-     Choosing returns to the Itinerary tab with the new place highlighted and a "Swapped in" tag.
-     The Stays tab always offers **Use as my stay**, and so does a hotel's own panel ("Your stay in the
-     Rome plan" on the current one); while a stop is being replaced, a place's panel offers **Use
-     instead of {stop}**.
+     stays** (or things to do, restaurants) lists every place of its kind on the card, in place of the
+     day: "Choose a stay to replace Hotel Artemide · Cancel", with **Use as my stay** (or **Use this**)
+     on each row, "Your stay" on the current one and "In your plan" on places the plan already has; a
+     row opens its place's panel, and the map shows the places to choose from. Choosing brings the day
+     back with the new place highlighted and a "Swapped in" tag. A hotel's own panel always offers
+     **Use as my stay** ("Your stay in the Rome plan" on the current one); while a stop is being
+     replaced, a place's panel offers **Use instead of {stop}**.
    - **Good pick / Miss** thumbs: a miss (Not a fit) swaps the place for its first alternate that is
-     not a miss too, on the spot, without rebuilding the rest of the days.
-   - **Move**: a day's stops can be put in any order. Drag one by its handle (within the day or onto
-     another day's stop or list), move it a step with the arrows around its number (at a day's edge
-     a step crosses into the day before or after), or send it to another day with its **Day** picker
-     (it goes to the end of that day). The day is re-timed from its first start, back to back with 20
-     minutes between stops, a meal never earlier than it was planned for; the numbers, the day's map
-     and its title follow, and so does Make itinerary. The keyboard works too (the handle, Space,
-     the arrow keys, Space).
-   - **Details & reviews** (or a click on its name, or its pin on the day's map) opens the place in
-     the column on the right, over the chat, so the plan stays in view beside it: photos, rating, its
-     match score with **Good fit / Not a fit**, the overview with the traveler reviews line, the
-     Reviews and Location tabs, Save and Add to trip. The stop and its pin are marked in the plan, and
-     picking another stop or pin switches the place. **Back to chat** returns to the conversation
-     (so does asking one of the panel's follow-up questions, to show the answer); a place marked Not a
-     fit here leaves the plan and its panel closes with its replacement in the plan.
-   The plan line ("stay at …"), the day titles, the score, the card in the chat and Make itinerary all
-   follow the swaps and moves. The Stays, Activities and Dining tabs list the traveler's scored picks for the city;
-   a row opens its place the same way. Escape goes back from a place (from the plan or the place's
-   panel), then closes the plan (not while typing in the chat); so does the close button, which gives
-   the chat its full width back. Below
-   1280 px there is no workspace: the Itinerary control turns the card over in place, and every row of
-   the plan there has its own Swap button (the same options and See all).
+     not a miss too, on the spot, without rebuilding the rest of the days (also from the place's panel,
+     outside edit mode: its panel closes with the replacement in the plan).
+   - **Move**: a day's stops can be put in any order. Drag one by its handle (within the day, or onto
+     another day's tab to send it to the end of that day), move it a step with the arrows around its
+     number (at a day's edge a step crosses into the day before or after), or send it to another day
+     with its **Day** picker (it goes to the end of that day); the tabs follow a stop moved to another
+     day. The day is re-timed from its first start, back to back with 20 minutes between stops, a meal
+     never earlier than it was planned for; the numbers, the map's pins and the day's title follow. The
+     keyboard works too (the handle, Space, the arrow keys, Space).
+   **Save** keeps the plan as it stands, with the chat and as a trip, in one click (no picker): a trip
+   "{n} days in {city}" with the stay first on day 1, every stop with its place, time and note, the
+   planner's dates and travelers when set. The plan itself is stored with the chat and the card it came
+   from (`chat_plans`, `GET/PUT /api/chats/[threadId]/plans`), so reopening the chat shows that plan,
+   swaps and order included, instead of building a new one. The button then reads **Saved**, the plan's
+   line adds **In your trips** (the trip page), the chat is filed under the trip in the side rail
+   ("Exploring Rome · 3 days in Rome"), the trip becomes the conversation's trip (a small tray on the
+   map: title, nights or "Dates flexible", travelers, View trip) and the chat opens as that trip's chat.
+   A change after saving turns the button into **Save changes**, which updates the same trip's days.
+   Deleting the trip deletes the saved plan with it; deleting the chat deletes its saved plans.
    **Traveler reviews.** Every real place's panel (beside the plan, over the map or in a phone sheet)
    carries what travelers on XPMatch say about it. The overview has one line: "3 traveler reviews · 2
    verified", "Loved by 2 verified travelers like you" and **Read reviews**, or "No traveler reviews
@@ -284,19 +275,9 @@ scheduling chip open the itinerary board as a full-height sheet (short map, then
    - **Reading.** Their own review first ("You"), then verified reviews, then those by travelers who
      **travel like them** (at least one interest, cuisine, kind of stay or travel style in common, and
      enough overall with budget, company and pace), newest first. Reviewers show as "Tayo A.".
-   Selecting a card makes it the active city: once it is closed, the map header reads
-   "Explore {city}" with its recommended places behind one **All / Stays / Dining / Experiences**
-   filter that the card's tabs mirror (a card opens on the tab the filter shows); a row shows that
-   exact place on the map and opens its panel (with its own Save and Add to trip); "All places" returns
-   to the whole conversation. Every card ends in the same two actions: **Make itinerary** (filled) and
-   **Save** (outlined). Make itinerary saves the plan as a trip, "{n} days in {city}", in one click (no
-   picker, no extra lookups): the stay first on day 1, every stop with its place, time and note, the
-   planner's dates and travelers when set; the trip becomes the conversation's trip and the button
-   turns into **Open itinerary**. A city the catalog cannot fill yet says "Not enough places here yet to
-   plan the days", and Make itinerary asks the concierge for the days instead. Hotel, restaurant and
-   attraction cards keep **Add to trip** for a single place: a traveler with no trip yet gets "Trip to
-   {city}" created and the item added in one step. The trip a conversation adds to is remembered and
-   shown as a small tray on the map (title, nights or "Dates flexible", travelers, View trip).
+   **All places** on the map returns it to the whole conversation. Hotel, restaurant and attraction
+   cards keep **Add to trip** for a single place: a traveler with no trip yet gets "Trip to {city}"
+   created and the item added in one step.
 4. **Understood as (smart filters)** — when the request carries criteria ("a quiet hotel under $250 a night
    with a pool and good vibes"), the assistant first shows a chip strip: dark chips are must-haves, light
    ones preferences, and "Not applied: 'good vibes'" lists what could not be mapped. Removing a chip, adding

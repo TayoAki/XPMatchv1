@@ -1,24 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import clsx from "clsx";
 import { TravelChat } from "@/components/chat/TravelChat";
 import { MobileMapSheet } from "@/components/map/MobileMapSheet";
-import { PlaceDetailSheet } from "@/components/map/PlaceDetailSheet";
 import { TripBoardSheet } from "@/components/trips/TripBoardSheet";
 import { RightPanel } from "@/components/panel/RightPanel";
-import { PlanOverlay } from "@/components/panel/PlanOverlay";
 import { useUiState } from "@/components/providers/UiState";
 import { TripScopeProvider } from "@/components/trips/TripScope";
-import { useDetailCardMounted } from "@/components/map/detailSlot";
 import { useTravelStore } from "@/lib/store";
-import { mapActions, useMapView } from "@/lib/map-store";
 import { useMediaQuery } from "@/lib/use-media-query";
 
 /**
- * The concierge page (`/chat`): the active chat (history lives in the side rail) and the
- * discovery/map panel; with a plan open, the plan in the center and the chat on the right, where a
- * place picked in the plan opens beside it.
+ * The concierge page (`/chat`): the active chat (history lives in the side rail), where a trip
+ * request answers with its whole itinerary on the card, and the discovery/map panel beside it,
+ * where the itinerary's day and any place opened from it show.
  */
 export function HomeClient({ threadId, initialPrompt, tripId }: { threadId?: string; initialPrompt?: string; tripId?: string }) {
   const { newChatNonce } = useUiState();
@@ -29,76 +23,16 @@ export function HomeClient({ threadId, initialPrompt, tripId }: { threadId?: str
   // A reopened chat keeps the trip it was started from.
   const effectiveTripId = tripId ?? (threadId ? chats.find((c) => c.id === threadId)?.tripId : undefined) ?? null;
   const chatKey = threadId ?? `new-${newChatNonce}-${tripId ?? ""}`;
-  // A destination card opened in full becomes the workspace: the plan takes the center and the
-  // chat moves to the right as a side panel, still live for asking about the plan. The columns only
-  // swap places (CSS order), so the conversation is never remounted.
-  const view = useMapView();
-  const cardOnScreen = useDetailCardMounted(view.detail);
-  const workspace = wide && !!view.detail && cardOnScreen;
-  // Without the side column the card expands over the page instead; the chat waits underneath.
-  const expanded = !wide && !!view.detail && cardOnScreen;
-  // A place picked in the plan (a stop, a pin on a day's map) opens in this column, over the
-  // conversation, so the itinerary and the place are on screen together; Back returns to the chat,
-  // which stays mounted underneath.
-  const sidePlace = workspace && view.selectedKey ? view.selected : null;
-  const threadOnScreen = view.threadId;
-  const backToChat = useCallback(() => {
-    if (threadOnScreen) mapActions.selectPlace(threadOnScreen, null);
-  }, [threadOnScreen]);
-  // Beside a plan the chat widens while the traveler is in it (typing, reading, scrolling) and
-  // narrows again when they work on the plan. It is remembered per plan, so opening a plan, or
-  // another city's from its card in the chat, starts narrow; a place open over it keeps it narrow.
-  const [chatFor, setChatFor] = useState<string | null>(null);
-  const chatWide = workspace && !sidePlace && chatFor !== null && chatFor === view.detail;
-  const planOpen = workspace ? view.detail : null;
-  useEffect(() => {
-    if (!planOpen) return;
-    // Where a press or the focus lands, by the page's layout: the plan is drawn into its column
-    // through a portal, so React's own event bubbling would credit the chat with it.
-    const onEnter = (e: Event) => {
-      const el = e.target instanceof Element ? e.target : null;
-      if (!el) return;
-      if (el.closest('[data-testid="plan-workspace"]')) setChatFor(null);
-      else if (el.closest('[data-testid="chat-column"]') && !el.closest('[data-testid="side-place"]')) setChatFor(planOpen);
-    };
-    document.addEventListener("pointerdown", onEnter, true);
-    document.addEventListener("focusin", onEnter, true);
-    return () => {
-      document.removeEventListener("pointerdown", onEnter, true);
-      document.removeEventListener("focusin", onEnter, true);
-    };
-  }, [planOpen]);
   return (
     <TripScopeProvider tripId={effectiveTripId}>
       <div className="flex h-full min-h-0">
-        <section
-          className={clsx(
-            "relative flex min-w-0 flex-col",
-            workspace
-              ? clsx("order-2 shrink-0 border-l border-border/60 transition-[width] duration-300 ease-out motion-reduce:transition-none", chatWide ? "w-[clamp(440px,42vw,760px)]" : "w-[clamp(360px,27vw,440px)]")
-              : "flex-1",
-          )}
-          data-testid="chat-column"
-          data-side={workspace || undefined}
-          data-wide={chatWide || undefined}
-        >
-          <div className="flex h-full min-h-0 flex-col" inert={!!sidePlace || expanded} aria-hidden={sidePlace || expanded ? true : undefined}>
-            <TravelChat key={chatKey} threadId={threadId} initialPrompt={initialPrompt} tripId={effectiveTripId ?? undefined} />
-          </div>
-          {sidePlace ? (
-            <div className="absolute inset-0 z-30 bg-white" data-testid="side-place">
-              <PlaceDetailSheet key={view.selectedKey ?? "none"} place={sidePlace} focusName={view.focus?.name} onClose={backToChat} onSent={backToChat} backLabel="Back to chat" />
-            </div>
-          ) : null}
+        <section className="relative flex min-w-0 flex-1 flex-col" data-testid="chat-column">
+          <TravelChat key={chatKey} threadId={threadId} initialPrompt={initialPrompt} tripId={effectiveTripId ?? undefined} />
           <MobileMapSheet />
           <TripBoardSheet />
-          {wide ? null : <PlanOverlay />}
         </section>
         {wide ? (
-          <aside
-            className={clsx("min-w-0 bg-white", workspace ? "order-1 flex-1" : "w-[clamp(360px,30vw,520px)] shrink-0 border-l border-border/60")}
-            data-testid={workspace ? "plan-workspace" : "side-panel"}
-          >
+          <aside className="w-[clamp(360px,30vw,520px)] min-w-0 shrink-0 border-l border-border/60 bg-white" data-testid="side-panel">
             <RightPanel />
           </aside>
         ) : null}
