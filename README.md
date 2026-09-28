@@ -221,7 +221,8 @@ and use place data, and Google's approved routes; `docs/PLACE_DATA_REDESIGN.md` 
 the compliant version; `docs/TERMS_RESEARCH.md` is the checklist of every outside service's terms
 and the laws we still need to check. `docs/REACT_NATIVE_PLAN.md` is the plan for native iOS and
 Android apps (Expo): how the stack works today, what moves to a shared package, the server changes,
-and the build blueprint.
+and the build blueprint. `docs/REBUILD_GUIDE.md` explains how the chat, the one-page itinerary,
+swapping and the map work, in enough detail to rebuild them, and lists the known limits.
 
 ## Getting started
 
