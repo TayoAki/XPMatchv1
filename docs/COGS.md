@@ -7,6 +7,12 @@ reference for what each Google call costs. Explore near you is off for now (Sept
 its rows cost nothing until it returns; a destination's Stays / Restaurants / Things to do tabs still
 use the same nearby search.
 
+**Measured spend:** from September 29, 2026 the server counts every call it pays for (Google by the
+SKU its field mask bills at, photos, routes, map loads, model tokens with OpenRouter's own cost,
+email) and the admin page's **Costs** section prices them with this list (`src/server/pricing.ts`),
+next to OpenRouter's own figure for the key. Before that the only measured figure was OpenRouter's:
+$0.39 for the whole beta to September 28.
+
 Unit costs as the app stood on September 20, 2026 before the catalog, priced against Google's current core-services
 list (per 1,000 calls, with the monthly free calls per SKU: Essentials 10,000, Pro 5,000,
 Enterprise 1,000). Usage assumptions are stated so the model can be re-run with real numbers from the

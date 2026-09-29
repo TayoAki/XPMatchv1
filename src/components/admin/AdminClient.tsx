@@ -4,13 +4,15 @@ import { useEffect, useState, type FormEvent } from "react";
 import clsx from "clsx";
 import { Bug, Database, Sparkles, ThumbsDown, ThumbsUp, Users } from "lucide-react";
 import { api } from "@/lib/api";
-import { QUIZ_FIELD_LABELS, type AdminUser, type BetaStats, type CatalogStats, type PackageStats, type QuizAnswers, type QuizStatus } from "@/lib/admin/types";
+import { QUIZ_FIELD_LABELS, type ActivityReport, type AdminUser, type BetaStats, type CatalogStats, type CostReport, type PackageStats, type QuizAnswers, type QuizStatus } from "@/lib/admin/types";
 import { BUG_SEVERITIES, type BugReport, type BugStatus } from "@/lib/bugs/types";
 import type { RecQuality } from "@/lib/recs/types";
 import { useTravelStore } from "@/lib/store";
 import { PageFrame, EmptyState } from "@/components/PageFrame";
 import { Button } from "@/components/ui/Button";
 import { TextInput } from "@/components/ui/Field";
+import { ActivitySection, CostsSection } from "./Metrics";
+import { Stat } from "./Stat";
 
 type Filter = BugStatus | "all";
 
@@ -25,18 +27,6 @@ function Screenshot({ id }: { id: string }) {
         // eslint-disable-next-line @next/next/no-img-element -- stored report screenshot
         <img src={`/api/bugs/${encodeURIComponent(id)}/screenshot`} alt="Screenshot from the report" className="mt-2 max-h-[420px] rounded-xl border border-border" />
       ) : null}
-    </div>
-  );
-}
-
-function Stat({ label, value, note, testId }: { label: string; value: number; note?: string; testId?: string }) {
-  return (
-    <div className="rounded-2xl border border-border p-4">
-      <div className="text-[12px] text-muted">{label}</div>
-      <div className="mt-1 text-[28px] font-semibold tabular-nums" data-testid={testId}>
-        {value}
-      </div>
-      {note ? <div className="text-[12px] text-muted">{note}</div> : null}
     </div>
   );
 }
@@ -275,6 +265,8 @@ export function AdminClient() {
   const [packages, setPackages] = useState<PackageStats | null>(null);
   const [statsVersion, setStatsVersion] = useState(0);
   const [members, setMembers] = useState<AdminUser[] | null>(null);
+  const [costs, setCosts] = useState<CostReport | null>(null);
+  const [activity, setActivity] = useState<ActivityReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const admin = !!user?.admin;
 
@@ -294,6 +286,21 @@ export function AdminClient() {
       active = false;
     };
   }, [hydrated, admin, statsVersion]);
+
+  useEffect(() => {
+    if (!hydrated || !admin) return;
+    let active = true;
+    api<{ costs: CostReport; activity: ActivityReport }>("/api/admin/metrics")
+      .then((data) => {
+        if (!active) return;
+        setCosts(data.costs);
+        setActivity(data.activity);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [hydrated, admin]);
 
   useEffect(() => {
     if (!hydrated || !admin) return;
@@ -350,7 +357,7 @@ export function AdminClient() {
   }
 
   return (
-    <PageFrame title="Admin" description={`Sign-ups, bug reports from testers and recommendation quality.${version ? ` Build ${version}.` : ""}`}>
+    <PageFrame title="Admin" description={`Sign-ups, activity, costs, bug reports from testers and recommendation quality.${version ? ` Build ${version}.` : ""}`}>
       <section data-testid="beta-stats">
         <h2 className="flex items-center gap-2 text-[19px] font-semibold tracking-tight">
           <Users className="h-5 w-5" /> Beta numbers
@@ -374,6 +381,10 @@ export function AdminClient() {
           </>
         )}
       </section>
+
+      <ActivitySection activity={activity} />
+
+      <CostsSection costs={costs} activeTravelers={activity?.last30Days ?? null} />
 
       <Members users={members} />
 

@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import { queryAll, queryOne } from "./db";
+import { recordActivity } from "./usage";
 
 export const SESSION_COOKIE = "xp_session";
 const SESSION_DAYS = 30;
@@ -90,6 +91,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     [hashToken(token)],
   );
   if (!row) return null;
+  recordActivity(row.id);
   const msLeft = new Date(row.expires_at).getTime() - Date.now();
   if (msLeft < RENEW_BEFORE_DAYS * 86400_000) {
     const expiresAt = new Date(Date.now() + SESSION_DAYS * 86400_000);

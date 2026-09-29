@@ -4,6 +4,7 @@ import { attributesFrom } from "@/lib/places/evidence";
 import { queryAll, queryOne } from "./db";
 import { jsonb } from "./models";
 import { fetchGooglePlaceDetails, photoProxyUrl, placesApiKey, toResolved, type GooglePlace } from "./places";
+import { recordUsage } from "./usage";
 
 /**
  * Place-facts layer: one Place Details call per place per 30 days, shared by
@@ -86,7 +87,10 @@ export async function loadPlace(id: string, hint?: PlaceKind): Promise<StoredPla
     const row = await queryOne<{ facts: unknown; fetched_at: unknown }>("SELECT facts, fetched_at FROM place_facts WHERE place_id = $1", [id]);
     const stored = row ? jsonb<StoredPlace>(row.facts) ?? null : null;
     const age = row ? Date.now() - new Date(String(row.fetched_at)).getTime() : Infinity;
-    if (stored && age < FRESH_MS) return stored;
+    if (stored && age < FRESH_MS) {
+      recordUsage("app", "details_cached");
+      return stored;
+    }
     try {
       return (await fetchAndStore(id, hint ?? stored?.facts.kind)) ?? stored;
     } catch (err) {

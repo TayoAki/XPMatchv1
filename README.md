@@ -111,7 +111,13 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   roster (who signed up, their email, sign-up date, whether they finished the quiz, home city and
   activity), **What people answered** (per-question counts of the quiz answers across onboarded
   profiles: interests, budget, stay types, cuisines and the rest), the reports and recommendation
-  quality. The server also logs one `[xpmatch] db ready` line
+  quality. **Activity** shows travelers active today, in 7 and 30 days and who came back, a column per
+  day, the path from sign-up to a trip and how many answers the assistant gave. **Costs** prices every
+  call the server counts (each Google Places call by the SKU its field mask bills at, photos, routes,
+  map loads, model tokens with OpenRouter's own per-call cost, email) at list price after the free
+  monthly allowances: this month so far, the monthly pace, OpenRouter's own spend for the key, a
+  daily chart, each Google SKU against its allowance, and what the catalog and caches answered
+  without Google. The server also logs one `[xpmatch] db ready` line
   with the user, trip and chat counts at boot, so the deploy log answers "how many users" without
   database access.
 - **Taste profile that learns from reactions** — Rate any place (Loved it / It was fine / Not for me
@@ -266,6 +272,8 @@ Without a model key the app starts in demo mode. Model selection lives in `src/s
 | `EMAIL_FROM` | Sender on the domain verified in Resend (default `XPMatch <no-reply@xpmatchme.com>`). |
 | `RESEND_BASE_URL` | Override Resend's API base URL (the end-to-end suite points it at a stub; never set in production). |
 | `APP_VERSION` | Optional build label attached to bug reports (Railway's `RAILWAY_GIT_COMMIT_SHA` is used when unset). |
+| `HOSTING_MONTHLY_USD` | The hosting plan's monthly price in the admin Costs section (default `20`, Railway Pro's minimum). |
+| `HOSTING_PLAN_LABEL` | Its name there (default `Railway Pro`). |
 
 Note: CopilotKit generates follow-up suggestions with a forced tool call, which Claude Fable 5.1
 rejects; keep `COPILOT_MODEL` on the Opus/Sonnet families.
@@ -349,6 +357,8 @@ src/lib/map-store.ts                         Per-thread map state (focus, pins, 
 src/server/places.ts + src/app/api/places/*  Places API (New) resolution, details, photo proxy
 src/server/catalog.ts + src/lib/places/names.ts   The place catalog: stored places, aliases, fuzzy name match, shared caches
 src/server/seed.ts + src/app/api/admin/seed  List searches that fill a city; the admin Seed city button
+src/server/usage.ts, pricing.ts, metrics.ts  Metering (calls, tokens, active days), list prices, the admin Costs and Activity reports
+src/components/admin/*                       The admin page: sections, stat tiles, daily charts, allowance meters
 src/server/packages.ts + src/app/api/packages/*   Package builder (variants, alternates, coherence) and the events log
 src/server/package-learning.ts               Calibration from package events and the admin package numbers
 src/components/chat/cards/PackageCard.tsx    The package card (on request): variants, swap, lock, narrowing, Make itinerary

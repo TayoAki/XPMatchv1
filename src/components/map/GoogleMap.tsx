@@ -238,6 +238,8 @@ export function GoogleMap({
           clickableIcons: false,
           gestureHandling: "greedy",
         });
+        // Each map created is one Dynamic Maps load on Google's bill; the admin page counts them.
+        void fetch("/api/usage/map", { method: "POST", keepalive: true }).catch(() => undefined);
         setStatus("ready");
       })
       .catch((err: unknown) => {

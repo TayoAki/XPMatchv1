@@ -37,9 +37,9 @@ async function streamReply(res, { text, toolCall }) {
       sse(res, chunk({ tool_calls: [{ index: 0, function: { arguments: args.slice(i, i + 24) } }] }));
       await new Promise((r) => setTimeout(r, 8));
     }
-    sse(res, chunk({}, "tool_calls", { usage: { prompt_tokens: 100, completion_tokens: 40, total_tokens: 140 } }));
+    sse(res, chunk({}, "tool_calls", { usage: { prompt_tokens: 100, completion_tokens: 40, total_tokens: 140, cost: 0.000039 } }));
   } else {
-    sse(res, chunk({}, "stop", { usage: { prompt_tokens: 100, completion_tokens: 20, total_tokens: 120 } }));
+    sse(res, chunk({}, "stop", { usage: { prompt_tokens: 100, completion_tokens: 20, total_tokens: 120, cost: 0.000027 } }));
   }
   res.write("data: [DONE]\n\n");
   res.end();
@@ -175,6 +175,19 @@ const server = http.createServer((req, res) => {
     if (req.method === "GET" && req.url?.startsWith("/api/v1/models")) {
       res.writeHead(200, { "Content-Type": "application/json" });
       return res.end(JSON.stringify({ data: [{ id: "mock/model" }] }));
+    }
+    // The key's own spend, as OpenRouter reports it (the admin page's Costs section reads it).
+    if (req.method === "GET" && req.url?.startsWith("/api/v1/key")) {
+      if (!/^Bearer sk-or-/.test(req.headers.authorization || "")) {
+        res.writeHead(401, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ error: { message: "missing bearer" } }));
+      }
+      res.writeHead(200, { "Content-Type": "application/json" });
+      return res.end(
+        JSON.stringify({
+          data: { label: "e2e", usage: 1.2345, usage_daily: 0.0123, usage_weekly: 0.1234, usage_monthly: 0.5678, limit: null, limit_remaining: null, is_free_tier: false },
+        }),
+      );
     }
     if (req.method !== "POST" || !req.url?.startsWith("/api/v1/chat/completions")) {
       res.writeHead(404);

@@ -1401,7 +1401,7 @@ taste".
 
 ## 15. Data model
 
-26 tables in `src/server/schema.ts`. Migrations run in order the first time a process touches the
+28 tables in `src/server/schema.ts`. Migrations run in order the first time a process touches the
 database, are recorded in `schema_migrations`, and use `IF NOT EXISTS` so they can run again. With
 `DATABASE_URL` set the app uses Postgres (a pool of 5, SSL when the URL asks for it or `PGSSL=true`);
 without it, PGlite in `.data/pglite`.
@@ -1434,12 +1434,14 @@ without it, PGlite in `.data/pglite`.
 | | `search_cache` | List search results, 24 hours |
 | | `photo_urls` | Resolved photo addresses, 24 hours |
 | | `place_facts` | Full details and reviews, 30 days |
+| Metering | `usage_daily` | Calls, tokens and cost per UTC day, provider and SKU, including what the catalog and caches answered |
+| | `activity_days` | The UTC days each traveler was signed in |
 
 ---
 
 ## 16. API reference
 
-56 route files under `src/app/api`. "Session" means the handler checks the session; "+ origin" means
+58 route files under `src/app/api`. "Session" means the handler checks the session; "+ origin" means
 writes must also come from the same origin.
 
 | Area | Routes | Access |
@@ -1455,7 +1457,8 @@ writes must also come from the same origin.
 | Guides | `guides`; `guides/{id}` (author edits); `…/save` | Session + origin |
 | Import | `import` (up to 60 s); `import/{id}` | Session + origin |
 | Bugs | `bugs` POST (anyone signed in), GET and `bugs/{id}` (admins), `…/screenshot` (admins) | Session; admin |
-| Admin | `admin/stats`, `admin/users`, `admin/users/{id}/reset`, `admin/quality`, `admin/seed` | Admin |
+| Admin | `admin/stats`, `admin/metrics` (costs and activity), `admin/users`, `admin/users/{id}/reset`, `admin/quality`, `admin/seed` | Admin |
+| Metering | `usage/map` (the browser reports a map load) | Session + origin |
 | Weather | `weather` (Open-Meteo) | No session check in the handler |
 
 ---

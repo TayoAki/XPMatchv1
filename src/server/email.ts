@@ -1,3 +1,5 @@
+import { recordUsage } from "./usage";
+
 /**
  * Outgoing email through Resend's REST API (no SDK: one POST). `RESEND_API_KEY` turns it on;
  * `EMAIL_FROM` is the sender on the verified domain; `RESEND_BASE_URL` exists for the test stub
@@ -37,6 +39,7 @@ export async function sendEmail(mail: OutgoingEmail): Promise<{ id: string }> {
     });
     const data = (await res.json().catch(() => ({}))) as { id?: string; message?: string };
     if (!res.ok) throw new Error(data.message ?? `Resend answered ${res.status}`);
+    recordUsage("resend", "email");
     return { id: data.id ?? "" };
   } finally {
     clearTimeout(timer);

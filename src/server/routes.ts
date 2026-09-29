@@ -1,5 +1,6 @@
 import { estimateLeg, type LatLngLike, type TravelLeg } from "@/lib/itinerary";
 import { placesApiKey } from "./places";
+import { recordUsage } from "./usage";
 
 /**
  * Travel legs between consecutive stops of a day. With a Google key (and
@@ -95,6 +96,8 @@ async function computeRoutes(points: LatLngLike[], mode: TravelMode): Promise<Ro
       console.warn(`[routes] computeRoutes ${res.status}: ${(await res.text()).slice(0, 200)}`);
       return null;
     }
+    // More than 10 waypoints between origin and destination moves a request to the Pro SKU.
+    recordUsage("google", points.length - 2 > 10 ? "compute_routes_pro" : "compute_routes");
     return parseRoutesResponse((await res.json()) as RoutesResponse, points.length - 1, mode);
   } catch (err) {
     console.warn("[routes] computeRoutes failed:", err instanceof Error ? err.message : err);

@@ -1,3 +1,5 @@
+import { recordUsage } from "@/server/usage";
+
 export const dynamic = "force-dynamic";
 
 const WMO: Record<number, string> = {
@@ -38,6 +40,7 @@ export async function GET(request: Request) {
       { signal: AbortSignal.timeout(6000) },
     );
     if (!res.ok) return Response.json({ error: "Weather unavailable" }, { status: 502 });
+    recordUsage("open-meteo", "forecast");
     const data = (await res.json()) as { current?: { temperature_2m: number; weather_code: number } };
     const current = data.current;
     if (!current) return Response.json({ error: "Weather unavailable" }, { status: 502 });

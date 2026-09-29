@@ -3,6 +3,7 @@ import { z } from "zod";
 import { TRAVEL_AGENT_PROMPT } from "@/lib/travel/prompt";
 import { createDemoTravelModel } from "./demo-model";
 import { OPENROUTER_PREFIX, createOpenRouterModel, modelMode, resolveModelSpec } from "./model";
+import { recordUsage } from "./usage";
 
 export { DEFAULT_ANTHROPIC_MODEL, DEFAULT_OPENROUTER_MODEL, DEMO_MODEL, OPENROUTER_PREFIX, modelMode, resolveModelSpec, type ModelMode } from "./model";
 
@@ -85,6 +86,7 @@ const weatherTool = defineTool({
       )) as {
         results?: Array<{ latitude: number; longitude: number; name: string; country?: string; admin1?: string }>;
       };
+      recordUsage("open-meteo", "geocoding");
       const place = geo.results?.[0];
       if (!place) return { error: `Could not find a location matching "${location}".` };
 
@@ -113,6 +115,7 @@ const weatherTool = defineTool({
           precipitation_probability_max: (number | null)[];
         };
       };
+      recordUsage("open-meteo", "forecast");
       const daily = forecast.daily;
       if (!daily) return { error: "No forecast data returned." };
       return {

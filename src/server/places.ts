@@ -14,6 +14,8 @@ import {
   upsertPlaces,
   type CatalogPlace,
 } from "./catalog";
+import { googleSkuFor } from "./pricing";
+import { recordUsage } from "./usage";
 
 /**
  * Server-side place resolution. Uses the Google Places API (New) when a key is
@@ -101,6 +103,9 @@ const DETAIL_FIELDS = [
   "parkingOptions",
   "paymentOptions",
 ].join(",");
+
+/** The field masks above, for the tests that check which SKU each one bills at. */
+export const PLACE_FIELD_MASKS = { search: SEARCH_FIELDS, cardDetails: CARD_DETAIL_FIELDS, idsOnly: IDS_ONLY_FIELDS, details: DETAIL_FIELDS };
 
 export interface GooglePlace {
   id: string;
@@ -221,10 +226,20 @@ async function googleFetch<T>(url: string, init: RequestInit, fieldMask: string)
     const body = await res.text().catch(() => "");
     throw new Error(`Places API ${res.status}: ${body.slice(0, 200)}`);
   }
+  // Billed by the priciest field in the mask; failed calls are not billed.
+  recordUsage("google", googleSkuFor(url, fieldMask));
   return (await res.json()) as T;
 }
 
 /* ---------------------------- caching ---------------------------- */
+
+/**
+ * How a lookup was answered, for the admin page: from this process's memory, from the catalog (a
+ * remembered query or a name match), by a free ids-only search that found a stored place, by
+ * buying a new place's details, or not by Google at all (an estimate).
+ */
+type LookupOutcome = "memory" | "catalog" | "known" | "new" | "fallback";
+const countLookup = (outcome: LookupOutcome) => recordUsage("app", `lookup_${outcome}`);
 
 const searchCache = new Map<string, Promise<ResolvedPlace | null>>();
 const MAX_CACHE = 500;
@@ -295,9 +310,15 @@ async function googleResolve(query: string, kind: PlaceKind, destination?: Resol
   const id = data.places?.[0]?.id;
   if (!id) return null;
   const known = await getCatalogPlace(id);
-  if (known) return freshen(known, kind);
+  if (known) {
+    countLookup("known");
+    return freshen(known, kind);
+  }
   const place = await fetchCardDetails(id, kind);
-  if (place) await upsertPlaces([place], kind === "destination" ? place.id : aliasDestination(destination) || null);
+  if (place) {
+    countLookup("new");
+    await upsertPlaces([place], kind === "destination" ? place.id : aliasDestination(destination) || null);
+  }
   return place;
 }
 
@@ -310,6 +331,7 @@ async function openMeteoGeocode(query: string): Promise<ResolvedPlace | null> {
       { signal: AbortSignal.timeout(6000) },
     );
     if (!res.ok) return null;
+    recordUsage("open-meteo", "geocoding");
     const data = (await res.json()) as {
       results?: { name: string; latitude: number; longitude: number; country?: string; admin1?: string }[];
     };
@@ -358,9 +380,13 @@ function jitter(seed: string, center: LatLng, kind: PlaceKind): LatLng {
 
 export async function resolveDestination(query: string): Promise<ResolvedPlace | null> {
   const key = `dest|${query.trim().toLowerCase()}`;
+  if (searchCache.has(key)) countLookup("memory");
   return remember(searchCache, key, async () => {
     const stored = await catalogLookup(query, "destination", null);
-    if (stored) return stored;
+    if (stored) {
+      countLookup("catalog");
+      return stored;
+    }
     if (placesApiKey()) {
       try {
         const hit = await googleResolve(query, "destination");
@@ -372,6 +398,7 @@ export async function resolveDestination(query: string): Promise<ResolvedPlace |
         console.warn("[places] destination search failed, using fallback:", err instanceof Error ? err.message : err);
       }
     }
+    countLookup("fallback");
     return (await openMeteoGeocode(query)) ?? gazetteerPlace(query);
   });
 }
@@ -382,9 +409,13 @@ export async function resolvePointOfInterest(
   destination: ResolvedPlace | null,
 ): Promise<ResolvedPlace | null> {
   const key = `poi|${kind}|${query.trim().toLowerCase()}|${destination?.id ?? ""}`;
+  if (searchCache.has(key)) countLookup("memory");
   return remember(searchCache, key, async () => {
     const stored = await catalogLookup(query, kind, destination);
-    if (stored) return stored;
+    if (stored) {
+      countLookup("catalog");
+      return stored;
+    }
     if (placesApiKey()) {
       try {
         const hit = await googleResolve(query, kind, destination ?? undefined);
@@ -396,6 +427,7 @@ export async function resolvePointOfInterest(
         console.warn("[places] search failed, using estimate:", err instanceof Error ? err.message : err);
       }
     }
+    countLookup("fallback");
     if (!destination) return null;
     const pos = jitter(query, destination, kind);
     return {
@@ -499,7 +531,10 @@ export async function searchTextPlaces(query: string, kind: PlaceKind, center: L
   const key = listKey("text", kind, query, center, limit, filters);
   // "Open now" changes by the hour, so it never comes from the day-long cache.
   const cached = filters.openNow ? null : await getSearchCache(key, LIST_CACHE_MS);
-  if (cached) return cached.map((p) => ({ ...p, kind }));
+  if (cached) {
+    recordUsage("app", "list_cached");
+    return cached.map((p) => ({ ...p, kind }));
+  }
   const places = await googleTextMany(query, kind, center, limit, filters);
   await upsertPlaces(places);
   if (!filters.openNow) await setSearchCache(key, places);
@@ -561,7 +596,10 @@ export async function searchNearby(
   const hasFilters = !!(effective.priceLevels?.length || effective.minRating || effective.openNow);
   const key = `${category}|${q}|${(effective.priceLevels ?? []).join("+")}|${effective.minRating ?? ""}|${effective.openNow ? "open" : ""}|${center.lat.toFixed(3)}|${center.lng.toFixed(3)}|${limit}`;
   const hit = nearbyCache.get(key);
-  if (hit && Date.now() - hit.at < NEARBY_TTL_MS) return hit.promise;
+  if (hit && Date.now() - hit.at < NEARBY_TTL_MS) {
+    recordUsage("app", "list_cached");
+    return hit.promise;
+  }
   const fetchFresh = async (): Promise<ResolvedPlace[]> => {
     if (q || hasFilters) {
       // Free text or filters: Text Search understands both; category tabs without either use the cheaper Nearby Search.
@@ -581,7 +619,10 @@ export async function searchNearby(
   const promise = (async () => {
     const dbKey = listKey("nearby", category, q, center, limit, effective);
     const cached = effective.openNow ? null : await getSearchCache(dbKey, LIST_CACHE_MS);
-    if (cached) return cached;
+    if (cached) {
+      recordUsage("app", "list_cached");
+      return cached;
+    }
     const places = await fetchFresh();
     await upsertPlaces(places);
     if (!effective.openNow) await setSearchCache(dbKey, places);
@@ -612,10 +653,14 @@ export async function resolvePhotoUri(photoName: string, width: number, fresh = 
   const px = Math.min(Math.max(width, 100), 1600);
   const cacheKey = `${photoName}|${px}`;
   const hit = photoUriCache.get(cacheKey);
-  if (hit && !fresh && Date.now() - hit.at < PHOTO_URI_TTL_MS) return hit.uri;
+  if (hit && !fresh && Date.now() - hit.at < PHOTO_URI_TTL_MS) {
+    recordUsage("app", "photo_cached");
+    return hit.uri;
+  }
   if (!fresh) {
     const stored = await getPhotoUrl(cacheKey, PHOTO_URL_DB_TTL_MS);
     if (stored) {
+      recordUsage("app", "photo_cached");
       rememberPhotoUri(cacheKey, stored);
       return stored;
     }
@@ -623,6 +668,7 @@ export async function resolvePhotoUri(photoName: string, width: number, fresh = 
   const url = `${PLACES_BASE}/${photoName}/media?maxWidthPx=${px}&skipHttpRedirect=true&key=${key}`;
   const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
   if (!res.ok) return null;
+  recordUsage("google", "place_photos");
   const data = (await res.json()) as { photoUri?: string };
   if (!data.photoUri) return null;
   rememberPhotoUri(cacheKey, data.photoUri);

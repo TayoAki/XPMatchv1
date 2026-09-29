@@ -373,4 +373,42 @@ export const MIGRATIONS: Migration[] = [
       )`,
     ],
   },
+  {
+    id: "0011_usage",
+    statements: [
+      // What the server paid for, or would past a free allowance, per UTC day and SKU (Google calls, map loads,
+      // model tokens, email), next to what it answered itself (catalog and cache hits). Priced on the admin page.
+      `CREATE TABLE IF NOT EXISTS usage_daily (
+        day date NOT NULL,
+        provider text NOT NULL,
+        sku text NOT NULL,
+        calls bigint NOT NULL DEFAULT 0,
+        units_in bigint NOT NULL DEFAULT 0,
+        units_out bigint NOT NULL DEFAULT 0,
+        cost_usd double precision NOT NULL DEFAULT 0,
+        updated_at timestamptz NOT NULL DEFAULT now(),
+        PRIMARY KEY (day, provider, sku)
+      )`,
+      // The UTC days each traveler used the app while signed in: daily, weekly and monthly actives, and who came back.
+      `CREATE TABLE IF NOT EXISTS activity_days (
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        day date NOT NULL,
+        PRIMARY KEY (user_id, day)
+      )`,
+      `CREATE INDEX IF NOT EXISTS activity_days_day_idx ON activity_days(day)`,
+      // The days before this table existed, from what travelers left behind: sign-ups, sign-ins, chats, trips, saves, reactions.
+      `INSERT INTO activity_days (user_id, day)
+         SELECT id, (created_at AT TIME ZONE 'UTC')::date FROM users
+         UNION SELECT user_id, (created_at AT TIME ZONE 'UTC')::date FROM sessions
+         UNION SELECT user_id, (created_at AT TIME ZONE 'UTC')::date FROM chats
+         UNION SELECT user_id, (updated_at AT TIME ZONE 'UTC')::date FROM chats
+         UNION SELECT user_id, (updated_at AT TIME ZONE 'UTC')::date FROM chat_messages
+         UNION SELECT owner_id, (created_at AT TIME ZONE 'UTC')::date FROM trips
+         UNION SELECT user_id, (created_at AT TIME ZONE 'UTC')::date FROM saved_items
+         UNION SELECT user_id, (updated_at AT TIME ZONE 'UTC')::date FROM place_feedback
+         UNION SELECT user_id, (updated_at AT TIME ZONE 'UTC')::date FROM rec_feedback
+         UNION SELECT user_id, (created_at AT TIME ZONE 'UTC')::date FROM package_events
+       ON CONFLICT DO NOTHING`,
+    ],
+  },
 ];

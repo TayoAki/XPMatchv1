@@ -5,6 +5,7 @@ import { EventType, type BaseEvent } from "@ag-ui/client";
 import { Observable, throwError } from "rxjs";
 import { loadTranscript, saveTranscript } from "./models";
 import { repairToolHistory, settlePendingToolCalls } from "./transcripts";
+import { recordUsage } from "./usage";
 
 /**
  * The signed-in user for the CopilotKit request being handled. The runtime's
@@ -52,6 +53,8 @@ export class PersistentAgentRunner extends InMemoryAgentRunner {
       return throwError(() => new Error("This conversation belongs to another traveler."));
     }
     this.claim(request.threadId, userId);
+    // One assistant answer (a message, or the continuation after a card was answered), for the admin page.
+    recordUsage("app", "agent_run");
     // A tool call without its result right after it (the traveler opened another chat mid-answer, or
     // wrote before answering a card) would make the model call fail, so the history is repaired first
     // (see repairToolHistory): on the agent, whose messages the model call is built from, and in the

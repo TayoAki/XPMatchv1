@@ -1,5 +1,6 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import type { LanguageModel } from "ai";
+import { wrapLanguageModel, type LanguageModel } from "ai";
+import { modelUsageMiddleware } from "./usage";
 
 /**
  * Model selection shared by the chat agent and the server-side helper calls
@@ -45,7 +46,8 @@ export function modelMode(spec: string = resolveModelSpec()): ModelMode {
 /**
  * OpenRouter exposes an OpenAI-compatible Chat Completions API, so any model it lists
  * (`provider/model`) works through the AI SDK's OpenAI-compatible provider. The key stays
- * on the server. `OPENROUTER_BASE_URL` exists for testing against a stand-in server.
+ * on the server. `OPENROUTER_BASE_URL` exists for testing against a stand-in server. Every call is
+ * counted with its tokens and cost for the admin page (`modelUsageMiddleware`).
  */
 export function createOpenRouterModel(modelId: string) {
   const apiKey = process.env.OPENROUTER_API_KEY;
@@ -61,7 +63,7 @@ export function createOpenRouterModel(modelId: string) {
     },
     includeUsage: true,
   });
-  return provider.chatModel(modelId);
+  return wrapLanguageModel({ model: provider.chatModel(modelId), middleware: modelUsageMiddleware(modelId) });
 }
 
 /**

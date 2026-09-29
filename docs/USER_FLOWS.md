@@ -514,6 +514,25 @@ summary: hit rate of thumbs across every traveler, by kind and by context (chat,
 sheet; older thumbs may say explore), why picks miss, and the recent misses with the score that was shown. The same counts are printed once at boot (`[xpmatch] db ready (pg):
 users=… trips=… chats=…`), so the Railway deploy log shows them without a database connection.
 
+**Activity** and **Costs** (`GET /api/admin/metrics`) come right after the beta numbers. Activity
+counts the travelers active (signed in) today, in the last 7 and 30 days, and those active on two or
+more of the last 30 days; a column per day for the last 30 days; the path from sign-up to a trip
+(signed up, finished the quiz, started a chat, made a trip, came back another day); assistant answers
+today, in 7 and in 30 days; and the messages travelers wrote across saved chats. The server marks a
+traveler active on their first signed-in request of each UTC day (`activity_days`); the days before
+metering were rebuilt once from sign-ups, sign-ins, chats, trips, saves and reactions, so they
+undercount. Costs prices what the server counted in `usage_daily`: every Google Places call by the SKU
+its field mask bills at, photos, Routes, map loads (the browser reports each map it creates through
+`POST /api/usage/map`, at most 500 a traveler a day), model calls with their tokens and OpenRouter's
+per-call cost, emails and Open-Meteo calls, next to what the catalog and caches answered instead. It
+shows this month so far (Google after the free allowances, the model — OpenRouter's own monthly
+figure for the key when it answers — and hosting from `HOSTING_MONTHLY_USD`), the monthly pace from the
+metered days, the model's all-time spend, Google at list price, a stacked daily chart of Google and the
+model (with a table view), each Google SKU with a free-allowance meter (amber from 80%, red past the
+allowance), the model table, how many lookups, photos, list searches and place sheets were answered
+without Google and what they would have cost, and links to the real bills (Google Cloud, OpenRouter,
+Railway, Resend). Counts are written every few seconds, so a deploy loses at most those seconds.
+
 ## 11. Routes
 
 | Route | Screen |
