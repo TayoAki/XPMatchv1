@@ -99,6 +99,27 @@ body {
 .xp-chat textarea {
   font-size: 15px;
 }
+/* Side gutters for the conversation and its composer, the same as the chat header and the chips under the composer
+   (16px, 24px from 640px). CopilotKit drops its own 16px once the chat is 48rem wide, which suits its 48rem column,
+   but ours runs to 54rem, so in between (a laptop with the map open) cards and bubbles ran into the panel edges.
+   Conversation only: the welcome screen places the composer itself. */
+.xp-chat [data-copilotkit] .cpk\:\@3xl\:px-0:has(> [data-testid="copilot-scroll-content"]),
+.xp-chat [data-testid="copilot-input-overlay"] .cpk\:max-w-3xl.cpk\:\@3xl\:px-0 {
+  padding-inline: 1rem;
+}
+/* The composer's padding sits inside its max width, so the max width grows by as much to keep it as wide as the messages. */
+.xp-chat [data-testid="copilot-input-overlay"] .cpk\:max-w-3xl.cpk\:\@3xl\:px-0 {
+  max-width: calc(var(--cpk-container-3xl) + 2rem);
+}
+@media (min-width: 40rem) {
+  .xp-chat [data-copilotkit] .cpk\:\@3xl\:px-0:has(> [data-testid="copilot-scroll-content"]),
+  .xp-chat [data-testid="copilot-input-overlay"] .cpk\:max-w-3xl.cpk\:\@3xl\:px-0 {
+    padding-inline: 1.5rem;
+  }
+  .xp-chat [data-testid="copilot-input-overlay"] .cpk\:max-w-3xl.cpk\:\@3xl\:px-0 {
+    max-width: calc(var(--cpk-container-3xl) + 3rem);
+  }
+}
 
 /* Loading placeholders: a soft shimmer sweeping across the warm surface. */
 @keyframes xp-shimmer {
