@@ -7,6 +7,7 @@ import { feedbackKey, type FeedbackSource, type FeedbackVerdict, type PlaceFeedb
 import type { Reservation } from "@/lib/reservations/types";
 import type { RecContext, RecFeedback, RecVerdict } from "@/lib/recs/types";
 import { recKey, type MatchFactor } from "@/lib/match";
+import type { EmailInviteResult, TripInvite } from "@/lib/collab/types";
 import {
   DEFAULT_PLANNER,
   DEFAULT_PROFILE,
@@ -112,8 +113,8 @@ export interface NewRecFeedback {
 
 /** The list view only needs the summary fields of a trip. */
 function toTripSummary(detail: TripDetail): Trip {
-  const { id, ownerId, role, title, destination, place, startDate, endDate, travelers, budgetTier, summary, itinerary, preferences, memberCount, createdAt, updatedAt } = detail;
-  return { id, ownerId, role, title, destination, place, startDate, endDate, travelers, budgetTier, summary, itinerary, preferences, memberCount, createdAt, updatedAt };
+  const { id, ownerId, role, title, destination, place, startDate, endDate, travelers, budgetTier, summary, itinerary, preferences, memberCount, via, createdAt, updatedAt } = detail;
+  return { id, ownerId, role, title, destination, place, startDate, endDate, travelers, budgetTier, summary, itinerary, preferences, memberCount, via, createdAt, updatedAt };
 }
 
 /**
@@ -642,6 +643,23 @@ export const travelActions = {
     return detail;
   },
 
+  /** Invites someone by email: added at once when they have an account, emailed an invite otherwise. */
+  async inviteToTrip(id: string, email: string, role: "editor" | "viewer"): Promise<EmailInviteResult & { invites: TripInvite[]; trip: TripDetail }> {
+    const res = await api<EmailInviteResult & { invites: TripInvite[]; trip: TripDetail }>(`/api/trips/${encodeURIComponent(id)}/invites`, {
+      method: "POST",
+      json: { kind: "email", email, role },
+    });
+    travelActions.replaceTrip(toTripSummary(res.trip));
+    return res;
+  },
+
+  /** The owner changes a member between Can edit and Can comment. */
+  async setTripMemberRole(id: string, userId: string, role: "editor" | "viewer"): Promise<TripDetail> {
+    const detail = await api<TripDetail>(`/api/trips/${encodeURIComponent(id)}/members/${encodeURIComponent(userId)}`, { method: "PATCH", json: { role } });
+    travelActions.replaceTrip(toTripSummary(detail));
+    return detail;
+  },
+
   /** Removes a member. Resolves with null when the signed-in user left the trip. */
   async removeTripMember(id: string, userId: string): Promise<TripDetail | null> {
     const detail = await api<TripDetail | null>(`/api/trips/${encodeURIComponent(id)}/members/${encodeURIComponent(userId)}`, { method: "DELETE" });
@@ -679,6 +697,25 @@ export const travelActions = {
   removeChat(id: string) {
     set((prev) => ({ chats: prev.chats.filter((c) => c.id !== id) }));
     api(`/api/chats/${encodeURIComponent(id)}`, { method: "DELETE" }).catch((err) => report("removing the chat", err));
+  },
+
+  /**
+   * Re-reads Updates (the shell polls this while the app is open, so the badge shows what other
+   * travelers did). A new "added you to a trip" brings that trip into the trips list too.
+   */
+  async refreshUpdates(): Promise<void> {
+    if (!readSnapshot().user) return;
+    try {
+      const { updates } = await api<{ updates: UpdateItem[] }>("/api/notifications");
+      const known = new Set(readSnapshot().updates.map((u) => u.id));
+      set({ updates });
+      if (updates.some((u) => u.kind === "trip_invite" && !known.has(u.id))) {
+        const { trips } = await api<{ trips: Trip[] }>("/api/trips");
+        set({ trips });
+      }
+    } catch (err) {
+      if (!(err instanceof ApiError && err.status === 401)) report("refreshing updates", err);
+    }
   },
 
   markUpdatesRead() {

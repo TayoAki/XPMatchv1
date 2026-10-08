@@ -2,13 +2,21 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { Bell, Briefcase, Heart, Sparkles, Users } from "lucide-react";
+import { Bell, Briefcase, Heart, MessageCircle, Sparkles, ThumbsUp, UserPlus, Users } from "lucide-react";
 import { PageFrame, EmptyState } from "@/components/PageFrame";
 import { useTravelStore, type UpdateItem } from "@/lib/store";
 import { tripsToRate } from "@/lib/feedback/post-trip";
 import { ratedKey } from "@/components/feedback/PostTripRating";
 
-const ICON: Record<UpdateItem["kind"], typeof Bell> = { trip_invite: Users, trip_activity: Briefcase, guide_saved: Heart, system: Bell };
+const ICON: Record<UpdateItem["kind"], typeof Bell> = {
+  trip_invite: Users,
+  trip_activity: Briefcase,
+  trip_discussion: MessageCircle,
+  trip_vote: ThumbsUp,
+  trip_join: UserPlus,
+  guide_saved: Heart,
+  system: Bell,
+};
 
 const noSubscribe = () => () => {};
 
@@ -27,14 +35,18 @@ function readRatedTrips(): string {
 }
 
 export default function UpdatesPage() {
-  const { updates, trips, markUpdatesRead } = useTravelStore();
+  const { updates, trips, markUpdatesRead, refreshUpdates } = useTravelStore();
   const rated = useSyncExternalStore(noSubscribe, readRatedTrips, () => "");
   const toRate = tripsToRate(trips, new Set(rated.split(",").filter(Boolean)));
+  // Fresh on arrival (the app polls slowly in the background), then everything shown counts as read.
+  useEffect(() => {
+    void refreshUpdates();
+  }, [refreshUpdates]);
   useEffect(() => {
     if (updates.some((u) => !u.read)) markUpdatesRead();
   }, [updates, markUpdatesRead]);
   return (
-    <PageFrame title="Updates" description="Trip invites, what your travel companions added, who saved your guides, and trips to rate.">
+    <PageFrame title="Updates" description="Trip invites, what your travel companions added, said and voted on, who saved your guides, and trips to rate.">
       {toRate.length ? (
         <ul className="mb-4 grid gap-2">
           {toRate.map((t) => (
@@ -69,12 +81,14 @@ export default function UpdatesPage() {
         </ul>
       ) : null}
       {updates.length === 0 && toRate.length === 0 ? (
-        <EmptyState title="You're all caught up" body="You'll hear here when someone adds you to a trip, adds to a shared trip, saves one of your guides, or when a trip is over and ready to rate." />
+        <EmptyState title="You're all caught up" body="You'll hear here when someone adds you to a trip, adds to, writes in or votes on a shared trip, saves one of your guides, or when a trip is over and ready to rate." />
       ) : updates.length ? (
         <ul className="divide-y divide-border rounded-2xl border border-border">
           {updates.map((u) => {
             const Icon = ICON[u.kind] ?? Bell;
             const tripId = typeof u.data?.tripId === "string" ? u.data.tripId : null;
+            // Messages and comments open the trip on its discussion.
+            const tripHref = tripId ? `/trips/${tripId}${u.data?.section === "discussion" ? "?section=discussion" : ""}` : null;
             const guideId = typeof u.data?.guideId === "string" ? u.data.guideId : null;
             return (
               <li key={u.id} className="flex items-center gap-3 px-4 py-3">
@@ -85,9 +99,9 @@ export default function UpdatesPage() {
                   <div className="text-[14px]">{u.text}</div>
                   <div className="text-[12px] text-muted">{new Date(u.at).toLocaleString()}</div>
                 </div>
-                {tripId ? (
-                  <Link href={`/trips/${tripId}`} className="inline-flex h-8 items-center rounded-full border border-border px-3 text-[13px] font-medium hover:bg-surface">
-                    Open trip
+                {tripHref ? (
+                  <Link href={tripHref} className="inline-flex h-8 items-center rounded-full border border-border px-3 text-[13px] font-medium hover:bg-surface">
+                    {u.data?.section === "discussion" ? "Open discussion" : "Open trip"}
                   </Link>
                 ) : null}
                 {guideId ? (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import {
@@ -14,6 +14,7 @@ import {
   ListOrdered,
   LogOut,
   MapPin,
+  MessageCircle,
   Plus,
   SlidersHorizontal,
   Sparkles,
@@ -39,8 +40,14 @@ import { TripCalendar } from "./TripCalendar";
 import { tripItemKey } from "./TripMap";
 import { ReactionControl } from "@/components/feedback/ReactionControl";
 import { BookingMeta, ReservationIcon } from "@/components/reservations/BookingMeta";
+import { itemTarget, roleLabel } from "@/lib/collab/types";
+import { useTripCollab, useUnseenCount } from "./collab/TripCollab";
+import { GroupVote } from "./collab/GroupVote";
+import { CommentThread, CommentToggle } from "./collab/Comments";
+import { DiscussionSection } from "./collab/Discussion";
+import { InvitePanel } from "./collab/Sharing";
 
-export type TripSection = "ideas" | "itinerary" | "bookings" | "media" | "preferences" | "calendar" | "members";
+export type TripSection = "discussion" | "ideas" | "itinerary" | "bookings" | "media" | "preferences" | "calendar" | "members";
 
 interface Tile {
   key: TripSection;
@@ -52,6 +59,8 @@ interface Tile {
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 export const TILES: Tile[] = [
+  // Its summary comes from the conversation (see TripSections).
+  { key: "discussion", label: "Discussion", icon: MessageCircle, summary: () => "Talk it over together" },
   {
     key: "ideas",
     label: "Ideas",
@@ -72,6 +81,7 @@ export const TILES: Tile[] = [
     label: "Bookings",
     icon: Ticket,
     summary: (t) => {
+      if (t.via === "feedback") return "Kept with the travelers";
       const n = t.items.filter((i) => i.kind === "booking").length;
       return n ? plural(n, "booking") : "Flights, stays, tickets";
     },
@@ -92,7 +102,15 @@ export const TILES: Tile[] = [
     summary: (t) => (t.preferences.trim() ? (t.preferences.length > 42 ? `${t.preferences.slice(0, 42)}…` : t.preferences) : "Notes for the assistant"),
   },
   { key: "calendar", label: "Calendar", icon: Calendar, summary: (t) => formatDateRange(t.startDate, t.endDate) || "Add dates" },
-  { key: "members", label: "Members", icon: Users, summary: (t) => plural(t.members.length, "traveler") },
+  {
+    key: "members",
+    label: "Members",
+    icon: Users,
+    summary: (t) => {
+      const feedback = t.members.filter((m) => m.via === "feedback").length;
+      return [plural(t.members.length - feedback, "traveler"), feedback ? `${feedback} giving feedback` : ""].filter(Boolean).join(" · ");
+    },
+  },
 ];
 
 interface SectionProps {
@@ -103,6 +121,8 @@ interface SectionProps {
   onSelectPlace: (key: string | null) => void;
   /** Switches the page to the itinerary board. */
   onOpenBoard?: () => void;
+  /** Opens another section (the discussion's "Invite people" opens Members). */
+  onOpenSection?: (section: TripSection) => void;
 }
 
 /** Tile grid (overview) or one opened section of a trip. */
@@ -111,6 +131,18 @@ export function TripSections({
   onSection,
   ...props
 }: SectionProps & { section: TripSection | null; onSection: (section: TripSection | null) => void }) {
+  const collab = useTripCollab();
+  const messages = collab?.collab.messages ?? [];
+  const unseen = useUnseenCount(props.trip.id, messages, collab?.me ?? null);
+  const summary = (tile: Tile) =>
+    tile.key === "discussion" && messages.length ? [plural(messages.length, "message"), unseen ? `${unseen} new` : ""].filter(Boolean).join(" · ") : tile.summary(props.trip);
+  const headerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const header = headerRef.current;
+    if (!section || !header) return;
+    const { top } = header.getBoundingClientRect();
+    if (top < 0 || top > window.innerHeight - 120) header.scrollIntoView({ block: "start" });
+  }, [section]);
   if (!section) {
     return (
       <div className="grid grid-cols-2 gap-3">
@@ -128,7 +160,7 @@ export function TripSections({
               </span>
               <span>
                 <span className="block text-[15px] font-semibold">{tile.label}</span>
-                <span className="block truncate text-[13px] text-muted">{tile.summary(props.trip)}</span>
+                <span className={clsx("block truncate text-[13px]", tile.key === "discussion" && unseen ? "font-semibold text-brand" : "text-muted")}>{summary(tile)}</span>
               </span>
             </button>
           );
@@ -139,13 +171,14 @@ export function TripSections({
   const tile = TILES.find((t) => t.key === section);
   return (
     <div>
-      <div className="flex items-center gap-2">
+      <div ref={headerRef} className="flex scroll-mt-2 items-center gap-2">
         <button type="button" onClick={() => onSection(null)} aria-label="Back to overview" className="rounded-full p-2 hover:bg-surface">
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h2 className="text-[20px] font-semibold tracking-tight">{tile?.label}</h2>
       </div>
       <div className="mt-4">
+        {section === "discussion" ? <DiscussionSection trip={props.trip} canEdit={props.canEdit} onSelectPlace={props.onSelectPlace} onOpenMembers={() => onSection("members")} /> : null}
         {section === "ideas" ? <IdeasSection {...props} /> : null}
         {section === "itinerary" ? <ItinerarySection {...props} /> : null}
         {section === "bookings" ? <LinkItemsSection kind="booking" {...props} /> : null}
@@ -271,6 +304,8 @@ function IdeaRow({
   onSelectPlace: (key: string | null) => void;
 }) {
   const { saved, toggleSaved, removeTripItem } = useTravelStore();
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const target = itemTarget(item);
   const place = item.place;
   const kind = place?.kind ?? "attraction";
   const isSaved = !!findSaved(saved, { kind, title: item.title, refId: place?.id });
@@ -294,7 +329,9 @@ function IdeaRow({
               {meta ? <span>{meta}</span> : null}
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-1">
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+            <GroupVote target={target} />
+            <CommentToggle target={target} open={commentsOpen} onToggle={() => setCommentsOpen((v) => !v)} />
             <ReactionControl name={item.title} kind={kind} place={place} destination={trip.destination} tripId={trip.id} source="trip" size="sm" />
             <IconButton
               label={isSaved ? `Remove ${item.title} from saved` : `Save ${item.title}`}
@@ -316,6 +353,7 @@ function IdeaRow({
         </div>
         {item.note ? <p className="mt-1 text-[13px] text-neutral-700">{item.note}</p> : null}
         <div className="mt-1 text-[12px] text-muted">{addedBy ? `Added by ${addedBy}` : ""}</div>
+        {commentsOpen ? <CommentThread target={target} /> : null}
       </div>
     </li>
   );
@@ -572,6 +610,9 @@ function LinkItemsSection({ kind, trip, canEdit, onTrip }: SectionProps & { kind
   const [error, setError] = useState<string | null>(null);
   const copy = LINK_COPY[kind];
   const Icon = kind === "booking" ? Ticket : ImageIcon;
+  if (kind === "booking" && trip.via === "feedback") {
+    return <EmptyState title="Bookings stay with the travelers" body="Confirmation numbers and booking details are only shown to the people going on this trip." />;
+  }
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -796,8 +837,9 @@ function CalendarSection({ trip, canEdit, onTrip }: SectionProps) {
 /* ------------------------------- members ------------------------------- */
 
 function MemberRow({ member, trip, isOwner, onTrip }: { member: TripMember; trip: TripDetail; isOwner: boolean; onTrip: (trip: TripDetail) => void }) {
-  const { user, removeTripMember } = useTravelStore();
+  const { user, removeTripMember, setTripMemberRole } = useTravelStore();
   const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
   const isMe = member.userId === user?.id;
   const canRemove = member.role !== "owner" && (isOwner || isMe);
 
@@ -813,76 +855,79 @@ function MemberRow({ member, trip, isOwner, onTrip }: { member: TripMember; trip
     }
   };
 
+  const changeRole = async (role: "editor" | "viewer") => {
+    setError(null);
+    try {
+      onTrip(await setTripMemberRole(trip.id, member.userId, role));
+    } catch (err) {
+      setError(errorMessage(err, "Could not change that"));
+    }
+  };
+
   return (
-    <li className="flex items-center gap-3 px-4 py-3">
+    <li className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3" data-testid="member-row">
       <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-sm font-semibold text-white">{member.name.charAt(0).toUpperCase()}</span>
       <div className="min-w-0 flex-1">
         <div className="truncate text-[15px] font-medium">
           {member.name}
           {isMe ? <span className="text-muted"> (you)</span> : null}
         </div>
-        <div className="truncate text-[12px] text-muted">@{member.handle}</div>
+        <div className="truncate text-[12px] text-muted">
+          @{member.handle}
+          {member.email && !isMe ? ` · ${member.email}` : ""}
+        </div>
       </div>
-      <span className="rounded-full bg-surface px-2.5 py-0.5 text-[12px] font-medium capitalize text-neutral-700">{member.role}</span>
+      {member.via === "feedback" ? <span className="rounded-full bg-violet-100 px-2.5 py-0.5 text-[12px] font-medium text-violet-800">Feedback</span> : null}
+      {isOwner && member.role !== "owner" ? (
+        <Select
+          value={member.role}
+          onChange={(e) => void changeRole(e.target.value as "editor" | "viewer")}
+          aria-label={`What ${member.name} can do`}
+          className="h-8 w-[132px] text-[13px]"
+        >
+          <option value="editor">Can edit</option>
+          <option value="viewer">Can comment</option>
+        </Select>
+      ) : (
+        <span className="rounded-full bg-surface px-2.5 py-0.5 text-[12px] font-medium text-neutral-700">{roleLabel(member.role)}</span>
+      )}
       {canRemove ? (
         <IconButton label={isMe ? "Leave trip" : `Remove ${member.name}`} danger onClick={remove}>
           {isMe ? <LogOut className="h-4 w-4" /> : <Trash2 className="h-4 w-4" />}
         </IconButton>
       ) : null}
+      {error ? <p className="basis-full text-[12px] text-red-600">{error}</p> : null}
     </li>
   );
 }
 
 function MembersSection({ trip, canEdit, isOwner, onTrip }: SectionProps) {
-  const { addTripMember } = useTravelStore();
-  const [email, setEmail] = useState("");
-  const [role, setRole] = useState<"editor" | "viewer">("editor");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
-    const value = email.trim();
-    if (!value) return;
-    setBusy(true);
-    setError(null);
-    setNotice(null);
-    try {
-      onTrip(await addTripMember(trip.id, value, role));
-      setNotice(`Added ${value}. They'll see the trip under Trips and get a note in Updates.`);
-      setEmail("");
-    } catch (err) {
-      setError(errorMessage(err, "Could not add this member"));
-    } finally {
-      setBusy(false);
-    }
-  };
-
+  const planning = trip.members.filter((m) => m.via !== "feedback");
+  const feedback = trip.members.filter((m) => m.via === "feedback");
   return (
     <div className="grid gap-4">
-      {canEdit ? (
-        <form onSubmit={submit} className="grid gap-2 rounded-2xl border border-border p-3">
-          <div className="flex gap-2">
-            <TextInput type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="friend@example.com" aria-label="Member email" />
-            <Select value={role} onChange={(e) => setRole(e.target.value as "editor" | "viewer")} className="w-32" aria-label="Role">
-              <option value="editor">Can edit</option>
-              <option value="viewer">Can view</option>
-            </Select>
-            <Button type="submit" disabled={busy || !email.trim()}>
-              {busy ? "Adding…" : "Add"}
-            </Button>
-          </div>
-          <p className="text-[12px] text-muted">Members need an XPMatch account with this email. They are notified in Updates.</p>
-          {notice ? <p className="text-[13px] text-emerald-700">{notice}</p> : null}
-          <ErrorText>{error}</ErrorText>
-        </form>
+      {canEdit ? <InvitePanel trip={trip} onTrip={onTrip} /> : null}
+      <section aria-label="People on this trip">
+        <div className="mb-1.5 text-[13px] font-semibold">On this trip</div>
+        <ul className="divide-y divide-border rounded-2xl border border-border">
+          {planning.map((m) => (
+            <MemberRow key={m.userId} member={m} trip={trip} isOwner={isOwner} onTrip={onTrip} />
+          ))}
+        </ul>
+      </section>
+      {feedback.length ? (
+        <section aria-label="Giving feedback">
+          <div className="mb-1.5 text-[13px] font-semibold">Giving feedback</div>
+          <ul className="divide-y divide-border rounded-2xl border border-border">
+            {feedback.map((m) => (
+              <MemberRow key={m.userId} member={m} trip={trip} isOwner={isOwner} onTrip={onTrip} />
+            ))}
+          </ul>
+        </section>
       ) : null}
-      <ul className="divide-y divide-border rounded-2xl border border-border">
-        {trip.members.map((m) => (
-          <MemberRow key={m.userId} member={m} trip={trip} isOwner={isOwner} onTrip={onTrip} />
-        ))}
-      </ul>
+      <p className="text-[12px] text-muted">
+        Can edit: change the plan, ideas and bookings. Can comment: see the plan, vote, comment and write in the discussion. Only the owner changes who can do what.
+      </p>
     </div>
   );
 }

@@ -23,9 +23,9 @@ test("trips: create, members, ideas, itinerary, trip chat, sharing", async ({ pa
   await test.step("members: add a friend by email", async () => {
     await page.getByRole("button", { name: "Invite friends" }).click();
     await page.getByPlaceholder("friend@example.com").fill(friend);
-    await page.getByRole("button", { name: "Add", exact: true }).click();
-    await expect(page.getByText(/Added sam\+/)).toBeVisible();
-    await expect(page.getByText("Sam Rivera")).toBeVisible();
+    await page.getByRole("button", { name: "Invite", exact: true }).click();
+    await expect(page.getByText("Added Sam Rivera. They'll see the trip under Trips and get a note in Updates.")).toBeVisible();
+    await expect(page.getByTestId("member-row").filter({ hasText: "Sam Rivera" })).toContainText("Can edit");
     await expect(page.getByRole("button", { name: "2 members" })).toBeVisible();
   });
 
@@ -104,7 +104,8 @@ test("trips: create, members, ideas, itinerary, trip chat, sharing", async ({ pa
     await login(friendPage, friend, { finishOnboarding: true });
     await friendPage.getByRole("banner").getByRole("link", { name: /^Updates/ }).click();
     await expect(friendPage.getByText(/Tayo Akigbogun added you to the trip "Trip to Rome"/)).toBeVisible();
-    await expect(friendPage.getByText(/added an idea to "Trip to Rome": Colosseum/)).toBeVisible();
+    // Both ideas the owner added in a row are one update.
+    await expect(friendPage.getByText(/Tayo Akigbogun added 2 ideas to "Trip to Rome": Colosseum and /)).toBeVisible();
     await friendPage.getByRole("link", { name: "Open trip" }).first().click();
     await expect(friendPage.getByRole("heading", { name: "Trip to Rome" })).toBeVisible();
     await friendPage.getByRole("button", { name: /^Ideas 2 places/ }).click();

@@ -28,11 +28,15 @@ export function TripCard({ trip, large = false }: { trip: Trip; large?: boolean 
       <Cover trip={trip} />
       <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent transition-opacity group-hover:opacity-90" />
       {trip.place?.photos?.[0] ? <PhotoCredit credit={trip.place.photoCredits?.[0]} className="left-3 top-3" asLink={false} /> : null}
-      {trip.memberCount > 1 ? (
-        <span className="absolute right-4 top-4 inline-flex items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 text-[12px] font-semibold text-neutral-800">
-          <Users className="h-3.5 w-3.5" /> {trip.memberCount}
-        </span>
-      ) : null}
+      <span className="absolute right-4 top-4 flex gap-1.5">
+        {/* A friend's trip you were asked to give feedback on, not one you are going on. */}
+        {trip.via === "feedback" ? <span className="rounded-full bg-violet-100 px-2.5 py-1 text-[12px] font-semibold text-violet-800">Feedback</span> : null}
+        {trip.memberCount > 1 ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 text-[12px] font-semibold text-neutral-800">
+            <Users className="h-3.5 w-3.5" /> {trip.memberCount}
+          </span>
+        ) : null}
+      </span>
       <div className="absolute inset-x-5 bottom-5 text-white drop-shadow">
         <div className={`${large ? "text-[22px]" : "text-[18px]"} font-semibold leading-tight`}>{trip.title}</div>
         <div className="mt-1 text-[14px] opacity-90">

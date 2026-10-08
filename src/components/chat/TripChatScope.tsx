@@ -18,6 +18,8 @@ import { useTripDetail } from "@/components/trips/useTripDetail";
 import { useTripScope } from "@/components/trips/TripScope";
 import { useUiState } from "@/components/providers/UiState";
 import { useMediaQuery } from "@/lib/use-media-query";
+import { discussionForContext, groupVotesForContext, membersForContext } from "@/lib/collab/types";
+import { useTripCollabData } from "@/components/trips/collab/TripCollab";
 
 type RenderProps<T> = { args: Partial<T> | T; status: ToolCallStatus; result?: string };
 
@@ -112,8 +114,10 @@ function cleanPatch(args: UpdateTripPlanArgs): UpdateTripPlanArgs {
  * Mounted inside a chat that belongs to a trip: tells the assistant about the
  * trip, lets it edit the plan and add ideas, and pins the trip on the map.
  */
-export function TripChatScope({ tripId, threadId }: { tripId: string; threadId?: string }) {
+export function TripChatScope({ tripId, threadId, onReady }: { tripId: string; threadId?: string; onReady?: () => void }) {
   const { trip, setTrip } = useTripDetail(tripId);
+  // What the group thinks: their votes on ideas and stops, and what they have been saying.
+  const { collab, settled } = useTripCollabData(tripId);
   const { preferences } = useTravelStore();
   const tripPreferences = useMemo(() => preferencesForContext(preferences, tripId), [preferences, tripId]);
 
@@ -143,7 +147,7 @@ export function TripChatScope({ tripId, threadId }: { tripId: string; threadId?:
 
   useAgentContext({
     description:
-      "Trip currently being planned. The conversation is about this trip unless the traveler says otherwise. Change it with update_trip_plan and add places with add_trip_ideas (never create_trip for this trip).",
+      "Trip currently being planned. The conversation is about this trip unless the traveler says otherwise. Change it with update_trip_plan and add places with add_trip_ideas (never create_trip for this trip). groupVotes are the trip members' votes on its ideas and stops (by name); discussion is what they have written to each other, latest last.",
     value: trip
       ? {
           title: trip.title,
@@ -154,13 +158,21 @@ export function TripChatScope({ tripId, threadId }: { tripId: string; threadId?:
           budgetTier: trip.budgetTier ?? "",
           summary: trip.summary ?? "",
           preferences: trip.preferences,
-          members: trip.members.map((m) => m.name),
+          members: membersForContext(trip.members),
+          groupVotes: groupVotesForContext(collab, trip),
+          discussion: discussionForContext(collab),
           ideas: trip.items.filter((i) => i.kind === "idea").map((i) => i.title).slice(0, 30),
           bookings: trip.items.filter((i) => i.kind === "booking").map((i) => i.title).slice(0, 20),
           itinerary: trip.itinerary.map((d) => ({ day: d.day, title: d.title, stops: d.stops.map((st) => `${st.title}${st.startTime ? ` (${st.startTime})` : ""}`) })),
         }
       : { status: "loading" },
   });
+
+  // Declared after the context above, so the assistant has it by the time the chat hears "ready".
+  const ready = !!trip && settled;
+  useEffect(() => {
+    if (ready) onReady?.();
+  }, [ready, onReady]);
 
   const itinerary = trip?.itinerary;
   useFrontendTool(

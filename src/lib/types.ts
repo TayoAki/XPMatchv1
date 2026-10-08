@@ -160,12 +160,17 @@ export interface ItineraryDay {
 
 export type TripRole = "owner" | "editor" | "viewer";
 
+/** How someone came onto a trip: added by email, an invite link, an emailed invite, or a "Get feedback" link. */
+export type TripJoinedVia = "added" | "link" | "email" | "feedback";
+
 export interface TripMember {
   userId: string;
   name: string;
   handle: string;
+  /** Shown to the trip's owner, and to each member for themselves; empty otherwise. */
   email: string;
   role: TripRole;
+  via?: TripJoinedVia;
 }
 
 export type TripItemKind = "idea" | "booking" | "media";
@@ -198,6 +203,8 @@ export interface Trip {
   itinerary: ItineraryDay[];
   preferences: string;
   memberCount: number;
+  /** How the signed-in traveler joined (feedback givers see the plan but not its bookings). */
+  via?: TripJoinedVia;
   createdAt: string;
   updatedAt: string;
 }
@@ -219,7 +226,7 @@ export interface ChatSummary {
   updatedAt: string;
 }
 
-export type UpdateKind = "trip_invite" | "trip_activity" | "guide_saved" | "system";
+export type UpdateKind = "trip_invite" | "trip_activity" | "trip_discussion" | "trip_vote" | "trip_join" | "guide_saved" | "system";
 
 export interface UpdateItem {
   id: string;

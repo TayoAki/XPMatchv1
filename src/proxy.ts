@@ -11,6 +11,8 @@ export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hasSession = request.cookies.has(SESSION_COOKIE);
 
+  // An invite link shows who invited you to what before you sign in (and joining needs a session anyway).
+  if (pathname.startsWith("/join/") || pathname.startsWith("/api/join/")) return NextResponse.next();
   if (PUBLIC_PATHS.has(pathname)) {
     if (hasSession && (pathname === "/login" || pathname === "/signup")) {
       const home = request.nextUrl.clone();

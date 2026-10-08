@@ -166,6 +166,21 @@ in development), and the app deploys to **Railway** with the included Dockerfile
   **Calendar** and **Members**, next to a map of everything pinned to the trip. Members are added by
   email and notified under Updates; inside a trip chat the assistant can `update_trip_plan` and
   `add_trip_ideas`.
+- **Plan together, and get feedback** — every trip has a **Discussion** (a tile, a header chip with
+  what's new, and a Discuss tab on phones) that everyone on the trip sees, and every idea and stop
+  carries a **group vote** (for / against, with who voted) and its own **comment thread**; a stop
+  scheduled from an idea keeps that idea's votes and comments. **Share** opens Members: invite by
+  email (straight onto the trip with an account; otherwise an emailed invite whose link only that
+  address can accept), copy an **invite link** (Can edit or Can comment), or
+  copy a **Get feedback** link for friends who aren't coming: they sign up from the link, land on
+  the trip (the first-run setup waits), vote, comment and write, but can't change the plan or see
+  bookings. `/join/[token]` shows who invited you to what before you have an account. Only the owner
+  changes roles; members see each other's names and handles, not their emails. An open trip page
+  polls `/api/trips/[id]/pulse` every 8 seconds while visible, so other people's changes and
+  messages appear within seconds; Updates group a burst of activity into one line ("Sam voted on 3
+  places", "Tayo made 5 changes", "2 new messages … Latest from Lee: …") and refresh every 45
+  seconds. The trip's assistant gets the members, the group's votes by name and the latest
+  discussion as context, and plans for the group.
 - **Add to trip** — every card and place sheet has an "Add to trip" picker (existing trip or a new
   one); ideas show up on the trip page and its map.
 - **Save anything** — heart any card, place sheet or Discover collection; the Saved
@@ -350,7 +365,11 @@ src/server/auth.ts + src/app/api/auth/*      Password hashing, hashed session to
 src/proxy.ts                                 Redirects signed-out visitors to /login (APIs get 401)
 src/server/models.ts + src/app/api/*         Profile, saved items, trips, members, items, chats, notifications
 src/components/trips/*                       Trips list + calendar, trip page (sections, map, members), Add to trip
-src/components/chat/TripChatScope.tsx        Trip context + update_trip_plan / add_trip_ideas inside a trip chat
+src/components/chat/TripChatScope.tsx        Trip context (with the group's votes and discussion) + update_trip_plan / add_trip_ideas inside a trip chat
+src/server/collab.ts + src/app/api/trips/[id]/{collab,messages,votes,pulse,invites}   Planning together: discussion and
+                                             comments, group votes, invite / feedback links, emailed invites, roles, grouped updates
+src/app/api/join/[token] + src/app/(auth)/join/[token]   What an invite link shows (public) and joining through it
+src/components/trips/collab/*                Discussion, group vote, comment threads, the Share panel, the trip's pulse
 src/server/guides.ts + src/app/api/guides/*  Community guides: list/search/nearby, create, edit, delete, save
 src/components/guides/*                      Guide card, editor (Create page), guide page
 src/components/map/PlacesMap.tsx             Shared labeled map + place sheet used by trips and guides

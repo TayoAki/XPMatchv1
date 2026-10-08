@@ -29,7 +29,9 @@ export function useTripDetail(tripId: string | null | undefined) {
     const id = tripId;
     api<TripDetail>(`/api/trips/${encodeURIComponent(id)}`)
       .then((trip) => {
-        if (active) setState({ id, trip, error: null });
+        if (!active) return;
+        // A reload that started before one of our own saves answered can land after it: keep the newer trip.
+        setState((prev) => (prev?.id === id && prev.trip && prev.trip.updatedAt > trip.updatedAt ? prev : { id, trip, error: null }));
       })
       .catch((err: unknown) => {
         if (!active) return;

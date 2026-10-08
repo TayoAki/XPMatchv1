@@ -14,6 +14,9 @@ import { TextArea, TextInput } from "@/components/ui/Field";
 import { ReactionControl } from "@/components/feedback/ReactionControl";
 import { photoCreditTitle } from "@/components/ui/PhotoCredit";
 import { StopDetails } from "./StopDetails";
+import { stopTarget } from "@/lib/collab/types";
+import { GroupVote } from "../collab/GroupVote";
+import { CommentThread, CommentToggle } from "../collab/Comments";
 
 export type StopMove = `day:${number}` | "ideas" | "remove";
 
@@ -76,6 +79,9 @@ export function StopCard({ stop, index, color, dayIndex, dayCount, canEdit, hove
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: stop.id, disabled: !canEdit || phone });
   const [editing, setEditing] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  // A stop scheduled from an idea carries that idea's votes and comments.
+  const voteTarget = stopTarget(stop);
   const [draft, setDraft] = useState({ startTime: stop.startTime ?? "", durationMin: stop.durationMin ? String(stop.durationMin) : "", note: stop.note });
   const key = stopPinKey(stop);
   const place = stop.place;
@@ -108,7 +114,7 @@ export function StopCard({ stop, index, color, dayIndex, dayCount, canEdit, hove
         // A click anywhere on the card shows the stop on the map; its own controls, links and fields keep their jobs.
         if (!place || editing) return;
         const target = e.target as HTMLElement;
-        if (target.closest("button, a, input, textarea, select, label, [data-testid='stop-details']")) return;
+        if (target.closest("button, a, input, textarea, select, label, [data-testid='stop-details'], [data-collab]")) return;
         onSelectPlace(key);
       }}
       className={clsx(
@@ -166,6 +172,8 @@ export function StopCard({ stop, index, color, dayIndex, dayCount, canEdit, hove
             </div>
           </div>
           <div className="ml-auto flex flex-wrap items-center justify-end gap-0.5">
+            <GroupVote target={voteTarget} className="mr-0.5" />
+            <CommentToggle target={voteTarget} open={commentsOpen} onToggle={() => setCommentsOpen((v) => !v)} />
             {place ? <ReactionControl name={stop.title} kind={place.kind} place={place} source="trip" size="sm" className="mr-1" /> : null}
             {place ? (
               <button
@@ -237,6 +245,7 @@ export function StopCard({ stop, index, color, dayIndex, dayCount, canEdit, hove
         </div>
         {!editing && stop.note ? <p className="mt-1 text-[13px] text-neutral-700">{stop.note}</p> : null}
         {detailsOpen && place ? <StopDetails stop={stop} place={place} destination={destination} /> : null}
+        {commentsOpen ? <CommentThread target={voteTarget} /> : null}
         {editing ? (
           <div className="mt-2 grid gap-2 rounded-xl bg-surface/70 p-2">
             <div className="flex gap-2">

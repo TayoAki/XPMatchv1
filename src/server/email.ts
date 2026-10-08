@@ -72,3 +72,29 @@ export function passwordResetEmail(input: { to: string; name: string; url: strin
 </div>`;
   return { to: input.to, subject: "Reset your XPMatch password", text, html };
 }
+
+/** An invite to plan a trip together, for someone without an XPMatch account yet. */
+export function tripInviteEmail(input: { to: string; inviter: string; title: string; destination: string; dates: string; url: string; canEdit: boolean }): OutgoingEmail {
+  const what = `${input.title} (${[input.destination, input.dates].filter(Boolean).join(", ")})`;
+  const role = input.canEdit ? "plan it together" : "see the plan, vote on places and comment";
+  const text = [
+    "Hi,",
+    "",
+    `${input.inviter} is planning ${what} on XPMatch and invited you to ${role}. Open this link to join:`,
+    "",
+    input.url,
+    "",
+    `Create your free account with this email address (${input.to}) and the trip will be waiting for you.`,
+    "",
+    "— XPMatch",
+  ].join("\n");
+  const html = `<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.5;color:#171717;max-width:520px">
+<p>Hi,</p>
+<p><strong>${escapeHtml(input.inviter)}</strong> is planning <strong>${escapeHtml(what)}</strong> on XPMatch and invited you to ${escapeHtml(role)}.</p>
+<p><a href="${escapeHtml(input.url)}" style="display:inline-block;background:#171717;color:#fff;text-decoration:none;padding:10px 16px;border-radius:999px;font-weight:600">Join the trip</a></p>
+<p style="color:#525252;font-size:13px">Create your free account with this email address (${escapeHtml(input.to)}) and the trip will be waiting for you. Or paste this into your browser:<br><a href="${escapeHtml(input.url)}" style="color:#171717">${escapeHtml(input.url)}</a></p>
+<p>— XPMatch</p>
+</div>`;
+  const subject = `${input.inviter} invited you to ${input.title} on XPMatch`.replace(/\s+/g, " ");
+  return { to: input.to, subject, text, html };
+}

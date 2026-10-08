@@ -1,8 +1,22 @@
+import { z } from "zod";
 import { queryAll } from "@/server/db";
-import { HttpError, json, requireUser, resolveParams, route } from "@/server/http";
+import { HttpError, json, parseBody, requireUser, resolveParams, route } from "@/server/http";
 import { loadTrip, loadTripDetail } from "@/server/models";
+import { changeMemberRole, requireTrip } from "@/server/collab";
 
 type Ctx = { params: Promise<{ id: string; userId: string }> };
+
+const patchSchema = z.object({ role: z.enum(["editor", "viewer"]) });
+
+/** The owner changes what a member can do: edit the trip, or comment on it. */
+export const PATCH = route(async (request, ctx: Ctx) => {
+  const user = await requireUser(request);
+  const { id, userId } = await resolveParams(ctx);
+  const trip = await requireTrip(id, user.id, "owner");
+  const body = await parseBody(request, patchSchema);
+  await changeMemberRole(trip, user, userId, body.role);
+  return json(await loadTripDetail(id, user.id));
+});
 
 export const DELETE = route(async (request, ctx: Ctx) => {
   const user = await requireUser(request);

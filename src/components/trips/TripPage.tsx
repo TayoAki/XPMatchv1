@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 import clsx from "clsx";
-import { ArrowLeft, ArrowUp, Calendar, KanbanSquare, LayoutGrid, Luggage, Map as MapIcon, MapPin, MessageCircle, MoreHorizontal, Sparkles, Users, Wallet } from "lucide-react";
+import { ArrowLeft, ArrowUp, Calendar, KanbanSquare, LayoutGrid, Luggage, Map as MapIcon, MapPin, MessageCircle, MessageSquareHeart, MoreHorizontal, Share2, Sparkles, Users, Wallet } from "lucide-react";
 import { formatDateRange, useTravelStore } from "@/lib/store";
 import type { TripDetail } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
@@ -19,12 +19,14 @@ import { TripDetailsDialog } from "./TripDetailsDialog";
 import { TripBoard } from "./board/TripBoard";
 import { PostTripRating } from "@/components/feedback/PostTripRating";
 import { ratingCandidates, tripEnded } from "@/lib/feedback/post-trip";
+import { TripCollabProvider, useTripCollabData, useTripPulse, useUnseenCount } from "./collab/TripCollab";
+import { DiscussionSection } from "./collab/Discussion";
 
 const BUDGET_LABEL: Record<string, string> = { budget: "Budget", "mid-range": "Mid-range", premium: "Premium", luxury: "Luxury" };
 
 type TripView = "tiles" | "board";
-/** Phones show the page as tabs: the overview (title, chips, prompt, chats), the board and the tiles. */
-type MobileTab = "overview" | "board" | "tiles";
+/** Phones show the page as tabs: the overview (title, chips, prompt, chats), the board, the tiles and the discussion. */
+type MobileTab = "overview" | "board" | "tiles" | "discuss";
 /** Wide screens keep the board on the left; the right column shows the tiles, with the map over them on demand. */
 type RightView = "tiles" | "map";
 
@@ -35,6 +37,15 @@ function readViewParam(): TripView | null {
   try {
     const fromUrl = new URLSearchParams(window.location.search).get("view");
     return fromUrl === "board" || fromUrl === "tiles" ? fromUrl : null;
+  } catch {
+    return null;
+  }
+}
+
+/** `?section=discussion` (the link from a discussion update) opens the trip on its discussion. */
+function readSectionParam(): TripSection | null {
+  try {
+    return new URLSearchParams(window.location.search).get("section") === "discussion" ? "discussion" : null;
   } catch {
     return null;
   }
@@ -96,11 +107,12 @@ function RightToggle({ view, pinCount, onChange }: { view: RightView; pinCount: 
   );
 }
 
-function MobileTabs({ tab, onChange }: { tab: MobileTab; onChange: (tab: MobileTab) => void }) {
+function MobileTabs({ tab, unseen, onChange }: { tab: MobileTab; unseen: number; onChange: (tab: MobileTab) => void }) {
   const options: { key: MobileTab; label: string; icon: typeof LayoutGrid }[] = [
-    { key: "overview", label: "Overview", icon: MessageCircle },
+    { key: "overview", label: "Overview", icon: Sparkles },
     { key: "board", label: "Board", icon: KanbanSquare },
     { key: "tiles", label: "Tiles", icon: LayoutGrid },
+    { key: "discuss", label: "Discuss", icon: MessageCircle },
   ];
   return (
     <div role="tablist" aria-label="Trip sections" data-testid="trip-tabs" className="flex shrink-0 gap-1 border-b border-border bg-white px-2 pt-1">
@@ -120,6 +132,11 @@ function MobileTabs({ tab, onChange }: { tab: MobileTab; onChange: (tab: MobileT
             )}
           >
             <Icon className="h-4 w-4" /> {o.label}
+            {o.key === "discuss" && unseen ? (
+              <span className="h-2 w-2 shrink-0 rounded-full bg-error" data-testid="discuss-unseen">
+                <span className="sr-only">{unseen} new</span>
+              </span>
+            ) : null}
           </button>
         );
       })}
@@ -128,11 +145,19 @@ function MobileTabs({ tab, onChange }: { tab: MobileTab; onChange: (tab: MobileT
 }
 
 function TripPageInner({ tripId }: { tripId: string }) {
-  const { trip, error, setTrip } = useTripDetail(tripId);
-  const { removeTrip, feedback } = useTravelStore();
+  const { trip, error, setTrip, reload } = useTripDetail(tripId);
+  const { removeTrip, feedback, user } = useTravelStore();
   const router = useRouter();
   const send = useSendMessage();
-  const [section, setSection] = useState<TripSection | null>(null);
+  const collabData = useTripCollabData(tripId);
+  // Someone else's change shows up within seconds while the page is open.
+  const reloadCollab = collabData.reload;
+  useTripPulse(trip ? tripId : null, (part) => (part === "trip" ? reload() : reloadCollab()));
+  const unseen = useUnseenCount(tripId, collabData.collab.messages, user?.id ?? null);
+  const sectionParam = useSyncExternalStore(noSubscribe, readSectionParam, () => null);
+  const [chosenSection, setChosenSection] = useState<TripSection | null | undefined>(undefined);
+  const section = chosenSection === undefined ? sectionParam : chosenSection;
+  const setSection = (next: TripSection | null) => setChosenSection(next);
   const viewParam = useSyncExternalStore(noSubscribe, readViewParam, () => null);
   const [chosenTab, setChosenTab] = useState<MobileTab | null>(null);
   const [mapShown, setMapShown] = useState(true);
@@ -210,6 +235,8 @@ function TripPageInner({ tripId }: { tripId: string }) {
 
   const canEdit = trip.role !== "viewer";
   const isOwner = trip.role === "owner";
+  const owner = trip.members.find((m) => m.role === "owner");
+  const messageCount = collabData.collab.messages.length;
   const dates = formatDateRange(trip.startDate, trip.endDate);
   const ideaCount = trip.items.filter((i) => i.kind === "idea").length;
   const toRate = tripEnded(trip) ? ratingCandidates(trip, feedback) : [];
@@ -250,7 +277,49 @@ function TripPageInner({ tripId }: { tripId: string }) {
 
   // Phones open on the board when the trip already has stops or a chat link asked for it.
   const hasStops = trip.itinerary.some((day) => day.stops.length > 0);
-  const tab: MobileTab = chosenTab ?? (viewParam === "board" || (viewParam === null && hasStops) ? "board" : viewParam === "tiles" ? "tiles" : "overview");
+  const tab: MobileTab =
+    chosenTab ?? (sectionParam === "discussion" ? "discuss" : viewParam === "board" || (viewParam === null && hasStops) ? "board" : viewParam === "tiles" ? "tiles" : "overview");
+  /** The discussion: the right column's section on wide screens, its own tab on phones. */
+  const openDiscussion = () => (wide ? openSection("discussion") : setChosenTab("discuss"));
+  /** Sharing lives in Members. */
+  const openMembers = () => {
+    if (wide) openSection("members");
+    else {
+      setSection("members");
+      setChosenTab("tiles");
+    }
+  };
+  const discussionChip = (
+    <button
+      type="button"
+      onClick={openDiscussion}
+      data-testid="discussion-chip"
+      className={clsx("inline-flex h-8 items-center gap-1.5 rounded-full border px-3 hover:bg-surface", unseen ? "border-brand bg-brand/5" : "border-border")}
+    >
+      <MessageCircle className="h-3.5 w-3.5" /> Discussion
+      {unseen ? <span className="font-semibold text-brand">· {unseen} new</span> : messageCount ? <span className="text-muted">· {messageCount}</span> : null}
+    </button>
+  );
+  const shareButton = canEdit ? (
+    <Button variant="outline" size="sm" onClick={openMembers} aria-label="Share this trip">
+      <Share2 className="h-4 w-4" /> Share
+    </Button>
+  ) : null;
+  const feedbackBanner =
+    trip.via === "feedback" ? (
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3" data-testid="feedback-banner">
+        <div className="flex min-w-0 items-start gap-2.5">
+          <MessageSquareHeart className="mt-0.5 h-4 w-4 shrink-0 text-violet-700" />
+          <div className="text-[13px] text-neutral-800">
+            <span className="font-semibold">{owner ? `${owner.name.split(/\s+/)[0]} asked for your feedback.` : "Your feedback is wanted."}</span> Vote on ideas and stops, comment on them, or write in the
+            discussion. The plan itself stays as the travelers make it.
+          </div>
+        </div>
+        <Button size="sm" variant="outline" onClick={openDiscussion}>
+          Open discussion
+        </Button>
+      </div>
+    ) : null;
 
   const overview = (
     <div className={clsx("mx-auto max-w-[760px]", wide ? "px-8 py-6" : "px-4 py-5")}>
@@ -261,6 +330,7 @@ function TripPageInner({ tripId }: { tripId: string }) {
           <div className="mt-4 flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
             <h1 className="min-w-0 flex-1 basis-[200px] text-[26px] font-semibold leading-tight tracking-tight sm:text-[34px]">{trip.title}</h1>
             <div className="relative flex shrink-0 items-center gap-2" ref={menuRef}>
+              {shareButton}
               {canEdit ? (
                 <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
                   Edit details
@@ -299,7 +369,7 @@ function TripPageInner({ tripId }: { tripId: string }) {
             <button type="button" onClick={() => setSection("calendar")} className="inline-flex h-8 items-center gap-1.5 rounded-full bg-surface px-3 hover:bg-surface-2">
               <Wallet className="h-3.5 w-3.5" /> {trip.budgetTier ? BUDGET_LABEL[trip.budgetTier] ?? trip.budgetTier : "Budget"}
             </button>
-            <button type="button" onClick={() => setSection("members")} className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border px-3 hover:bg-surface">
+            <button type="button" onClick={openMembers} className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border px-3 hover:bg-surface">
               <span className="flex -space-x-1.5">
                 {trip.members.slice(0, 3).map((m) => (
                   <span key={m.userId} className="flex h-5 w-5 items-center justify-center rounded-full bg-brand text-[10px] font-semibold text-white ring-2 ring-white" title={m.name}>
@@ -309,8 +379,10 @@ function TripPageInner({ tripId }: { tripId: string }) {
               </span>
               {trip.members.length === 1 ? "Invite friends" : `${trip.members.length} members`}
             </button>
+            {discussionChip}
           </div>
 
+          {feedbackBanner ? <div className="mt-4">{feedbackBanner}</div> : null}
           {trip.summary ? <p className="mt-4 text-[15px] leading-relaxed text-neutral-700">{trip.summary}</p> : null}
 
           {toRate.length ? (
@@ -423,162 +495,178 @@ function TripPageInner({ tripId }: { tripId: string }) {
           onOpenBoard={() => setChosenTab("board")}
         />
       );
-    return (
-      <div className="flex h-full min-h-0 flex-col">
-        <MobileTabs tab={tab} onChange={setChosenTab} />
-        <section className="xp-scroll min-h-0 flex-1 overflow-y-auto" data-testid="trip-tab-panel">
-          {tab === "overview" ? (
-            overview
-          ) : (
-            <div className="px-4 py-4">
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <div className="min-w-0 truncate text-[15px] font-semibold">{trip.title}</div>
-                <button type="button" onClick={() => setMapShown((v) => !v)} aria-pressed={mapShown} className="shrink-0 rounded-full border border-border px-3 py-1 text-[12px] font-medium hover:bg-surface">
-                  {mapShown ? "Hide map" : "Show map"}
-                </button>
-              </div>
-              {mapShown ? <div className="mb-4">{map("relative h-[220px] overflow-hidden rounded-3xl")}</div> : null}
-              {mobilePanel}
-            </div>
-          )}
-        </section>
-        {dialogs}
+    const discussPanel = (
+      <div className="px-4 py-4">
+        <h2 className="mb-3 text-[20px] font-semibold tracking-tight">Discussion</h2>
+        {feedbackBanner ? <div className="mb-4">{feedbackBanner}</div> : null}
+        <DiscussionSection trip={trip} canEdit={canEdit} onSelectPlace={setSelectedKey} onOpenMembers={openMembers} />
       </div>
+    );
+    return (
+      <TripCollabProvider trip={trip} data={collabData}>
+        <div className="flex h-full min-h-0 flex-col">
+          <MobileTabs tab={tab} unseen={unseen} onChange={setChosenTab} />
+          <section className="xp-scroll min-h-0 flex-1 overflow-y-auto" data-testid="trip-tab-panel">
+            {tab === "overview" ? (
+              overview
+            ) : tab === "discuss" ? (
+              discussPanel
+            ) : (
+              <div className="px-4 py-4">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <div className="min-w-0 truncate text-[15px] font-semibold">{trip.title}</div>
+                  <button type="button" onClick={() => setMapShown((v) => !v)} aria-pressed={mapShown} className="shrink-0 rounded-full border border-border px-3 py-1 text-[12px] font-medium hover:bg-surface">
+                    {mapShown ? "Hide map" : "Show map"}
+                  </button>
+                </div>
+                {mapShown ? <div className="mb-4">{map("relative h-[220px] overflow-hidden rounded-3xl")}</div> : null}
+                {mobilePanel}
+              </div>
+            )}
+          </section>
+          {dialogs}
+        </div>
+      </TripCollabProvider>
     );
   }
 
   // Wide screens: the board is the workspace on the left, the tiles sit on the right with the map
   // over them on demand, and the assistant is one box along the bottom, so nothing competes.
   return (
-    <div className="flex h-full min-h-0 flex-col" data-testid="trip-desktop">
-      <header className="shrink-0 border-b border-border/60 bg-white px-6 py-3">
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-          <div className="min-w-0 flex-1">
-            <Link href="/trips" className="inline-flex items-center gap-1 text-[12px] font-medium text-neutral-600 hover:text-foreground">
-              <ArrowLeft className="h-3.5 w-3.5" /> Your trips
-            </Link>
-            <h1 className="truncate text-[24px] font-semibold leading-tight tracking-tight">{trip.title}</h1>
-          </div>
-          <div className="relative flex shrink-0 items-center gap-2" ref={menuRef}>
-            {canEdit ? (
-              <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-                Edit details
-              </Button>
-            ) : null}
-            <button type="button" onClick={() => setMenuOpen((v) => !v)} aria-label="Trip menu" aria-haspopup="menu" aria-expanded={menuOpen} className="rounded-full border border-border p-2 hover:bg-surface">
-              <MoreHorizontal className="h-4 w-4" />
-            </button>
-            {menuOpen ? (
-              <div role="menu" className="absolute right-0 top-10 z-20 w-48 rounded-xl border border-border bg-white p-1 shadow-lg">
-                <button type="button" role="menuitem" onClick={destroy} className="w-full rounded-lg px-3 py-2 text-left text-sm text-red-600 hover:bg-surface">
-                  {isOwner ? "Delete trip" : "Leave trip"}
-                </button>
-              </div>
-            ) : null}
-          </div>
-        </div>
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-[13px] font-medium">
-          <span className="inline-flex h-8 items-center gap-1.5 rounded-full bg-surface px-3">
-            <MapPin className="h-3.5 w-3.5" /> {trip.destination}
-          </span>
-          <button type="button" onClick={() => openSection("calendar")} className="inline-flex h-8 items-center gap-1.5 rounded-full bg-surface px-3 hover:bg-surface-2">
-            <Calendar className="h-3.5 w-3.5" /> {dates || "Add dates"}
-          </button>
-          <button type="button" onClick={() => openSection("calendar")} className="inline-flex h-8 items-center gap-1.5 rounded-full bg-surface px-3 hover:bg-surface-2">
-            <Users className="h-3.5 w-3.5" /> {trip.travelers ? `${trip.travelers} traveler${trip.travelers === 1 ? "" : "s"}` : "Who's going?"}
-          </button>
-          <button type="button" onClick={() => openSection("calendar")} className="inline-flex h-8 items-center gap-1.5 rounded-full bg-surface px-3 hover:bg-surface-2">
-            <Wallet className="h-3.5 w-3.5" /> {trip.budgetTier ? BUDGET_LABEL[trip.budgetTier] ?? trip.budgetTier : "Budget"}
-          </button>
-          <button type="button" onClick={() => openSection("members")} className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border px-3 hover:bg-surface">
-            <span className="flex -space-x-1.5">
-              {trip.members.slice(0, 3).map((m) => (
-                <span key={m.userId} className="flex h-5 w-5 items-center justify-center rounded-full bg-brand text-[10px] font-semibold text-white ring-2 ring-white" title={m.name}>
-                  {m.name.charAt(0).toUpperCase()}
-                </span>
-              ))}
-            </span>
-            {trip.members.length === 1 ? "Invite friends" : `${trip.members.length} members`}
-          </button>
-          {trip.summary ? <span className="min-w-0 flex-1 basis-[240px] truncate text-[13px] font-normal text-neutral-600" title={trip.summary}>{trip.summary}</span> : null}
-        </div>
-      </header>
-
-      <div className="flex min-h-0 flex-1">
-        <section className="xp-scroll min-w-0 flex-1 overflow-y-auto px-5 py-4" data-testid="trip-board-column">
-          {toRate.length ? (
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3" data-testid="post-trip-banner">
-              <div>
-                <div className="text-[15px] font-semibold">How was {trip.destination}?</div>
-                <div className="text-[13px] text-neutral-700">
-                  Rate {toRate.length} place{toRate.length === 1 ? "" : "s"} from this trip so XPMatch learns what you love.
-                </div>
-              </div>
-              <Button size="sm" onClick={() => setRatingState("open")}>
-                Rate {toRate.length} place{toRate.length === 1 ? "" : "s"}
-              </Button>
+    <TripCollabProvider trip={trip} data={collabData}>
+      <div className="flex h-full min-h-0 flex-col" data-testid="trip-desktop">
+        <header className="shrink-0 border-b border-border/60 bg-white px-6 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+            <div className="min-w-0 flex-1">
+              <Link href="/trips" className="inline-flex items-center gap-1 text-[12px] font-medium text-neutral-600 hover:text-foreground">
+                <ArrowLeft className="h-3.5 w-3.5" /> Your trips
+              </Link>
+              <h1 className="truncate text-[24px] font-semibold leading-tight tracking-tight">{trip.title}</h1>
             </div>
-          ) : null}
-          {boardPanel}
-        </section>
-
-        <aside className="flex w-[40%] min-w-[400px] max-w-[720px] shrink-0 flex-col border-l border-border/60 bg-white" data-testid="trip-side">
-          <div className="flex items-center justify-between gap-2 border-b border-border/60 px-4 py-2">
-            <RightToggle view={rightView} pinCount={pinCount} onChange={setChosenRight} />
-            <span className="truncate text-[12px] text-muted">{rightView === "map" ? "Click a stop on the board to find it; tap a pin for details" : "Everything else about the trip"}</span>
-          </div>
-          <div className="relative min-h-0 flex-1">
-            <div className="xp-scroll h-full overflow-y-auto p-4" aria-hidden={rightView === "map"}>
-              {tilesPanel}
-            </div>
-            {rightView === "map" ? (
-              <div className="absolute inset-0 bg-white" data-testid="trip-map-over">
-                {map("h-full")}
-              </div>
-            ) : null}
-          </div>
-        </aside>
-      </div>
-
-      <footer className="shrink-0 border-t border-border/60 bg-white px-6 py-3" data-testid="trip-chat-box">
-        <div className="mx-auto max-w-[960px]">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand text-white">
-              <Sparkles className="h-3.5 w-3.5" />
-            </span>
-            {starters.map((chip) => (
-              <button key={chip.label} type="button" onClick={() => send(chip.prompt)} className="h-8 rounded-full border border-border bg-white px-3 text-[13px] font-medium hover:bg-neutral-50">
-                {chip.label}
+            <div className="relative flex shrink-0 items-center gap-2" ref={menuRef}>
+              {shareButton}
+              {canEdit ? (
+                <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+                  Edit details
+                </Button>
+              ) : null}
+              <button type="button" onClick={() => setMenuOpen((v) => !v)} aria-label="Trip menu" aria-haspopup="menu" aria-expanded={menuOpen} className="rounded-full border border-border p-2 hover:bg-surface">
+                <MoreHorizontal className="h-4 w-4" />
               </button>
-            ))}
-            {trip.chats.length ? (
-              <span className="ml-auto flex min-w-0 flex-wrap items-center gap-1.5 text-[12px]" data-testid="trip-recent-chats">
-                <MessageCircle className="h-3.5 w-3.5 text-neutral-500" />
-                {trip.chats.slice(0, 3).map((c) => (
-                  <Link key={c.id} href={`/chat?thread=${encodeURIComponent(c.id)}&trip=${encodeURIComponent(trip.id)}`} className="max-w-[220px] truncate rounded-full bg-surface px-2.5 py-1 font-medium hover:bg-surface-2">
-                    {c.title}
-                  </Link>
-                ))}
-                {trip.chats.length > 3 ? <span className="text-muted">+{trip.chats.length - 3} more</span> : null}
-              </span>
-            ) : null}
+              {menuOpen ? (
+                <div role="menu" className="absolute right-0 top-10 z-20 w-48 rounded-xl border border-border bg-white p-1 shadow-lg">
+                  <button type="button" role="menuitem" onClick={destroy} className="w-full rounded-lg px-3 py-2 text-left text-sm text-red-600 hover:bg-surface">
+                    {isOwner ? "Delete trip" : "Leave trip"}
+                  </button>
+                </div>
+              ) : null}
+            </div>
           </div>
-          <form onSubmit={ask} className="mt-2 flex items-center gap-2 rounded-full border border-border bg-white py-1 pl-5 pr-1 shadow-sm focus-within:border-brand">
-            <input
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              placeholder={`Ask anything about ${trip.destination}: hotels, what to do, a day-by-day plan…`}
-              aria-label="Ask about this trip"
-              className="h-9 flex-1 bg-transparent text-[15px] outline-none placeholder:text-neutral-400"
-            />
-            <button type="submit" disabled={!question.trim()} aria-label="Send" className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-white disabled:opacity-30">
-              <ArrowUp className="h-4 w-4" />
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-[13px] font-medium">
+            <span className="inline-flex h-8 items-center gap-1.5 rounded-full bg-surface px-3">
+              <MapPin className="h-3.5 w-3.5" /> {trip.destination}
+            </span>
+            <button type="button" onClick={() => openSection("calendar")} className="inline-flex h-8 items-center gap-1.5 rounded-full bg-surface px-3 hover:bg-surface-2">
+              <Calendar className="h-3.5 w-3.5" /> {dates || "Add dates"}
             </button>
-          </form>
-        </div>
-      </footer>
+            <button type="button" onClick={() => openSection("calendar")} className="inline-flex h-8 items-center gap-1.5 rounded-full bg-surface px-3 hover:bg-surface-2">
+              <Users className="h-3.5 w-3.5" /> {trip.travelers ? `${trip.travelers} traveler${trip.travelers === 1 ? "" : "s"}` : "Who's going?"}
+            </button>
+            <button type="button" onClick={() => openSection("calendar")} className="inline-flex h-8 items-center gap-1.5 rounded-full bg-surface px-3 hover:bg-surface-2">
+              <Wallet className="h-3.5 w-3.5" /> {trip.budgetTier ? BUDGET_LABEL[trip.budgetTier] ?? trip.budgetTier : "Budget"}
+            </button>
+            <button type="button" onClick={() => openSection("members")} className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border px-3 hover:bg-surface">
+              <span className="flex -space-x-1.5">
+                {trip.members.slice(0, 3).map((m) => (
+                  <span key={m.userId} className="flex h-5 w-5 items-center justify-center rounded-full bg-brand text-[10px] font-semibold text-white ring-2 ring-white" title={m.name}>
+                    {m.name.charAt(0).toUpperCase()}
+                  </span>
+                ))}
+              </span>
+              {trip.members.length === 1 ? "Invite friends" : `${trip.members.length} members`}
+            </button>
+            {discussionChip}
+            {trip.summary ? <span className="min-w-0 flex-1 basis-[240px] truncate text-[13px] font-normal text-neutral-600" title={trip.summary}>{trip.summary}</span> : null}
+          </div>
+        </header>
 
-      {dialogs}
-    </div>
+        <div className="flex min-h-0 flex-1">
+          <section className="xp-scroll min-w-0 flex-1 overflow-y-auto px-5 py-4" data-testid="trip-board-column">
+            {feedbackBanner ? <div className="mb-4">{feedbackBanner}</div> : null}
+            {toRate.length ? (
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3" data-testid="post-trip-banner">
+                <div>
+                  <div className="text-[15px] font-semibold">How was {trip.destination}?</div>
+                  <div className="text-[13px] text-neutral-700">
+                    Rate {toRate.length} place{toRate.length === 1 ? "" : "s"} from this trip so XPMatch learns what you love.
+                  </div>
+                </div>
+                <Button size="sm" onClick={() => setRatingState("open")}>
+                  Rate {toRate.length} place{toRate.length === 1 ? "" : "s"}
+                </Button>
+              </div>
+            ) : null}
+            {boardPanel}
+          </section>
+
+          <aside className="flex w-[40%] min-w-[400px] max-w-[720px] shrink-0 flex-col border-l border-border/60 bg-white" data-testid="trip-side">
+            <div className="flex items-center justify-between gap-2 border-b border-border/60 px-4 py-2">
+              <RightToggle view={rightView} pinCount={pinCount} onChange={setChosenRight} />
+              <span className="truncate text-[12px] text-muted">{rightView === "map" ? "Click a stop on the board to find it; tap a pin for details" : "Everything else about the trip"}</span>
+            </div>
+            <div className="relative min-h-0 flex-1">
+              <div className="xp-scroll h-full overflow-y-auto p-4" aria-hidden={rightView === "map"}>
+                {tilesPanel}
+              </div>
+              {rightView === "map" ? (
+                <div className="absolute inset-0 bg-white" data-testid="trip-map-over">
+                  {map("h-full")}
+                </div>
+              ) : null}
+            </div>
+          </aside>
+        </div>
+
+        <footer className="shrink-0 border-t border-border/60 bg-white px-6 py-3" data-testid="trip-chat-box">
+          <div className="mx-auto max-w-[960px]">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand text-white">
+                <Sparkles className="h-3.5 w-3.5" />
+              </span>
+              {starters.map((chip) => (
+                <button key={chip.label} type="button" onClick={() => send(chip.prompt)} className="h-8 rounded-full border border-border bg-white px-3 text-[13px] font-medium hover:bg-neutral-50">
+                  {chip.label}
+                </button>
+              ))}
+              {trip.chats.length ? (
+                <span className="ml-auto flex min-w-0 flex-wrap items-center gap-1.5 text-[12px]" data-testid="trip-recent-chats">
+                  <MessageCircle className="h-3.5 w-3.5 text-neutral-500" />
+                  {trip.chats.slice(0, 3).map((c) => (
+                    <Link key={c.id} href={`/chat?thread=${encodeURIComponent(c.id)}&trip=${encodeURIComponent(trip.id)}`} className="max-w-[220px] truncate rounded-full bg-surface px-2.5 py-1 font-medium hover:bg-surface-2">
+                      {c.title}
+                    </Link>
+                  ))}
+                  {trip.chats.length > 3 ? <span className="text-muted">+{trip.chats.length - 3} more</span> : null}
+                </span>
+              ) : null}
+            </div>
+            <form onSubmit={ask} className="mt-2 flex items-center gap-2 rounded-full border border-border bg-white py-1 pl-5 pr-1 shadow-sm focus-within:border-brand">
+              <input
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                placeholder={`Ask anything about ${trip.destination}: hotels, what to do, a day-by-day plan…`}
+                aria-label="Ask about this trip"
+                className="h-9 flex-1 bg-transparent text-[15px] outline-none placeholder:text-neutral-400"
+              />
+              <button type="submit" disabled={!question.trim()} aria-label="Send" className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-white disabled:opacity-30">
+                <ArrowUp className="h-4 w-4" />
+              </button>
+            </form>
+          </div>
+        </footer>
+
+        {dialogs}
+      </div>
+    </TripCollabProvider>
   );
 }

@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { queryAll } from "@/server/db";
 import { HttpError, json, parseBody, requireUser, resolveParams, route } from "@/server/http";
-import { loadTrip, loadTripDetail, notify, tripMemberIds } from "@/server/models";
+import { loadTrip, loadTripDetail } from "@/server/models";
+import { itemRecipients, notifyItemAdded } from "@/server/collab";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -28,10 +29,7 @@ export const POST = route(async (request, ctx: Ctx) => {
     [id, body.kind, body.title, body.note, body.url ?? null, body.place ? JSON.stringify(body.place) : null, details, user.id],
   );
   await queryAll("UPDATE trips SET updated_at = now() WHERE id = $1", [id]);
-  const others = (await tripMemberIds(id)).filter((m) => m !== user.id);
-  const what = body.kind === "idea" ? "an idea" : body.kind === "booking" ? "a booking" : "media";
-  await Promise.all(
-    others.map((m) => notify(m, "trip_activity", `${user.name} added ${what} to "${trip.title}": ${body.title}.`, { tripId: id })),
-  );
+  // The assistant adding five ideas in a row is one update ("added 5 ideas"), not five.
+  await notifyItemAdded(await itemRecipients(id, user.id, body.kind), trip, user, body.kind, body.title);
   return json(await loadTripDetail(id, user.id), { status: 201 });
 });

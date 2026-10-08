@@ -382,22 +382,24 @@ page.
 ## 4. Trips
 
 **List** — `/trips`: "Your trips" with **Trips | Calendar** tabs and an All / Upcoming / Past filter.
-Cards show the destination photo, title, destination and dates, and a member count when shared. The
-calendar tab highlights trip date ranges by month.
+Cards show the destination photo, title, destination and dates, a member count when shared, and a
+**Feedback** label on a friend's trip you were asked to give feedback on. The calendar tab highlights
+trip date ranges by month.
 
 **Create** — planner dialog → Create trip; the chat's proposal card → Save to my trips; the Create page's
 Trip tab; or **Add to trip → New trip** from any place.
 
 **Trip page** — `/trips/[id]`. On a wide screen it is one workspace with three fixed places for
 things, so nothing competes for attention:
-- **Header** (one band across the top): "Your trips", the title, **Edit details** (title,
-  destination, dates, travelers, budget), a menu with **Delete trip** (owner) or **Leave trip**
-  (member), then chips for destination, dates, travelers, budget (each opens the matching tile
-  section on the right) and members, with the summary on one line.
+- **Header** (one band across the top): "Your trips", the title, **Share** (opens Members; people who
+  can edit only), **Edit details** (title, destination, dates, travelers, budget), a menu with **Delete
+  trip** (owner) or **Leave trip** (member), then chips for destination, dates, travelers, budget (each
+  opens the matching tile section on the right), members and **Discussion** (the number of messages,
+  or "N new" highlighted when others wrote since you last looked), with the summary on one line.
 - **Board on the left** — the itinerary is the main column and is always in view (the post-trip
   "How was Rome?" banner sits above it when the trip has ended).
-- **Tiles on the right** — Ideas, Itinerary, Bookings, Media, Trip preferences, Calendar and Members,
-  opening in place. A **Tiles | Map · N pinned** switch at the top of the column brings the **map over
+- **Tiles on the right** — Discussion, Ideas, Itinerary, Bookings, Media, Trip preferences, Calendar
+  and Members, opening in place. A **Tiles | Map · N pinned** switch at the top of the column brings the **map over
   the tiles** and back. Clicking a stop on the board (anywhere on its card) or "Show on the map" on
   an idea brings the map over with that pin marked and panned into view, without opening its sheet;
   tapping the pin on the map opens the sheet. Opening a tile section brings the tiles back.
@@ -410,9 +412,10 @@ things, so nothing competes for attention:
   summary, the whole itinerary as structured stops, preferences), `add_trip_ideas` (adds places to the
   Ideas list) and `schedule_stops` ("put the Colosseum on day 2": places are resolved and pinned; the chip
   links to the board).
-- On a phone the page is three tabs, **Overview | Board | Tiles** (the overview holds the title, chips,
-  the proactive card, the ask box and the chats), and opens on the board when the trip has stops (or
-  `?view=board`); the map is a short header above the board with **Hide map / Show map**, and stops
+- On a phone the page is four tabs, **Overview | Board | Tiles | Discuss** (the overview holds the
+  title, chips, the proactive card, the ask box and the chats; a dot on Discuss means new messages),
+  and opens on the board when the trip has stops (or `?view=board`, or the discussion with
+  `?section=discussion`); the map is a short header above the board with **Hide map / Show map**, and stops
   have no drag handle: **up / down** buttons reorder them within the day and **Move to…** sends them to
   another day, back to ideas or away.
 - **Board** — Wanderlog-style: dates, travelers, bookings and ideas chips and a **Walk / Drive /
@@ -439,7 +442,7 @@ things, so nothing competes for attention:
   the hotel or venue resolved) and **Media** (title, link, note; image links preview), **Trip preferences**
   (free text the assistant reads for this trip, plus **Learned for this trip**: the "For this trip"
   answers from its chats, each removable), **Calendar** (dates, travelers, budget plus a month view),
-  **Members** (add by email, role Can edit / Can view; remove; leave).
+  **Members** (see "Planning together" below).
 - **Map** — destination pin, unscheduled ideas/bookings/media with a place, and the itinerary's stops as
   numbered pins colored per day with a line through each day; chips **All · Day 1 · Day 2…** show one day
   at a time; hovering a board card highlights its pin and vice versa; click a pin for its sheet.
@@ -448,9 +451,49 @@ things, so nothing competes for attention:
   "Which did you prefer?" pairs against places already rated in the same domain, which turn into 0–10
   scores; the same prompt sits under Updates (`?rate=1` opens it).
 
-**Members and notifications** — adding a member requires an XPMatch account with that email. The member
-gets an Update ("Tayo added you to the trip…") and the trip appears in their Trips. Adding ideas,
-bookings, media or editing the plan notifies the other members.
+**Planning together** — once someone else is on the trip, every idea (in Ideas and on the board's tray)
+and every stop has a **group vote** (an up and a down arrow with counts; your own vote filled in; who
+voted in the tooltip; click again to take it back) and a **comment** button with the count that opens
+the place's thread in the card. A stop scheduled from an idea shows that idea's votes and comments.
+**Discussion** is the trip's conversation: everyone on the trip writes there (Enter sends, Shift+Enter
+for a new line), comments on places appear in the same stream with an "on Colosseum" chip that shows
+the place, authors delete their own messages and the owner can delete any. Alone on the trip, it offers
+**Invite people** and **Get feedback**. An open trip page checks for changes every 8 seconds while the
+tab is visible (`GET /api/trips/[id]/pulse`, two short version strings) and reloads the trip or the
+conversation when someone else changed it, so a vote, a message or a new idea appears within seconds.
+
+**Sharing (Members)** — **Invite people**: an email and **Can edit** / **Can comment**. Someone with
+an XPMatch account goes straight onto the trip and gets an Update ("Tayo added you to the trip…");
+anyone else gets an email (through Resend) with a join link only that address can accept: they open
+it, sign up with that address and join (signing up with the address alone does not join, since
+accounts are not email-verified; the link from the email is the proof). **Or share a link**: **Copy invite link** for
+Can edit or Can comment (the same link each time, until it is turned off). **Get feedback**: **Copy
+feedback link** for friends who aren't coming. **Invites and links** lists what is waiting: emailed
+invites (Copy link, Withdraw) and live links with how many joined (Turn off). **On this trip** and
+**Giving feedback** list the people: name, handle (emails only for the owner), role, Remove / Leave;
+the owner switches anyone between Can edit and Can comment.
+
+**Joining** — `/join/[token]` works signed out: "Tayo invited you to plan Trip to Rome" (or "would love
+your feedback on…"), the trip's destination, dates and size, then **Create a free account** / **I
+have an account** (both come back to the link). Signed in: **Join the trip** (or **Open the trip** for
+feedback). A link that was turned off, has expired or was used says so; an emailed invite opened with
+another account says whose it is ("sent to s•••@gmail.com") and offers **Use another account**. A new
+account lands on the trip first; the first-run setup appears once they go anywhere else. People giving
+feedback see the plan, ideas, the board and the discussion and can vote and comment, but have no Share,
+Edit details or editing, and **Bookings** reads "Bookings stay with the travelers".
+
+**Updates from shared trips** — a burst of activity is one update while it is unread (for half an
+hour): "Tayo added 3 ideas to "Rome": A, B and C.", "Tayo made 5 changes to "Rome".", "Sam voted on 2
+places in "Rome": Colosseum and Roman Forum.", "1 new message and 2 comments in "Rome" from Sam and Lee.
+Latest from Lee: "…"" (its link opens the discussion), plus "Sam joined "Rome"." and "Lee opened your
+feedback link…" for the owner and whoever shared the link, and a note when the owner changes your role.
+
+**The assistant on a shared trip** — a trip chat's context also lists the members with their roles,
+the group's votes on each idea and stop (for and against, by name, where it stands now) and the latest
+fifteen messages and comments; the assistant keeps and schedules what most voted for, offers to
+replace what more voted against, names disagreements instead of picking a side, and only changes the
+trip when the traveler talking to it asks. A chat opened from the trip page waits (five seconds at
+most) for the trip and its votes to load before its first message goes out.
 
 ## 5. Add to trip (everywhere)
 
@@ -513,8 +556,10 @@ the link from history, or lists the screenshot's places), the source link and re
 ## 10. Updates
 
 `/updates` is the notification feed (unread count on the header bell and the More tab; opening the page marks all as
-read): you were added to a trip, a member added an idea/booking/media or edited the plan, someone saved
-your guide. Each item links to the trip or guide. Trips that ended recently show a "How was Rome?" card
+read; it refreshes every 45 seconds while the app is open): you were added to a trip, someone joined
+your trip, a member added an idea/booking/media or edited the plan, wrote in the discussion or voted
+(grouped per burst, see Planning together), someone saved your guide. Each item links to the trip (the
+discussion for messages) or guide. Trips that ended recently show a "How was Rome?" card
 on top with **Rate places** (opens the post-trip rating on the trip page) and **Not now**.
 
 ## 10a. Bug reports and Admin
@@ -565,10 +610,11 @@ Railway, Resend). Counts are written every few seconds, so a deploy loses at mos
 | Route | Screen |
 | --- | --- |
 | `/login`, `/signup`, `/forgot`, `/reset` (`?token=`) | Account, the "Forgot password?" form, and the page a reset link opens |
+| `/join/[token]` | An invite or feedback link: who invited you to what, then sign up / sign in and join (works signed out) |
 | `/admin` | Bug reports and recommendation quality (admins) |
 | `/` | Discover: hero with the composer and planner fields, collections, picks, Jump back in, community guides |
 | `/chat` (`?thread=`, `?trip=`, `?prompt=`) | The concierge: chat and map, history in the side rail; `/?thread=`, `/?prompt=` and `/chats` redirect here |
-| `/trips`, `/trips/[id]` (`?view=board`, `?rate=1`) | Trips list and trip page (board view, post-trip rating) |
+| `/trips`, `/trips/[id]` (`?view=board`, `?rate=1`, `?section=discussion`) | Trips list and trip page (board view, post-trip rating, the discussion) |
 | `/explore` | Off for now: redirects to Discover |
 | `/create` (`?guide=`) | Guide editor / trip form |
 | `/inspiration` (`?collection=`), `/guides/[id]` | Community guides and the curated rows (narrowed to a Discover collection) |
@@ -581,8 +627,10 @@ mind; never the interview's audio or transcript), dealbreakers and learned prefe
 reasons that repeat in reactions become preferences with source "feedback"), the computed taste profile,
 reactions to places (one row per place: verdict, reasons, note, score, trip), thumbs on recommendations
 (one row per place: up / down, the score shown, the match factors that fired, the miss reason, where it was
-shown), bug reports (with their screenshot), trips (with members, items — bookings imported from a
-confirmation keep their structured details — structured itinerary stops, preferences), saved places and
+shown), bug reports (with their screenshot), trips (with members and how each joined, items — bookings imported from a
+confirmation keep their structured details — structured itinerary stops, preferences, the discussion and
+comments, group votes, and invites: links and emailed invites with the invited address until it is
+used), saved places and
 guides, guides they authored (including private import collections),
 imports (source, verified places, unverified mentions), the chat list (titles, trip links), chat
 transcripts (every message, tool call and card, written by the runtime after each run and restored when a

@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { queryAll } from "@/server/db";
 import { HttpError, json, parseBody, requireUser, resolveParams, route } from "@/server/http";
-import { loadTrip, loadTripDetail, notify, tripMemberIds } from "@/server/models";
+import { loadTrip, loadTripDetail, tripMemberIds } from "@/server/models";
+import { notifyTripEdited } from "@/server/collab";
 import { resolveDestination } from "@/server/places";
 import { countPendingLookups, resolveItinerary } from "@/server/itinerary";
 import { assertLookupBudget } from "@/server/lookup-budget";
@@ -65,10 +66,9 @@ export const PATCH = route(async (request, ctx: Ctx) => {
   if (body.preferences !== undefined) add("preferences", body.preferences);
   if (sets.length) {
     await queryAll(`UPDATE trips SET ${sets.join(", ")}, updated_at = now() WHERE id = $1`, values);
+    // A run of edits (dragging stops around the board) is one update for the others, not one per drop.
     const others = (await tripMemberIds(id)).filter((m) => m !== user.id);
-    await Promise.all(
-      others.map((m) => notify(m, "trip_activity", `${user.name} updated the trip "${body.title ?? existing.title}".`, { tripId: id })),
-    );
+    await notifyTripEdited(others, { id, title: body.title ?? existing.title }, user);
   }
   const trip = await loadTripDetail(id, user.id);
   return json(trip);

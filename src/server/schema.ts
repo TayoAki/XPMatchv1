@@ -411,4 +411,55 @@ export const MIGRATIONS: Migration[] = [
        ON CONFLICT DO NOTHING`,
     ],
   },
+  {
+    id: "0012_trip_collaboration",
+    statements: [
+      // The trip's discussion (no target) and comments on its ideas and stops (target_kind 'item' or 'stop').
+      // The label keeps the place's name as it was, since a stop can be renamed or removed later.
+      `CREATE TABLE IF NOT EXISTS trip_messages (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        trip_id uuid NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+        user_id uuid REFERENCES users(id) ON DELETE CASCADE,
+        target_kind text,
+        target_id text,
+        target_label text,
+        body text NOT NULL,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )`,
+      `CREATE INDEX IF NOT EXISTS trip_messages_trip_idx ON trip_messages(trip_id, created_at)`,
+      // One vote per member per idea or stop: +1 for, -1 against.
+      `CREATE TABLE IF NOT EXISTS trip_votes (
+        trip_id uuid NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        target_kind text NOT NULL,
+        target_id text NOT NULL,
+        target_label text NOT NULL DEFAULT '',
+        value smallint NOT NULL,
+        updated_at timestamptz NOT NULL DEFAULT now(),
+        PRIMARY KEY (trip_id, target_kind, target_id, user_id)
+      )`,
+      // Invite links (anyone with the link), emailed invites (only that address, waiting for a sign-up)
+      // and "Get feedback" links. The token stays readable so "Copy link" keeps handing out the same link.
+      `CREATE TABLE IF NOT EXISTS trip_invites (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        trip_id uuid NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+        token text UNIQUE NOT NULL,
+        role text NOT NULL DEFAULT 'editor',
+        purpose text NOT NULL DEFAULT 'invite',
+        email text,
+        created_by uuid REFERENCES users(id) ON DELETE SET NULL,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        expires_at timestamptz,
+        uses int NOT NULL DEFAULT 0,
+        revoked_at timestamptz,
+        accepted_at timestamptz
+      )`,
+      `CREATE INDEX IF NOT EXISTS trip_invites_trip_idx ON trip_invites(trip_id, created_at DESC)`,
+      `CREATE INDEX IF NOT EXISTS trip_invites_email_idx ON trip_invites(email) WHERE email IS NOT NULL`,
+      // How each member came onto the trip: 'added' by email, an invite 'link', an 'email' invite, or 'feedback'.
+      `ALTER TABLE trip_members ADD COLUMN IF NOT EXISTS via text NOT NULL DEFAULT 'added'`,
+      // Grouping a burst of activity into one update looks up the recipient's unread updates by group.
+      `CREATE INDEX IF NOT EXISTS notifications_group_idx ON notifications(user_id, (data->>'group')) WHERE read = false`,
+    ],
+  },
 ];

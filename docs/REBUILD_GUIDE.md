@@ -1267,12 +1267,60 @@ Empty: "No trips yet" with Create a trip.
 - **Bookings and Media:** a title, a link and a note or caption; image links preview. Bookings with
   details show their facts, appear on their day and are pinned.
 - **Trip preferences:** free text plus "Learned for this trip".
-- **Members:** invite by email with Can edit or Can view. The person needs an XPMatch account; they get
-  a "trip invite" update. The owner cannot be removed; others can remove themselves. Edits and new
-  items notify the other members.
+- **Members:** the sharing hub (see Planning together). The owner cannot be removed; others can
+  remove themselves; only the owner changes roles. Edits and new items notify the other members,
+  grouped per burst.
 - **Trip chat:** a "Planning {trip}" banner with Open trip; the assistant sees the trip, its items are
   pinned on the chat map, and it can use `update_trip_plan`, `add_trip_ideas` (1–8 places) and
   `schedule_stops` (1–10).
+
+### Planning together
+
+Everything lives in `src/server/collab.ts` (server), `src/lib/collab/types.ts` (shared types and the
+helpers both sides use) and `src/components/trips/collab/*` (the page).
+
+- **Roles.** `owner`, `editor` ("Can edit") and `viewer` ("Can comment": reads the trip, votes,
+  comments and writes in the discussion, changes nothing). `trip_members.via` records how someone came:
+  `added` (by email, with an account), `link`, `email` (an emailed invite) or `feedback`. Feedback givers
+  are viewers who don't get the trip's bookings (`loadTripDetail` leaves them out) and are listed apart.
+  Only the owner sees members' email addresses.
+- **Targets.** A vote or a comment is about `{ kind: "item" | "stop", id, label }`. A stop scheduled
+  from an idea (`stop.itemId`) is that idea, so its votes and comments follow it from the tray onto a
+  day. The server checks the target is one of the trip's ideas or stops and takes the label from the
+  trip, never from the request.
+- **Votes.** One row per member and target in `trip_votes` (+1 / -1; 0 deletes). Only votes of people
+  still on the trip count. The UI is an up and a down arrow with counts (hidden at zero), the
+  traveler's own vote filled in, names in the tooltip; arrows so it never reads as the personal
+  thumbs reaction next to it. Votes show at once and are sent one after another; the answer to the
+  latest one wins.
+- **Discussion and comments.** One table, `trip_messages`: no target for the discussion, a target for
+  a comment. The page loads the latest 300 (oldest first). Authors delete their own; the owner can
+  delete any. "New" is per browser: the newest message seen is kept in localStorage per trip.
+- **Live.** An open trip page polls `GET /api/trips/{id}/pulse` every 8 seconds while visible (and
+  at once when the tab comes back). The pulse is two strings: the trip (its `updated_at`, the item
+  count and a hash of the members with their roles) and the conversation (message and vote counts
+  and latest times, plus the members hash). A change reloads the trip or the conversation. No
+  websockets: a pulse is one indexed query.
+- **Invites.** `trip_invites` holds a readable token (so "Copy link" keeps giving the same link),
+  the role, the purpose (`invite` or `feedback`, always Can comment), an optional email, uses, expiry,
+  revoked and accepted times. Links never expire until turned off; emailed invites last 30 days and
+  are single use. Inviting an address with an account adds them at once; otherwise the invite is
+  emailed (Resend; ten invite emails a day per inviter, three a day per address) and accepted through
+  its link by an account with that address. Accounts are not email-verified, so signing up with the
+  address alone never joins: the token from the email is the proof. Joining through a link never lowers a
+  role; a planning link lifts a commenter to editor and a feedback giver into the plan.
+- **Joining.** `/join/{token}` sits in the auth layout and is public (the route gate lets `/join/` and
+  `/api/join/` through). It describes the trip only while the invite works, offers sign up / sign in
+  with `next` back to itself, then joins with a POST. The join page sets a session-storage flag so the
+  trip opens before the first-run setup, which appears once the newcomer goes anywhere else.
+- **Updates.** `notifyGrouped` rewrites the recipient's unread update of the same group from the last
+  half hour instead of adding one: discussion (`talk:{trip}`), votes (`vote:{trip}:{voter}`), edits
+  (`edit:{trip}:{editor}`) and added items (`add:{trip}:{who}:{kind}`). The shell re-reads Updates
+  every 45 seconds while visible; a new "added you to a trip" also refreshes the trips list.
+- **The assistant.** The trip chat's context carries `members` (with roles), `groupVotes` (per place:
+  for and against with names, and whether it is on a day, still an idea, or removed) and `discussion`
+  (the latest 15, with what a comment was about). The prompt says to plan for the group. A chat opened
+  from the trip page holds its first message until that context has loaded (five seconds at most).
 
 ### Add to trip
 
@@ -1424,7 +1472,7 @@ learned", the "Learn from our chats" switch and "Your taste".
 
 ## 15. Data model
 
-28 tables in `src/server/schema.ts`. Migrations run in order the first time a process touches the
+31 tables in `src/server/schema.ts`. Migrations run in order the first time a process touches the
 database, are recorded in `schema_migrations`, and use `IF NOT EXISTS` so they can run again. With
 `DATABASE_URL` set the app uses Postgres (a pool of 5, SSL when the URL asks for it or `PGSSL=true`);
 without it, PGlite in `.data/pglite`.
@@ -1436,7 +1484,10 @@ without it, PGlite in `.data/pglite`.
 | | `profiles` | The profile as JSON, onboarded, the taste profile |
 | | `password_resets` | Token hash, used at, created by |
 | Trips | `trips` | Owner, title, destination, place, dates, travelers, budget, summary, itinerary (days as JSON), preferences |
-| | `trip_members` | Trip and user, role (owner, editor, viewer), added by |
+| | `trip_members` | Trip and user, role (owner, editor, viewer), added by, how they joined (added, link, email, feedback) |
+| | `trip_messages` | The discussion and comments: author, optional target (idea or stop, with its name then), body |
+| | `trip_votes` | One vote per member and idea or stop: +1 or -1, the place's name, when |
+| | `trip_invites` | Links and emailed invites: token, role, purpose (invite or feedback), email, uses, expiry, revoked, accepted |
 | | `trip_items` | Ideas, bookings and media: title, note, link, place, booking details, added by |
 | | `chat_plans` | Saved itineraries by user, chat and card, with their trip (§11) |
 | Chats | `chats` | Thread id, owner, title, linked trip, destination and place |
@@ -1464,15 +1515,17 @@ without it, PGlite in `.data/pglite`.
 
 ## 16. API reference
 
-61 route files under `src/app/api`. "Session" means the handler checks the session; "+ origin" means
+70 route files under `src/app/api`. "Session" means the handler checks the session; "+ origin" means
 writes must also come from the same origin.
 
 | Area | Routes | Access |
 | --- | --- | --- |
 | Accounts | `auth/signup`, `auth/login`, `auth/forgot`, `auth/reset` (rate limited); `auth/logout`; `auth/me` | Public; logout needs the cookie; me needs a session |
 | Health | `health` (runs `SELECT 1`), `config` (model mode, whether places and voice are set up) | Public |
-| The traveler | `me/state` (everything the app needs in one call), `me/profile`, `me/preferences`, `me/feedback`, `me/recs`, `notifications/read`, `saved` | Session + origin |
-| Trips | `trips` GET/POST; `trips/{id}` GET/PATCH/DELETE (a non-owner's delete leaves); `…/items`; `…/members` | Session + origin, members only; viewers can't write |
+| The traveler | `me/state` (everything the app needs in one call), `me/profile`, `me/preferences`, `me/feedback`, `me/recs`, `notifications` (GET, polled), `notifications/read`, `saved` | Session + origin |
+| Trips | `trips` GET/POST; `trips/{id}` GET/PATCH/DELETE (a non-owner's delete leaves); `…/items`; `…/members`; `…/members/{userId}` PATCH (role, owner only) / DELETE | Session + origin, members only; viewers can't write |
+| Planning together | `trips/{id}/collab` GET; `…/messages` POST (120 an hour) and `…/messages/{id}` DELETE; `…/votes` PUT (600 an hour); `…/pulse` GET; `…/invites` GET/POST (links; emails, 30 a day) and `…/invites/{id}` DELETE | Session + origin, members (viewers can talk and vote); invites need edit |
+| Joining | `join/{token}` GET (what the link opens) / POST (join) | GET public (120 an hour per address); POST session + origin |
 | Chats | `chats/{threadId}` PUT/DELETE (delete removes the transcript and saved plans); `…/messages` GET; `…/plans` GET/PUT | Session + origin |
 | Chat runtime | `copilotkit/[[...path]]` | Session |
 | Places | `places/resolve` (up to 12 places, charged to the budget); `places/{id}`; `…/reviews`; `…/checkin`; `places/ask`; `places/nearby`; `places/photo`; `places/cities` (city suggestions while typing) | Session |
@@ -1517,9 +1570,13 @@ Each step builds on the one before and ends with a check you can run by hand.
     *Done when* Ask answers only from quotes it shows.
 11. **Trips.** The page, the board, travel times, members and the trip chat. *Done when* an invited
     editor's board change shows up for the owner.
-12. **Learning.** Ratings, the taste profile, "Remember this?" and package weights. *Done when* loving
+12. **Planning together.** Votes, comments, the discussion, the pulse, invite and feedback links,
+    emailed invites and grouped updates. *Done when* a friend who signs up from a feedback link votes
+    against a stop and the owner's open page shows it within ten seconds, and the trip chat's context
+    names who voted.
+13. **Learning.** Ratings, the taste profile, "Remember this?" and package weights. *Done when* loving
     one museum lifts the score of similar museums.
-13. **The rest.** Discover, Saved, Updates, guides, import and admin.
+14. **The rest.** Discover, Saved, Updates, guides, import and admin.
 
 ---
 
@@ -1568,6 +1625,12 @@ Found while tracing the code for this guide. A rebuild can avoid them from the s
 - **Routes on the chat map are straight lines.** Real travel times appear only on the trip board.
 - **A stale session cookie can loop** between `/` and `/login` when its session row is gone, because
   the gate only checks that the cookie exists.
-- **Every board save notifies every other member,** so a drag sends a notification.
+- **Live updates are polling.** An open trip page asks every 8 seconds, so others' changes take up to
+  that long, and a reload of the trip while someone is mid-drag replaces the board under them.
+- **Invite links are stored readable** (so "Copy link" is stable): anyone who can read the database
+  can join through a live link. Turning a link off is the remedy; emailed invites are single use.
+- **"New messages" is per browser,** kept in localStorage, so a second device counts them again.
+- **Accounts are not email-verified.** Adding someone by email trusts that whoever made the account with
+  that address owns it; emailed invites avoid this by requiring the link from the email.
 - **Without OpenRouter, Ask and imports probably fail.** The helper model is passed as a bare model
   name, which the AI SDK sends to its own gateway.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CopilotChat, UseAgentUpdate, useAgent, useCopilotKit } from "@copilotkit/react-core/v2";
 import type { Message } from "@ag-ui/core";
@@ -102,15 +102,26 @@ export function TravelChat({ threadId, initialPrompt, tripId }: { threadId?: str
     upsertChat({ id: agent.threadId, title: messageText(firstUser).slice(0, 70) || "New chat", tripId });
   }, [agent, agent.threadId, messageCount, knownChat, upsertChat, tripId]);
 
+  // A chat opened from a trip waits for the trip (and what its group thinks) before its first
+  // message goes out, so the assistant answers with it; five seconds at most.
+  const [tripContextFor, setTripContextFor] = useState<string | null>(null);
+  const tripContextReady = !tripId || tripContextFor === tripId;
+  const markTripContextReady = useCallback(() => setTripContextFor(tripId ?? null), [tripId]);
+  useEffect(() => {
+    if (tripContextReady) return;
+    const timer = setTimeout(markTripContextReady, 5000);
+    return () => clearTimeout(timer);
+  }, [tripContextReady, markTripContextReady]);
+
   // A prompt carried over from another page is sent once the chat is ready.
   useEffect(() => {
-    if (!initialPrompt || sentRef.current || !isReady || !previousSettled) return;
+    if (!initialPrompt || sentRef.current || !isReady || !previousSettled || !tripContextReady) return;
     sentRef.current = true;
     // Drop the prompt from the URL but keep the trip so the chat stays attached to it.
     router.replace(tripId ? `/chat?trip=${encodeURIComponent(tripId)}` : "/chat", { scroll: false });
     agent.addMessage({ id: newId(), role: "user", content: initialPrompt });
     copilotkit.runAgent({ agent }).catch((err) => console.error("XPMatch: runAgent failed", err));
-  }, [initialPrompt, isReady, previousSettled, agent, copilotkit, router, tripId]);
+  }, [initialPrompt, isReady, previousSettled, tripContextReady, agent, copilotkit, router, tripId]);
 
   // The conversation's title over the transcript once it has one (the first message names it).
   const chatTitle = activeThreadId ? chats.find((c) => c.id === activeThreadId)?.title : undefined;
@@ -135,7 +146,7 @@ export function TravelChat({ threadId, initialPrompt, tripId }: { threadId?: str
           </span>
         </div>
       ) : null}
-      {tripId ? <TripChatScope tripId={tripId} threadId={activeThreadId} /> : null}
+      {tripId ? <TripChatScope tripId={tripId} threadId={activeThreadId} onReady={markTripContextReady} /> : null}
       {chatTitle && messageCount > 0 ? (
         <div className="shrink-0 border-b border-border/60 bg-canvas px-4 py-3 pr-44 sm:px-6 sm:pr-44 xl:pr-6" data-testid="chat-header">
           <h1 className="truncate font-serif text-[22px] leading-tight">{chatTitle}</h1>

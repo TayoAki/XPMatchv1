@@ -12,6 +12,7 @@ import type {
   Trip,
   TripDetail,
   TripItem,
+  TripJoinedVia,
   TripMember,
   UpdateItem,
   UpdateKind,
@@ -318,12 +319,43 @@ export async function notify(userId: string, kind: UpdateKind, text: string, dat
   ]);
 }
 
+/** A burst of activity within this many minutes becomes one update, while it is still unread. */
+export const GROUP_WINDOW_MINUTES = 30;
+
+/**
+ * One update per burst of activity instead of one per event: when a recipient still has an unread
+ * update of the same `group` from the last half hour, `build` rewrites it from its earlier data
+ * (and it moves back to the top); otherwise a new one is added. `build` gets undefined for a new one.
+ */
+export async function notifyGrouped(
+  userIds: string[],
+  kind: UpdateKind,
+  group: string,
+  build: (previous: Record<string, unknown> | undefined) => { text: string; data: Record<string, unknown> },
+) {
+  await Promise.all(
+    userIds.map(async (userId) => {
+      const existing = await queryOne<{ id: string; data: unknown }>(
+        `SELECT id, data FROM notifications
+          WHERE user_id = $1 AND read = false AND data->>'group' = $2 AND created_at > now() - interval '${GROUP_WINDOW_MINUTES} minutes'
+          ORDER BY created_at DESC LIMIT 1`,
+        [userId, group],
+      );
+      const { text, data } = build(existing ? jsonb<Record<string, unknown>>(existing.data) : undefined);
+      const payload = JSON.stringify({ ...data, group });
+      if (existing) await queryAll("UPDATE notifications SET text = $2, data = $3::jsonb, created_at = now() WHERE id = $1", [existing.id, text, payload]);
+      else await queryAll("INSERT INTO notifications (user_id, kind, text, data) VALUES ($1, $2, $3, $4::jsonb)", [userId, kind, text, payload]);
+    }),
+  );
+}
+
 /* ------------------------------ trips ------------------------------ */
 
 interface TripRow extends Row {
   id: string;
   owner_id: string;
   role: string;
+  via: string | null;
   title: string;
   destination: string;
   place: unknown;
@@ -340,7 +372,7 @@ interface TripRow extends Row {
 }
 
 const TRIP_SELECT = `
-  SELECT t.id, t.owner_id, tm.role, t.title, t.destination, t.place, t.start_date::text AS start_date,
+  SELECT t.id, t.owner_id, tm.role, tm.via, t.title, t.destination, t.place, t.start_date::text AS start_date,
          t.end_date::text AS end_date, t.travelers, t.budget_tier, t.summary, t.itinerary, t.preferences,
          (SELECT count(*) FROM trip_members m WHERE m.trip_id = t.id) AS member_count,
          t.created_at, t.updated_at
@@ -362,6 +394,7 @@ const mapTrip = (r: TripRow): Trip => ({
   itinerary: normalizeItinerary(jsonb<unknown>(r.itinerary)),
   preferences: r.preferences ?? "",
   memberCount: Number(r.member_count ?? 1),
+  via: (r.via as TripJoinedVia | null) ?? "added",
   createdAt: iso(r.created_at),
   updatedAt: iso(r.updated_at),
 });
@@ -382,6 +415,7 @@ interface MemberRow extends Row {
   handle: string;
   email: string;
   role: string;
+  via: string | null;
 }
 
 interface ItemRow extends Row {
@@ -401,19 +435,29 @@ export async function loadTripDetail(tripId: string, userId: string): Promise<Tr
   if (!trip) return null;
   const [members, items, chats] = await Promise.all([
     queryAll<MemberRow>(
-      `SELECT u.id AS user_id, u.name, u.handle, u.email, tm.role FROM trip_members tm JOIN users u ON u.id = tm.user_id
+      `SELECT u.id AS user_id, u.name, u.handle, u.email, tm.role, tm.via FROM trip_members tm JOIN users u ON u.id = tm.user_id
         WHERE tm.trip_id = $1 ORDER BY tm.created_at`,
       [tripId],
     ),
+    // Someone giving feedback sees the plan, not the confirmations (numbers, names, times) in the bookings.
     queryAll<ItemRow>(
-      "SELECT id, kind, title, note, url, place, details, added_by, created_at FROM trip_items WHERE trip_id = $1 ORDER BY created_at DESC",
+      `SELECT id, kind, title, note, url, place, details, added_by, created_at FROM trip_items
+        WHERE trip_id = $1 ${trip.via === "feedback" ? "AND kind <> 'booking'" : ""} ORDER BY created_at DESC`,
       [tripId],
     ),
     // Only the viewer's own trip chats: transcripts are stored per traveler, so another member's
     // chat can neither be opened nor continued, and its title is that traveler's first message.
     queryAll<ChatRow>(`SELECT ${CHAT_FIELDS} FROM chats WHERE trip_id = $1 AND user_id = $2 ORDER BY updated_at DESC`, [tripId, userId]),
   ]);
-  const toMember = (m: MemberRow): TripMember => ({ userId: m.user_id, name: m.name, handle: m.handle, email: m.email, role: m.role as TripMember["role"] });
+  // Members see each other by name and handle; only the owner (who manages the trip) sees addresses.
+  const toMember = (m: MemberRow): TripMember => ({
+    userId: m.user_id,
+    name: m.name,
+    handle: m.handle,
+    email: trip.role === "owner" || m.user_id === userId ? m.email : "",
+    role: m.role as TripMember["role"],
+    via: (m.via as TripJoinedVia | null) ?? "added",
+  });
   const toItem = (i: ItemRow): TripItem => ({
     id: i.id,
     kind: i.kind as TripItem["kind"],

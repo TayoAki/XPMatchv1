@@ -16,6 +16,16 @@ const chunk = (delta, finish = null, extra = {}) => ({
   ...extra,
 });
 
+/** Up to 500 characters of the request's context that follow `key`, or "" when it is not there. */
+function contextAfter(messages, key) {
+  for (const m of messages) {
+    const text = textOf(m.content);
+    const at = text.indexOf(key);
+    if (at >= 0) return text.slice(at, at + 500);
+  }
+  return "";
+}
+
 function textOf(content) {
   if (typeof content === "string") return content;
   if (Array.isArray(content)) return content.map((p) => p?.text ?? "").join(" ");
@@ -219,6 +229,9 @@ const server = http.createServer((req, res) => {
           learned: messages.some((m) => /Learned preferences/.test(textOf(m.content))),
           taste: messages.some((m) => /Taste profile/.test(textOf(m.content))),
         },
+        // What a shared trip's context said about the group (the collab spec checks names and places).
+        groupVotes: contextAfter(messages, '"groupVotes":'),
+        discussion: contextAfter(messages, '"discussion":'),
       }) + "\n",
     );
     const text = textOf(lastUser?.content).toLowerCase();

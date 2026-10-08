@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { queryAll } from "@/server/db";
+import { queryOne } from "@/server/db";
 import { findUserByEmail } from "@/server/auth";
 import { HttpError, json, parseBody, requireUser, resolveParams, route } from "@/server/http";
 import { loadTrip, loadTripDetail, notify } from "@/server/models";
@@ -20,12 +20,12 @@ export const POST = route(async (request, ctx: Ctx) => {
   const body = await parseBody(request, schema);
   const invitee = await findUserByEmail(body.email);
   if (!invitee) throw new HttpError(404, "No XPMatch account uses that email yet. Ask them to sign up first.");
-  await queryAll(
-    `INSERT INTO trip_members (trip_id, user_id, role, added_by) VALUES ($1, $2, $3, $4)
-     ON CONFLICT (trip_id, user_id) DO UPDATE SET role = CASE WHEN trip_members.role = 'owner' THEN 'owner' ELSE EXCLUDED.role END`,
+  // Adding someone who is already on the trip leaves their role alone: only the owner changes roles.
+  const added = await queryOne<{ user_id: string }>(
+    "INSERT INTO trip_members (trip_id, user_id, role, added_by) VALUES ($1, $2, $3, $4) ON CONFLICT (trip_id, user_id) DO NOTHING RETURNING user_id",
     [id, invitee.id, body.role, user.id],
   );
-  if (invitee.id !== user.id) {
+  if (added && invitee.id !== user.id) {
     await notify(invitee.id, "trip_invite", `${user.name} added you to the trip "${trip.title}" (${trip.destination}).`, {
       tripId: id,
       addedBy: user.handle,

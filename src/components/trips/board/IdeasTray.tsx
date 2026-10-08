@@ -12,6 +12,9 @@ import { shortTitle } from "@/lib/places/names";
 import { PlaceImage } from "@/components/ui/PlaceImage";
 import { tripItemKey } from "../TripMap";
 import { IDEAS_CONTAINER, ideaDragId } from "./useItineraryDnd";
+import { itemTarget } from "@/lib/collab/types";
+import { GroupVote } from "../collab/GroupVote";
+import { CommentThread, CommentToggle } from "../collab/Comments";
 
 function IdeaThumb({ item, destination }: { item: TripItem; destination: string }) {
   const [failed, setFailed] = useState(false);
@@ -43,6 +46,8 @@ function IdeaCard({
   onAddToDay: (item: TripItem, dayIndex: number) => void;
 }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: ideaDragId(item.id), disabled: !canEdit });
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const target = itemTarget(item);
   const place = item.place;
   const key = tripItemKey(item.id);
   const meta = [place?.category, place?.locality].filter(Boolean).join(" · ");
@@ -53,8 +58,9 @@ function IdeaCard({
       data-testid="idea-card"
       onMouseEnter={() => place && onHover?.(key)}
       onMouseLeave={() => onHover?.(null)}
-      className={clsx("flex items-center gap-2 rounded-2xl border bg-white p-2.5", hovered ? "border-brand" : "border-border", isDragging && "z-10 opacity-70 shadow-lg")}
+      className={clsx("rounded-2xl border bg-white p-2.5", hovered ? "border-brand" : "border-border", isDragging && "z-10 opacity-70 shadow-lg")}
     >
+      <div className="flex flex-wrap items-center gap-2">
       {canEdit ? (
         <button
           ref={setActivatorNodeRef}
@@ -86,6 +92,8 @@ function IdeaCard({
           <MapPin className="h-4 w-4" />
         </button>
       ) : null}
+      <GroupVote target={target} />
+      <CommentToggle target={target} open={commentsOpen} onToggle={() => setCommentsOpen((v) => !v)} />
       {canEdit && dayCount > 0 ? (
         <select
           aria-label={`Add ${item.title} to a day`}
@@ -104,6 +112,8 @@ function IdeaCard({
           ))}
         </select>
       ) : null}
+      </div>
+      {commentsOpen ? <CommentThread target={target} /> : null}
     </li>
   );
 }
