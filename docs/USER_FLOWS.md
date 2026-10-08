@@ -9,39 +9,66 @@ Routes are listed at the end.
 creates the user, a profile row and a session, sets the `xp_session` HttpOnly cookie and lands on Discover.
 A handle (`@tayo-akigbogun`) is derived from the name and shown in the account menu.
 
-**Onboarding** — on the first visit the "Let's personalize your assistant" wizard opens: six short steps
-with a progress bar, Back / Next and "Skip for now" on every step.
-1. *About you* — name, home city, home airport, who usually comes along.
-2. *Style & interests* — budget tier, pace, travel styles, and **things you love doing** (museums & art,
-   history & architecture, food tours & markets, nightlife, live music, nature & hiking, beaches, wellness,
-   shopping, photography spots, sports & adventure, family activities, local neighborhoods, coffee culture,
-   wine & craft beer, street food).
-3. *Where you stay* — kind of place (boutique, design, luxury resort, budget hotel, apartment, hostel, B&B,
-   business hotel), must-haves (pool, gym, breakfast, kitchen, central, quiet room, workspace, free
-   cancellation, walkable, near transit, parking) and free text.
-4. *How you eat* — cuisines, dietary needs as chips (vegetarian, vegan, gluten-free, halal, kosher, no
-   shellfish, nut allergy) plus free text, and how adventurous (play it safe / a bit of both / try anything).
-5. *Logistics & next trip* — early riser / in between / night owl, how much walking, getting around
-   (walk & transit / rideshare / rental car / whatever works), flights (nonstop / cheapest / comfort /
-   flexible), and **where you are dreaming of going next** with a rough when.
-6. *Dealbreakers & notes* — **"What ruins a trip for you?"** chips (street noise, no workspace, stairs,
-   crowds, early starts, long transfers, spicy food…) that become dealbreakers, and anything else.
+**Onboarding** — on the first visit a full-screen "Set up your travel assistant" flow covers the app
+(on every screen size; the app behind it is inert). Each screen has the question on the left and a
+photo on the right (wide screens), a progress bar, a back arrow with the step's name and **Next**; the
+**×** at the top closes it at any point and keeps what was entered. Five setup screens come first:
+1. *The basics* — "Hi, I'm your travel assistant." First and last name (from sign-up) and **Where do you
+   live?**, a city field that suggests towns as you type ("Atl" → Atlanta, GA, USA; Atlanta, KS, USA …,
+   Places Autocomplete through `/api/places/cities`); anything typed is kept as typed. Next needs a first name.
+2. *Voice & personality* — four voices for the voice interview (Aoede · Breezy, Puck · Upbeat,
+   Sulafat · Warm, Charon · Informative), each with a play button for a short sample, and the assistant's
+   **personality**: Casual (playful, treats planning as fun), Neutral (clear, organized, helpful) or
+   Professional (competent and efficient). The personality sets the tone of the chat assistant too. The
+   voices only show when the voice interview is set up.
+3. *Your next trip* — "Do you have a trip in mind now?" Yes / No. Yes opens a note (0/2000) and
+   **Where** (city suggestions), **When** (two dates) and **Who** (a people stepper).
+4. *Favorite places* — "Share a few places you've been and want to go": two lists of places with their
+   flag, **+ Add place** / **+ Add more** (city suggestions, or Enter to add as typed), × to remove.
+5. *Interview* — "Let's talk about how you like to travel." **Start voice interview** (when
+   `GEMINI_API_KEY` is set and the browser can record) or **Skip interview** to answer by tapping.
 
-On a phone (under 640 px) the wizard does not open at all: the Discover hero asks three questions as
-chat bubbles (where you start from and where you dream of going, what you love doing as chips that fold
-behind **Show all**, how you like to spend as four budget cards), each answer echoes back as your bubble,
-**Done** saves the profile and Discover shows the hero with "For you in Rome"; the Concierge tab's empty
-state then opens with the nine home picks as the assistant's first message ("Here's what I'd pick for
-you in Rome…"); **Skip for now** saves what was filled. The full six sections stay
-one tap away under More › Update my assistant, where they come as three screens (about you + style,
-where you stay + how you eat, logistics + dealbreakers) while the quiz is unfinished.
+Then four sections of questions, the same whether spoken or tapped:
+- *Tell me a bit about your travel style* — who you usually travel with (Solo, Couple, Family, Friends),
+  your typical budget ($ On a budget, $$ Sensibly priced, $$$ Upscale, $$$$ Luxury) and what you sometimes
+  splurge on (Stay, Restaurants, Experiences, Other).
+- *Let's go a little deeper on how you stay* — accommodation style (Luxury hotels, Boutique hotels, Bed &
+  breakfasts, Budget-friendly hotels, Hostels, Campgrounds, Eco-lodges, Inns, Resorts, Motels,
+  Short-term rentals, Other) and hotel loyalty programs (Marriott Bonvoy, Hilton Honors, World of Hyatt,
+  IHG One Rewards, Wyndham Rewards, Choice Privileges, Accor Live Limitless (ALL), Best Western Rewards,
+  GHA Discovery, Other).
+- *Share a bit about your food preferences* — kinds of restaurants (Fine dining & gourmet, Local street
+  food, Cafes/bistros, Family restaurants, Vegetarian / vegan eateries, Food trucks, Ethnic cuisine,
+  Farm-to-table, Fast casual, Pub / tavern food, Bakeries, Coffee shops, Other) and dietary restrictions
+  (Gluten-free, Dairy-free, Vegetarian, Vegan, Pescatarian, Halal, Kosher, Other).
+- *Wrapping up* — weekend fun (Outdoors, Live music, Art & museums, Bars & nightlife, Sports games,
+  Fitness, Shopping, Movies & theater, Comedy shows, Wellness & spa, Other) and "Anything to clarify or
+  final things I should know as your personal travel assistant?" (free text).
+"Other" takes an answer in your own words, which shows as a picked chip. **Finish** on the last screen
+saves everything; a trip in mind (or else the first place you want to go) becomes the destination the
+home picks line up for, and a trip with a Where also fills the Discover planner fields.
 
-"Save preferences" on the last step stores the profile and the dealbreakers on the server; "Skip for
-now" keeps what was filled so far. Everything is sent to the assistant as context on every message
-(interests, stay types, must-haves, cuisines, dietary tags, rhythm, walking, transport, flights, next
-destination included), drives the home picks and the match score, and can be changed later from
-**Update my assistant** (the same six sections stacked, with a section rail) or by simply telling the
-assistant ("I'm vegetarian" → `update_traveler_profile`, which accepts every field).
+**The voice interview** — Start voice interview asks for the microphone, the server mints a single-use
+Gemini Live session (`POST /api/voice/session`, eight a day per traveler), and the assistant greets you
+by name in the voice you picked and asks the four sections out loud, one question at a time, in the tone
+you chose, using what you already said (it may ask what you loved about Lisbon). As you answer, the
+chips fill in on screen and briefly light up; the screen moves to each section as the assistant reaches
+it. A bar under the questions shows who is talking with live captions, a **mute** button and **Type
+instead** (ends the call; your answers so far stay and **Talk again** picks up where it stopped). When all
+four sections are covered the assistant says your answers are saved and can be edited any time, the call
+ends by itself on the last screen ("Interview finished"), and you check the answers and press Finish. The
+audio goes from the browser straight to Gemini; XPMatch keeps the answers, not the recording. Calls end
+after eight minutes at most, and their minutes are counted in the admin Costs section.
+
+Everything is sent to the assistant as context on every message (interests, stay types, must-haves,
+cuisines, dietary tags, splurges, loyalty programs, places loved and wanted, the trip in mind, the tone,
+rhythm, walking, transport, flights, next destination included), drives the home picks and the match
+score (a hotel that earns your loyalty points and a pricier pick in something you splurge on score
+higher), and can be changed later from **Update my assistant** (every answer in stacked sections with a
+section rail, plus the home airport, pace, must-haves, logistics and **"What ruins a trip for you?"**
+dealbreakers, which onboarding no longer asks) or by simply telling the assistant ("I'm vegetarian" →
+`update_traveler_profile`, which accepts every field). Answers from the earlier quiz ("Museums & art",
+"Italian", "Boutique hotel") keep working and show as picked chips there until removed.
 
 **What XPMatch has learned** — the same dialog lists every preference confirmed in chat (statement,
 likes/avoids/dealbreaker, domain, where it came from, and "only for <trip>" when trip-scoped) with a delete
@@ -549,7 +576,8 @@ Railway, Resend). Counts are written every few seconds, so a deploy loses at mos
 
 ## 12. What is stored per user
 
-Profile (the six onboarding sections), dealbreakers and learned preferences (profile-wide or per trip;
+Profile (every onboarding answer, the chosen voice and personality, places loved and wanted, the trip in
+mind; never the interview's audio or transcript), dealbreakers and learned preferences (profile-wide or per trip;
 reasons that repeat in reactions become preferences with source "feedback"), the computed taste profile,
 reactions to places (one row per place: verdict, reasons, note, score, trip), thumbs on recommendations
 (one row per place: up / down, the score shown, the match factors that fired, the miss reason, where it was

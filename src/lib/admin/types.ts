@@ -48,6 +48,11 @@ export const QUIZ_FIELD_LABELS: { key: string; label: string }[] = [
   { key: "walking", label: "Walking" },
   { key: "transport", label: "Transport" },
   { key: "flightPreference", label: "Flights" },
+  { key: "splurges", label: "Splurges on" },
+  { key: "loyaltyPrograms", label: "Loyalty programs" },
+  { key: "personality", label: "Assistant tone" },
+  { key: "voice", label: "Interview voice" },
+  { key: "tripInMind", label: "Trip in mind" },
 ];
 
 /** Beta numbers shown on the admin page: who signed up and what they have made so far. */
@@ -109,6 +114,8 @@ export interface SkuUsage {
 /** One model this month: calls, tokens and dollars (OpenRouter's own figure per call when it sent one). */
 export interface ModelSpend {
   model: string;
+  /** What the in/out units count: tokens for text models, seconds of audio for the voice interview. */
+  unit: "tokens" | "seconds";
   calls: number;
   inputTokens: number;
   outputTokens: number;

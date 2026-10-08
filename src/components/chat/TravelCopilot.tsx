@@ -5,6 +5,7 @@ import { useAgentContext, useConfigureSuggestions, useFrontendTool, useHumanInTh
 import type { ToolCallStatus } from "@copilotkit/core";
 import { travelActions, useTravelStore, type LearnedPreference, type TravelerProfile, type Trip, type TripPlanner } from "@/lib/store";
 import { useAppConfig } from "@/lib/app-config";
+import { PERSONALITY_OPTIONS } from "@/lib/profile/options";
 import { useHitlPending } from "@/lib/hitl-store";
 import { mapActions, useMapView } from "@/lib/map-store";
 import { resolvePlaces } from "@/lib/places/client";
@@ -223,6 +224,22 @@ export function TravelCopilot() {
       nextWhen: profile.nextWhen || "",
       notes: profile.notes || "",
       learnFromChat: profile.learnFromChat,
+      tone: `${profile.personality}: ${PERSONALITY_OPTIONS.find((o) => o.value === profile.personality)?.hint ?? ""}`,
+      splurgesOn: profile.splurges,
+      hotelLoyaltyPrograms: profile.loyaltyPrograms,
+      placesLoved: profile.placesBeen,
+      placesWantToGo: profile.placesWant,
+      tripInMind:
+        profile.tripInMind === "yes"
+          ? {
+              about: profile.nextNotes || "",
+              where: profile.nextDestination || "",
+              dates: profile.nextStartDate ? `${profile.nextStartDate} to ${profile.nextEndDate || "?"}` : "",
+              travelers: profile.nextTravelers || null,
+            }
+          : profile.tripInMind === "no"
+            ? "none right now"
+            : "not asked",
     },
   });
 
@@ -441,7 +458,7 @@ export function TravelCopilot() {
     {
       name: "update_traveler_profile",
       description:
-        "Remember lasting traveler preferences (name, home city/airport, travel styles, pace, budget tier, companions, dietary needs, accommodation preference, notes). Only include fields the traveler actually stated. travelStyles replaces the whole list.",
+        "Remember lasting traveler preferences (name, home city/airport, travel styles, pace, budget tier, companions, dietary needs, accommodation preference, splurges, hotel loyalty programs, tone, places been and wanted, notes). Only include fields the traveler actually stated. Every list replaces the whole list.",
       parameters: updateTravelerProfileSchema,
       followUp: true,
       handler: async (args) => {

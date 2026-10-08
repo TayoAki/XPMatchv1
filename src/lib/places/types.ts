@@ -91,3 +91,12 @@ export interface ResolveResponse {
   items: { key: string; place: ResolvedPlace | null }[];
   provider: "google" | "fallback";
 }
+
+/** A place suggestion while the traveler types a city (Places Autocomplete). */
+export interface CitySuggestion {
+  /** "Atlanta, GA, USA": what is stored when picked. */
+  text: string;
+  /** "Atlanta" and "GA, USA", for the bold and the plain part of a suggestion row. */
+  main: string;
+  secondary: string;
+}

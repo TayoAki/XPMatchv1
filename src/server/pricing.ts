@@ -22,7 +22,8 @@ export type GoogleSku =
   | "place_photos"
   | "dynamic_maps"
   | "compute_routes"
-  | "compute_routes_pro";
+  | "compute_routes_pro"
+  | "autocomplete_requests";
 
 export interface SkuPrice {
   label: string;
@@ -49,6 +50,7 @@ export const GOOGLE_PRICES: Record<GoogleSku, SkuPrice> = {
   dynamic_maps: { label: "Dynamic Maps (map loads)", per1000: 7, freePerMonth: 10000 },
   compute_routes: { label: "Compute Routes Essentials", per1000: 5, freePerMonth: 10000 },
   compute_routes_pro: { label: "Compute Routes Pro (over 10 waypoints)", per1000: 10, freePerMonth: 5000 },
+  autocomplete_requests: { label: "Autocomplete Requests (city suggestions)", per1000: 2.83, freePerMonth: 10000 },
 };
 
 export const isGoogleSku = (sku: string): sku is GoogleSku => sku in GOOGLE_PRICES;
@@ -190,3 +192,8 @@ export function tokenCost(price: { input: number; output: number } | null, input
 
 /** Resend's free plan: emails a month (and at most 100 a day). */
 export const EMAIL_FREE_PER_MONTH = 3000;
+
+/** Gemini Live audio, dollars per minute (paid tier): what the traveler says in, what the model says out. */
+export const LIVE_AUDIO_PRICES: Record<string, { inPerMinute: number; outPerMinute: number }> = {
+  "gemini-3.8-live": { inPerMinute: 0.005, outPerMinute: 0.018 },
+};

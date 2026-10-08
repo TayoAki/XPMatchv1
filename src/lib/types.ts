@@ -11,6 +11,10 @@ export type DayRhythm = "early" | "balanced" | "late";
 export type Walking = "lots" | "moderate" | "little";
 export type Transport = "walk-transit" | "rideshare" | "car" | "mixed";
 export type FlightPreference = "nonstop" | "cheapest" | "comfort" | "flexible";
+/** How the assistant talks: chosen in onboarding ("Voice & personality"). */
+export type Personality = "casual" | "neutral" | "professional";
+/** "Do you have a trip in mind now?": yes, no, or not answered. */
+export type TripInMind = "yes" | "no" | "";
 
 export interface SessionUser {
   id: string;
@@ -49,6 +53,23 @@ export interface TravelerProfile {
   /** Where the traveler is dreaming of going next, and roughly when ("October", "spring 2027"). */
   nextDestination: string;
   nextWhen: string;
+  /** The Gemini voice of spoken conversations (the onboarding interview). */
+  voice: string;
+  personality: Personality;
+  /** What they sometimes splurge on: Stay, Restaurants, Experiences, or their own words. */
+  splurges: string[];
+  loyaltyPrograms: string[];
+  /** Places they have loved and places they want to go ("Tokyo, Japan"). */
+  placesBeen: string[];
+  placesWant: string[];
+  /** The trip in mind at onboarding: whether there is one, what they said about it, its dates and party size. */
+  tripInMind: TripInMind;
+  nextNotes: string;
+  /** YYYY-MM-DD, or empty. */
+  nextStartDate: string;
+  nextEndDate: string;
+  /** People going, 0 when not said. */
+  nextTravelers: number;
 }
 
 export type PreferenceDomain = "stays" | "food" | "flights" | "activities" | "general";
@@ -282,6 +303,17 @@ export const DEFAULT_PROFILE: TravelerProfile = {
   flightPreference: "flexible",
   nextDestination: "",
   nextWhen: "",
+  voice: "Aoede",
+  personality: "neutral",
+  splurges: [],
+  loyaltyPrograms: [],
+  placesBeen: [],
+  placesWant: [],
+  tripInMind: "",
+  nextNotes: "",
+  nextStartDate: "",
+  nextEndDate: "",
+  nextTravelers: 0,
 };
 
 export const DEFAULT_PLANNER: TripPlanner = {

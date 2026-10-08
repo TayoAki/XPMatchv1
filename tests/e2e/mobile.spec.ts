@@ -1,7 +1,7 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 /**
- * The app on a phone: the three-screen quiz, the home feed with picks, the tab bar reaching every
+ * The app on a phone: onboarding one column wide, the home feed with picks, the tab bar reaching every
  * page, the proposal fitting the screen, the map opening over the chat, and the trip page tabs.
  * Runs in Chromium with touch and a phone viewport (the device descriptor would switch to WebKit).
  */
@@ -18,51 +18,57 @@ test.setTimeout(420_000);
 
 const PHONE_WIDTH = 390;
 
-/** Chip groups fold behind "Show all" on phones; open the fold when the chip is not on screen yet. */
-async function pick(group: Locator, label: string) {
-  const chip = group.getByRole("button", { name: label, exact: true });
-  if ((await chip.count()) === 0) {
-    const showAll = group.getByRole("button", { name: /^Show all/ });
-    if (await showAll.count()) await showAll.click();
-  }
-  await chip.click();
-}
-
 async function expectFits(page: Page, what: string) {
   const width = await page.evaluate(() => document.documentElement.scrollWidth);
   expect(width, `${what} should not be wider than the phone`).toBeLessThanOrEqual(PHONE_WIDTH);
 }
 
-test("phone: quiz in the Discover hero, picks, tab bar, card rows, proposal, sheets over the chat, trip tabs", async ({ page }) => {
+test("phone: onboarding, picks, tab bar, card rows, proposal, sheets over the chat, trip tabs", async ({ page }) => {
   const email = `mobile+${Date.now()}@example.com`;
 
-  await test.step("sign up and answer the three questions in the chat", async () => {
+  await test.step("sign up and onboard full screen: a city suggestion, a place to go, the typed questions", async () => {
     await page.goto("/signup");
     await page.getByPlaceholder("Tayo Akigbogun").fill("Mia Mobile");
     await page.getByPlaceholder("you@example.com").fill(email);
     await page.locator('input[type="password"]').fill("travel-2026-secret");
     await page.getByRole("button", { name: "Create account" }).click();
 
-    // No wizard dialog on a phone: the questions are bubbles in the Discover hero.
-    const quiz = page.getByTestId("phone-quiz");
-    await quiz.waitFor({ timeout: 60_000 });
-    await expect(page.getByRole("dialog", { name: /personalize/i })).toHaveCount(0);
-    await quiz.getByLabel("Home city").fill("Austell, GA");
-    await quiz.getByLabel("Dreaming of").fill("Rome, Italy");
-    await quiz.getByRole("button", { name: "Next" }).click();
-    await expect(quiz).toContainText("From Austell, GA · dreaming of Rome, Italy");
+    // The same onboarding as on a laptop, one column wide.
+    const flow = page.getByRole("dialog", { name: "Set up your travel assistant" });
+    await flow.waitFor({ timeout: 60_000 });
+    await expectFits(page, "onboarding");
+    await expect(flow.getByLabel("First name", { exact: true })).toHaveValue("Mia");
+    await flow.getByRole("combobox", { name: "Where do you live?" }).fill("Aus");
+    await flow.getByRole("option", { name: "Austell, GA, USA" }).click();
+    await expect(flow.getByRole("combobox", { name: "Where do you live?" })).toHaveValue("Austell, GA, USA");
+    const next = () => flow.getByRole("button", { name: "Next", exact: true }).click();
+    await next();
+    await expect(flow).toHaveAttribute("data-step", "voice");
+    await next();
+    await flow.getByRole("radio", { name: "No", exact: true }).click();
+    await next();
+    const want = flow.getByTestId("places-want");
+    await want.getByRole("button", { name: "Add place" }).click();
+    await want.getByRole("combobox").fill("Rom");
+    await flow.getByRole("option", { name: "Rome, Italy" }).click();
+    await expect(want.getByRole("button", { name: "Remove Rome" })).toBeVisible();
+    await next();
+    await flow.getByRole("button", { name: "Skip interview" }).click();
 
-    const interests = quiz.getByTestId("quiz-interests");
-    await pick(interests, "Museums & art");
-    // "Street food" sits past the fold, so picking it opens "Show all" first.
-    await expect(interests.getByRole("button", { name: /^Show all/ })).toBeVisible();
-    await pick(interests, "Street food");
-    await quiz.getByRole("button", { name: "Next" }).click();
-    await expect(quiz).toContainText("Museums & art, Street food");
-
-    await quiz.getByTestId("quiz-budget").getByRole("button", { name: /^Mid-range/ }).click();
-    await quiz.getByRole("button", { name: "Done" }).click();
-    await expect(quiz).toBeHidden();
+    await flow.getByTestId("question-budgetTier").getByRole("radio", { name: /Sensibly priced$/ }).click();
+    await expectFits(page, "a question screen");
+    await next();
+    await next();
+    await next();
+    const fun = flow.getByTestId("question-interests");
+    await fun.getByRole("button", { name: "Art & museums", exact: true }).click();
+    // Anything not on the list goes in the traveler's own words.
+    await fun.getByRole("button", { name: "Other" }).click();
+    await fun.getByLabel(/weekends\? Other/).fill("street food");
+    await fun.getByLabel(/weekends\? Other/).press("Enter");
+    await expect(fun.getByRole("button", { name: "Street food", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await flow.getByRole("button", { name: "Finish", exact: true }).click();
+    await expect(flow).toBeHidden();
   });
 
   await test.step("Discover shows the hero and the picks for the dream destination", async () => {

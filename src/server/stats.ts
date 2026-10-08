@@ -66,8 +66,8 @@ export async function loadBetaStats(): Promise<BetaStats> {
   };
 }
 
-const ARRAY_FIELDS = ["interests", "travelStyles", "stayTypes", "stayMustHaves", "cuisines", "dietaryTags"] as const;
-const SCALAR_FIELDS = ["budgetTier", "pace", "companions", "foodAdventure", "dayRhythm", "walking", "transport", "flightPreference"] as const;
+const ARRAY_FIELDS = ["interests", "travelStyles", "stayTypes", "stayMustHaves", "cuisines", "dietaryTags", "splurges", "loyaltyPrograms"] as const;
+const SCALAR_FIELDS = ["budgetTier", "pace", "companions", "foodAdventure", "dayRhythm", "walking", "transport", "flightPreference", "personality", "voice", "tripInMind"] as const;
 
 /** How many onboarded travelers picked each answer, per quiz field (field names are constants, not input). */
 export async function loadQuizAnswers(): Promise<QuizAnswers> {
@@ -105,7 +105,7 @@ interface RosterRow extends Record<string, unknown> {
   last_active: unknown;
 }
 
-/** completed = finished the wizard and left real answers; skipped = went through it but left it empty. */
+/** completed = finished onboarding and left real answers; skipped = went through it but left it empty. */
 function quizStatus(onboarded: boolean, prefs: Record<string, unknown>): QuizStatus {
   if (!onboarded) return "not-started";
   const filled =
@@ -113,6 +113,10 @@ function quizStatus(onboarded: boolean, prefs: Record<string, unknown>): QuizSta
     arrayLength(prefs.stayTypes) > 0 ||
     arrayLength(prefs.cuisines) > 0 ||
     arrayLength(prefs.dietaryTags) > 0 ||
+    arrayLength(prefs.splurges) > 0 ||
+    arrayLength(prefs.loyaltyPrograms) > 0 ||
+    arrayLength(prefs.placesBeen) > 0 ||
+    arrayLength(prefs.placesWant) > 0 ||
     !!asString(prefs.homeCity) ||
     !!asString(prefs.nextDestination);
   return filled ? "completed" : "skipped";

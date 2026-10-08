@@ -208,7 +208,7 @@ no invite code.
    switch Walk → Drive → paste a blog link in chat → Import cards → Add all to a trip → Saved › Imports →
    Update my assistant › Your taste.
 7. **Not set in production:** `IMPORT_ALLOW_LOOPBACK`, `PLACES_BASE_URL`, `ROUTES_BASE_URL`,
-   `OPENROUTER_BASE_URL`, `RESEND_BASE_URL`.
+   `OPENROUTER_BASE_URL`, `RESEND_BASE_URL`, `GEMINI_BASE_URL`.
 8. **Admins.** Set `ADMIN_EMAILS` on Railway to the team's account emails (comma-separated) so bug
    reports reach someone: those accounts get an Update per report and the Admin item in the sidebar.
    Without it reports are still stored, but nobody is told.

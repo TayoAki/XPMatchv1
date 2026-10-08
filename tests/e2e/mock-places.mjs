@@ -1,5 +1,5 @@
-// Stand-in for the Google Places API (New): text search, nearby search, details and photos
-// for a small Rome + Austell fixture set, so end-to-end runs are deterministic and free.
+// Stand-in for the Google Places API (New): text search, nearby search, details, photos and city
+// autocomplete for a small Rome + Austell fixture set, so end-to-end runs are deterministic and free.
 import http from "node:http";
 
 const PORT = Number(process.env.PORT || 4546);
@@ -533,6 +533,30 @@ function photoSvg(placeId) {
 </svg>`;
 }
 
+/** Places Autocomplete (New) answers for the onboarding's city fields: [line, main text, secondary text, primary type]. */
+const CITY_SUGGESTIONS = [
+  ["Atlanta, GA, USA", "Atlanta", "GA, USA", "locality"],
+  ["Atlanta, KS, USA", "Atlanta", "KS, USA", "locality"],
+  ["Atlanta, MO, USA", "Atlanta", "MO, USA", "locality"],
+  ["Austell, GA, USA", "Austell", "GA, USA", "locality"],
+  ["Austin, TX, USA", "Austin", "TX, USA", "locality"],
+  ["Tokyo, Japan", "Tokyo", "Japan", "locality"],
+  ["Rome, Italy", "Rome", "Italy", "locality"],
+  ["Lisbon, Portugal", "Lisbon", "Portugal", "locality"],
+  ["Kyoto, Japan", "Kyoto", "Japan", "locality"],
+  ["Paris, France", "Paris", "France", "locality"],
+  ["Japan", "Japan", "", "country"],
+  ["Italy", "Italy", "", "country"],
+];
+
+function autocomplete(body) {
+  const input = String(body.input || "").trim().toLowerCase();
+  const types = Array.isArray(body.includedPrimaryTypes) ? body.includedPrimaryTypes : null;
+  return CITY_SUGGESTIONS.filter(([, main, , type]) => input && main.toLowerCase().startsWith(input) && (!types || types.includes(type))).map(([text, main, secondary]) => ({
+    placePrediction: { text: { text }, structuredFormat: { mainText: { text: main }, ...(secondary ? { secondaryText: { text: secondary } } : {}) } },
+  }));
+}
+
 const server = http.createServer((req, res) => {
   let body = "";
   req.on("data", (d) => (body += d));
@@ -545,6 +569,10 @@ const server = http.createServer((req, res) => {
     try {
       if (req.method === "POST" && url.pathname === "/v1/places:searchText") {
         return send(200, { places: textSearch(JSON.parse(body || "{}")).map((p) => project(p, SEARCH_FIELDS)) });
+      }
+      if (req.method === "POST" && url.pathname === "/v1/places:autocomplete") {
+        if (!req.headers["x-goog-api-key"]) return send(403, { error: { message: "missing key" } });
+        return send(200, { suggestions: autocomplete(JSON.parse(body || "{}")) });
       }
       if (req.method === "POST" && url.pathname === "/v1/places:searchNearby") {
         return send(200, { places: nearbySearch(JSON.parse(body || "{}")).map((p) => project(p, SEARCH_FIELDS)) });

@@ -22,7 +22,6 @@ import { CommunityGuides } from "./CommunityGuides";
 export function DiscoverPage() {
   const { profile, planner, trips, hydrated } = useTravelStore();
   const md = useMediaQuery("(min-width: 768px)");
-  const phone = !useMediaQuery("(min-width: 640px)");
   const homeCity = profile.homeCity.trim();
 
   const picks = useMemo(
@@ -35,7 +34,7 @@ export function DiscoverPage() {
 
   return (
     <div className="xp-scroll h-full overflow-y-auto" data-testid="discover-page">
-      <DiscoverHero destination={heroDestination} phoneQuiz={phone && hydrated && !profile.onboarded} />
+      <DiscoverHero destination={heroDestination} />
 
       <div className="mx-auto max-w-[1720px] px-4 pb-28 sm:px-6 lg:px-9">
         <Reveal as="section" className="mt-10 md:mt-12" data-testid="collections">

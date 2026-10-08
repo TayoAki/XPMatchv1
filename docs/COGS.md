@@ -38,6 +38,7 @@ Google Cloud billing console once testers are on.
 | Autocomplete | 2.83 | 10,000 |
 | Places UI Kit (query / Pro) | 1.00 / 5.00 | — |
 | OpenRouter `openai/gpt-4o-mini` | $0.15 per 1M input tokens, $0.60 per 1M output | — |
+| Gemini Live `gemini-3.8-live` (onboarding voice interview, paid tier) | $0.005 per minute of audio heard, $0.018 per minute spoken | — (the free tier has limits and may use the audio to improve Google's products, so production runs on the paid tier) |
 | Railway | Pro plan $20/month plus usage (about $1–2/month at beta scale) | — |
 
 Which SKU a call lands on is decided by the field mask: asking for one Enterprise field bills the whole
@@ -60,6 +61,8 @@ Details the IDs-only tier covers `id`, `name`, `photos` and `attributions`.
 | Board travel legs | Compute Routes | — | Routes Essentials, $5 | 24 hours in-process |
 | Weather chip, destination blurbs, fallback photos | Open-Meteo, Wikipedia | — | free | 15 minutes / per page |
 | Chat, helpers, imports | OpenRouter | — | about $0.005 per message | prompt caching on OpenAI models |
+| Onboarding city fields ("Where do you live?", places, the trip's Where) | `places:autocomplete`, up to 5 suggestions | text, structured format | Autocomplete Requests, $2.83 | 10 minutes in-process per query and scope; the browser asks after 2 letters and 200 ms of no typing, and remembers answers for the page |
+| Onboarding voice interview | Gemini Live, minted per interview (`authTokens.create` is free) | — | $0.005 per minute heard + $0.018 per minute spoken | none; capped at 8 minutes per call and 8 calls per traveler a day |
 
 Two things stand out. Cards are bought at the most expensive tier because of one field
 (`editorialSummary`) the card never shows on its own line, and every cache except place facts lives
@@ -84,6 +87,8 @@ List prices, before free tiers. "Catalog" is the design in section 6.
 | Import a link or screenshot (about 7 candidates) | $0.28–0.30 | $0.05 |
 | Create a trip or guide (destination lookup) | $0.04 | $0.005 |
 | Ask about a place, match score, thumbs, board edits | $0 (cached facts, no external calls) | $0 |
+| Onboarding, typed (about 6–10 city suggestion requests) | $0.02–0.03 past the free 10,000 a month; $0 within it | same |
+| Onboarding with the voice interview (about 4 minutes: some 3 heard, 2 spoken) | **about $0.05** on top of the typed path | same |
 
 ## 4. What the free tiers buy, per month, across all testers
 
@@ -96,6 +101,7 @@ List prices, before free tiers. "Catalog" is the design in section 6.
 | Place Photos | 10,000 | about 10,000 images: a card is 1, a sheet up to 5, an Explore view 12 |
 | Dynamic Maps | 10,000 | 10,000 maps created (about 150 people at 60 a month) |
 | Compute Routes | 10,000 | 10,000 day changes on boards |
+| Autocomplete Requests | 10,000 | about 1,000 onboardings (or people adding places in "Update my assistant") |
 
 The Enterprise tiers are the binding ones: 1,000 cards is roughly a week of 25 active testers.
 

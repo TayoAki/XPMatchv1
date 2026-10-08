@@ -6,6 +6,8 @@ export interface AppConfig {
   mode: "live" | "demo";
   model: string;
   places?: "google" | "fallback";
+  /** The Gemini voice interview is set up (a Gemini key on the server). */
+  voice?: boolean;
 }
 
 const FALLBACK: AppConfig = { mode: "live", model: "unknown", places: "fallback" };

@@ -2,7 +2,7 @@ import type { PlaceKind, ResolvedPlace } from "@/lib/places/types";
 import type { LearnedPreference, PreferenceDomain, TravelerProfile } from "@/lib/types";
 import { DOMAIN_OF_KIND, type TasteProfile } from "@/lib/feedback/types";
 import type { RecFeedback } from "@/lib/recs/types";
-import { CUISINES, DIETARY_TAGS, INTERESTS, STAY_MUST_HAVES, STAY_TYPES, matchingOptions, type ProfileOption } from "@/lib/profile/options";
+import { CUISINES, DIETARY_TAGS, INTERESTS, LOYALTY_PROGRAMS, STAY_MUST_HAVES, STAY_TYPES, matchingOptions, type ProfileOption } from "@/lib/profile/options";
 
 /**
  * Match score: how well one recommendation fits this traveler, from the deep
@@ -33,6 +33,8 @@ export type MatchFactor =
   | "price-fit"
   | "price-near"
   | "price-off"
+  | "splurge"
+  | "loyalty"
   | "interest"
   | "style"
   | "stay-type"
@@ -98,6 +100,13 @@ const STYLE_KEYWORDS: Record<string, string[]> = {
 const BUDGET_LEVEL: Record<TravelerProfile["budgetTier"], number> = { budget: 1, "mid-range": 2, premium: 3, luxury: 4 };
 const BUDGET_LABEL: Record<TravelerProfile["budgetTier"], string> = { budget: "budget", "mid-range": "mid-range", premium: "premium", luxury: "luxury" };
 
+/** The onboarding's "what do you splurge on" answer that covers each kind of place. */
+const SPLURGE_OF_KIND: Partial<Record<PlaceKind, { answer: string; noun: string }>> = {
+  hotel: { answer: "stay", noun: "stays" },
+  restaurant: { answer: "restaurants", noun: "restaurants" },
+  attraction: { answer: "experiences", noun: "experiences" },
+};
+
 const STOPWORDS = new Set([
   "with", "that", "this", "from", "have", "without", "near", "very", "more", "less", "than", "into", "your", "their", "they", "what", "when", "over", "only",
   "like", "likes", "love", "loves", "prefer", "prefers", "avoid", "avoids", "needs", "need", "value", "values", "cares", "about", "hotel", "hotels", "place",
@@ -105,6 +114,8 @@ const STOPWORDS = new Set([
 ]);
 
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9$ ]+/g, " ").replace(/\s+/g, " ").trim();
+/** A vocabulary keyword in the same form as normalized text ("ritz-carlton" → "ritz carlton"); a leading space is kept on purpose (" inn"). */
+const keyword = (k: string) => k.toLowerCase().replace(/[^a-z0-9$ ]+/g, " ").replace(/\s+/g, " ");
 
 function contentTokens(statement: string): string[] {
   return [...new Set(norm(statement).split(" ").filter((w) => w.length >= 4 && !STOPWORDS.has(w)))];
@@ -197,7 +208,10 @@ export function scoreMatch(candidate: MatchCandidate, inputs: MatchInputs): Matc
     const expected = BUDGET_LEVEL[profile.budgetTier];
     const diff = level - expected;
     const tier = "$".repeat(level);
+    const splurge = SPLURGE_OF_KIND[kind];
+    const splurges = splurge && (profile.splurges ?? []).some((s) => s.trim().toLowerCase() === splurge.answer);
     if (diff === 0) add("price-fit", `${tier} fits your ${BUDGET_LABEL[profile.budgetTier]} budget`, 10);
+    else if (diff >= 1 && splurges) add("splurge", `${tier}: worth it, you splurge on ${splurge.noun}`, 4);
     else if (diff === -1) add("price-near", `${tier}, a notch below your usual`, 4);
     else if (diff === 1) add("price-near", `${tier}, a notch above your usual`, 0);
     else if (diff >= 2) add("price-off", `${tier}: pricier than your usual`, -10);
@@ -208,24 +222,26 @@ export function scoreMatch(candidate: MatchCandidate, inputs: MatchInputs): Matc
 
   // Interests, styles, stay types, cuisines: what the traveler told us they like.
   if (kind === "attraction" || kind === "destination") {
-    const hits = chosen(INTERESTS, profile.interests).filter((o) => o.keywords.some((k) => text.includes(k)));
+    const hits = chosen(INTERESTS, profile.interests).filter((o) => o.keywords.some((k) => text.includes(keyword(k))));
     hits.slice(0, 2).forEach((o, i) => add("interest", o.label, i === 0 ? 12 : 6));
     const styles = profile.travelStyles.filter((s) => (STYLE_KEYWORDS[s] ?? []).some((k) => text.includes(k)));
     if (!hits.length) styles.slice(0, 2).forEach((s) => add("style", s, 6));
   }
   if (kind === "hotel") {
-    const types = chosen(STAY_TYPES, profile.stayTypes).filter((o) => o.keywords.some((k) => text.includes(k)));
+    const types = chosen(STAY_TYPES, profile.stayTypes).filter((o) => o.keywords.some((k) => text.includes(keyword(k))));
     if (types.length) add("stay-type", types[0].label, 10);
-    const musts = chosen(STAY_MUST_HAVES, profile.stayMustHaves).filter((o) => o.keywords.some((k) => text.includes(k)));
+    const musts = chosen(STAY_MUST_HAVES, profile.stayMustHaves).filter((o) => o.keywords.some((k) => text.includes(keyword(k))));
     musts.slice(0, 3).forEach((o) => add("must-have", o.label, 4));
     if (profile.accommodation.trim() && statementMatches(profile.accommodation, text)) add("stay-note", `Matches "${profile.accommodation.trim()}"`, 4);
+    const programs = chosen(LOYALTY_PROGRAMS, profile.loyaltyPrograms ?? []).filter((o) => o.keywords.some((k) => text.includes(keyword(k))));
+    if (programs.length) add("loyalty", `Earns ${programs[0].label} points`, 8);
     const styles = profile.travelStyles.filter((s) => (s === "Luxury" || s === "Budget travel" || s === "Wellness") && (STYLE_KEYWORDS[s] ?? []).some((k) => text.includes(k)));
     if (!types.length) styles.slice(0, 1).forEach((s) => add("style", s, 6));
   }
   if (kind === "restaurant") {
-    const cuisines = chosen(CUISINES, profile.cuisines).filter((o) => o.keywords.some((k) => text.includes(k)));
+    const cuisines = chosen(CUISINES, profile.cuisines).filter((o) => o.keywords.some((k) => text.includes(keyword(k))));
     if (cuisines.length) add("cuisine", cuisines[0].label, 12);
-    const tags = chosen(DIETARY_TAGS, profile.dietaryTags).filter((o) => o.keywords.some((k) => text.includes(k)));
+    const tags = chosen(DIETARY_TAGS, profile.dietaryTags).filter((o) => o.keywords.some((k) => text.includes(keyword(k))));
     if (tags.length) add("dietary", `${tags[0].label} options mentioned`, 6);
     else if (profile.dietary.trim() && statementMatches(profile.dietary, text)) add("dietary", `Mentions "${profile.dietary.trim()}"`, 5);
     if (profile.foodAdventure === "adventurous" && /street food|market|stall|hole in the wall|no menu|locals/.test(text)) add("adventurous", "The kind of local spot you go for", 4);

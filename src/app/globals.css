@@ -236,6 +236,24 @@ body {
     box-shadow: 0 12px 28px rgb(8 19 22 / 10%);
   }
 }
+/* The voice interview: bars that bounce while the assistant talks. */
+@keyframes xp-voice-bar {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+.xp-voice-bar {
+  animation: xp-voice-bar 900ms ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .xp-voice-bar {
+    animation: none !important;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .xp-reveal,
   .xp-pop,

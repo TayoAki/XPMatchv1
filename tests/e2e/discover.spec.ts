@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { signup, uniqueEmail } from "./helpers";
+import { eventually, signup, uniqueEmail } from "./helpers";
 
 type SavedRow = { kind: string; title: string };
 
@@ -163,19 +163,26 @@ test("discover: hero photo and attribution, planner fields, create a trip, colle
 test.describe("discover on a phone", () => {
   test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 
-  test("the quiz sits in the hero until answered, then the fields stack in two columns and nothing overflows", async ({ page }) => {
+  test("onboarding covers the hero until closed, then the fields stack in two columns and nothing overflows", async ({ page }) => {
     await page.goto("/signup");
     await page.getByPlaceholder("Tayo Akigbogun").fill("Pia Phone");
     await page.getByPlaceholder("you@example.com").fill(uniqueEmail("discover-phone"));
     await page.locator('input[type="password"]').fill("travel-2026-secret");
     await page.getByRole("button", { name: "Create account" }).click();
 
-    const quiz = page.getByTestId("hero-quiz");
-    await quiz.waitFor({ timeout: 60_000 });
-    await expect(page.getByRole("heading", { name: /Go somewhere that stays with you/ })).toHaveCount(0);
-    await quiz.getByRole("button", { name: "Skip for now" }).click();
-    await expect(quiz).toHaveCount(0);
+    // Closing onboarding keeps what was entered and does not bring it back.
+    const flow = page.getByRole("dialog", { name: "Set up your travel assistant" });
+    await flow.waitFor({ timeout: 60_000 });
+    await flow.getByRole("button", { name: "Close setup" }).click();
+    await expect(flow).toHaveCount(0);
     await expect(page.getByRole("heading", { name: /Go somewhere that stays with you/ })).toBeVisible();
+    await eventually(
+      () => page.request.get("/api/me/state").then((r) => r.json() as Promise<{ profile: { onboarded: boolean; name: string } }>),
+      (s) => s.profile.onboarded && s.profile.name === "Pia Phone",
+    );
+    await page.reload();
+    await expect(page.getByRole("heading", { name: /Go somewhere that stays with you/ })).toBeVisible();
+    await expect(flow).toHaveCount(0);
 
     const fields = page.getByTestId("planner-fields");
     const whereBox = await page.getByTestId("planner-field-where").boundingBox();

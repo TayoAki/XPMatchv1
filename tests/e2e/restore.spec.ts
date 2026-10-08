@@ -74,7 +74,7 @@ test.describe("chat transcripts survive a server restart", () => {
     await page.getByPlaceholder("you@example.com").fill(email);
     await page.locator('input[type="password"]').fill(PASSWORD);
     await page.getByRole("button", { name: "Create account" }).click();
-    await page.getByRole("dialog", { name: /personalize/i }).waitFor({ timeout: 60_000 });
+    await page.getByRole("dialog", { name: "Set up your travel assistant" }).waitFor({ timeout: 60_000 });
     await completeOnboarding(page);
     await expect(page.getByRole("heading", { name: /Go somewhere that stays with you/ })).toBeVisible({ timeout: 30_000 });
     await page.goto(`${BASE}/chat`);

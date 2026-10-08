@@ -9,7 +9,7 @@ import { ArrowLeftRight, Bed, ChevronDown, ChevronRight, ChevronUp, GripVertical
 import type { PlaceKind, ResolvedPlace } from "@/lib/places/types";
 import { shortPlaceName } from "@/lib/places/names";
 import { photoAtWidth } from "@/lib/places/destination-photo";
-import { CUISINES, INTERESTS, STAY_TYPES, matchingOptions } from "@/lib/profile/options";
+import { CUISINES, INTERESTS, STAY_TYPES, describePlace } from "@/lib/profile/options";
 import { stopKey } from "@/lib/recs/itinerary-draft";
 import type { DraftDay, DraftPick, DraftStop, ItineraryDraft } from "@/server/itineraries";
 import { RecThumbs } from "@/components/recs/RecThumbs";
@@ -50,12 +50,12 @@ const planCollision: CollisionDetection = (args) => {
 /** A place's second line: what it is and why it is there ("Garden · Nature & hiking", "Lunch · Italian", "Luxury resort"). */
 export function placeLine(place: ResolvedPlace, kind: PlaceKind, meal?: "lunch" | "dinner"): string {
   const text = [place.category, place.name, ...(place.types ?? [])].filter(Boolean).join(" ").toLowerCase();
-  if (kind === "hotel") return matchingOptions(STAY_TYPES, `${text} ${place.summary ?? ""}`)[0]?.label ?? place.category ?? "Hotel";
+  if (kind === "hotel") return describePlace(STAY_TYPES, `${text} ${place.summary ?? ""}`) ?? place.category ?? "Hotel";
   if (kind === "restaurant") {
-    const cuisine = matchingOptions(CUISINES, text)[0]?.label ?? place.category?.replace(/\s*restaurant$/i, "");
+    const cuisine = describePlace(CUISINES, text) ?? place.category?.replace(/\s*restaurant$/i, "");
     return [meal ? (meal === "lunch" ? "Lunch" : "Dinner") : null, cuisine].filter(Boolean).join(" · ");
   }
-  const interest = matchingOptions(INTERESTS, text)[0]?.label;
+  const interest = describePlace(INTERESTS, text);
   return [place.category, interest && interest.toLowerCase() !== place.category?.toLowerCase() ? interest : null].filter(Boolean).join(" · ");
 }
 

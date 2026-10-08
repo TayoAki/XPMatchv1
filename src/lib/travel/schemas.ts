@@ -1,4 +1,8 @@
 import { z } from "zod";
+import { CUISINES, DIETARY_TAGS, INTERESTS, LOYALTY_PROGRAMS, SPLURGE_OPTIONS, STAY_MUST_HAVES, STAY_TYPES, offered } from "@/lib/profile/options";
+
+/** "Replaces the list: A, B, C" from the choices onboarding offers, so the tool and the screens agree. */
+const replaces = (labels: readonly string[], extra = "") => `Replaces the list${extra}: ${labels.join(", ")}`;
 
 /**
  * Parameter schemas for the generative-UI tools the assistant can call from
@@ -178,11 +182,16 @@ export const updateTravelerProfileSchema = z.object({
   dietary: z.string().optional(),
   accommodation: z.string().optional().describe("Preferred stay type, e.g. boutique hotels"),
   notes: z.string().optional().describe("Anything else worth remembering"),
-  interests: z.array(z.string()).optional().describe("Things-to-do interests, replaces the list: Museums & art, History & architecture, Food tours & markets, Nightlife, Live music, Nature & hiking, Beaches, Wellness & spa, Shopping, Photography spots, Sports & adventure, Family activities, Local neighborhoods, Coffee culture, Wine & craft beer, Street food"),
-  stayTypes: z.array(z.string()).optional().describe("Replaces the list: Boutique hotel, Design hotel, Luxury resort, Budget hotel, Apartment, Hostel, B&B / guesthouse, Business hotel"),
-  stayMustHaves: z.array(z.string()).optional().describe("Replaces the list: Pool, Gym, Breakfast included, Kitchen, Central location, Quiet room, Workspace, Free cancellation, Walkable area, Near transit, Parking"),
-  cuisines: z.array(z.string()).optional().describe("Replaces the list: Italian, Japanese, Mexican, Thai, Indian, French, Middle Eastern, Korean, Chinese, Seafood, Steakhouse, Plant-based, Street food, Fine dining, Cafés & bakeries"),
-  dietaryTags: z.array(z.string()).optional().describe("Replaces the list: Vegetarian, Vegan, Gluten-free, Halal, Kosher, No shellfish, Nut allergy"),
+  interests: z.array(z.string()).optional().describe(replaces(offered(INTERESTS), " of how they like to have fun")),
+  stayTypes: z.array(z.string()).optional().describe(replaces(offered(STAY_TYPES), " of accommodation styles")),
+  stayMustHaves: z.array(z.string()).optional().describe(replaces(offered(STAY_MUST_HAVES))),
+  cuisines: z.array(z.string()).optional().describe(replaces(offered(CUISINES), " of kinds of restaurants")),
+  dietaryTags: z.array(z.string()).optional().describe(replaces(offered(DIETARY_TAGS))),
+  splurges: z.array(z.string()).optional().describe(replaces(SPLURGE_OPTIONS, " of what they sometimes splurge on")),
+  loyaltyPrograms: z.array(z.string()).optional().describe(replaces(offered(LOYALTY_PROGRAMS), " of hotel loyalty programs they belong to")),
+  personality: z.enum(["casual", "neutral", "professional"]).optional().describe("The tone they want from you"),
+  placesBeen: z.array(z.string()).optional().describe("Places they have been and loved, as 'City, Country'; replaces the list"),
+  placesWant: z.array(z.string()).optional().describe("Places they want to go, as 'City, Country'; replaces the list"),
   foodAdventure: z.enum(["safe", "mix", "adventurous"]).optional(),
   dayRhythm: z.enum(["early", "balanced", "late"]).optional().describe("early riser / in between / night owl"),
   walking: z.enum(["lots", "moderate", "little"]).optional().describe("How much walking they enjoy in a day"),

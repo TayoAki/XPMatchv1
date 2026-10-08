@@ -12,6 +12,9 @@ const BILLS = [
   { label: "Resend", href: "https://resend.com/emails" },
 ];
 
+/** Seconds of audio as "12 min" (or "40 s" under a minute). */
+const minutes = (seconds: number) => (seconds >= 60 ? `${Math.round(seconds / 60)} min` : `${Math.round(seconds)} s`);
+
 const share = (part: number, whole: number) => (whole > 0 ? `${Math.round((part / whole) * 100)}%` : "—");
 
 function SavingsTile({ label, cached, bought, testId }: { label: string; cached: number; bought: number; testId?: string }) {
@@ -153,8 +156,8 @@ export function CostsSection({ costs, activeTravelers }: { costs: CostReport | n
                       <tr key={m.model} className="border-t border-border">
                         <td className="break-all px-3 py-2">{m.model}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{m.calls.toLocaleString("en-US")}</td>
-                        <td className="hidden px-3 py-2 text-right tabular-nums sm:table-cell">{compact(m.inputTokens)}</td>
-                        <td className="hidden px-3 py-2 text-right tabular-nums sm:table-cell">{compact(m.outputTokens)}</td>
+                        <td className="hidden px-3 py-2 text-right tabular-nums sm:table-cell">{m.unit === "seconds" ? `${minutes(m.inputTokens)} listening` : compact(m.inputTokens)}</td>
+                        <td className="hidden px-3 py-2 text-right tabular-nums sm:table-cell">{m.unit === "seconds" ? `${minutes(m.outputTokens)} speaking` : compact(m.outputTokens)}</td>
                         <td className="px-3 py-2 text-right font-medium tabular-nums">{usdFine(m.cost)}</td>
                       </tr>
                     ))}

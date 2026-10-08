@@ -1,22 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import clsx from "clsx";
-import { ArrowLeft, ArrowRight, Brain, Sparkles, Trash2 } from "lucide-react";
+import { Brain, Sparkles, Trash2 } from "lucide-react";
 import { YourTaste } from "@/components/feedback/YourTaste";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
-import { DEALBREAKER_OPTIONS, DOMAIN_LABEL, useTravelStore, type LearnedPreference, type TravelerProfile } from "@/lib/store";
+import { DEALBREAKER_OPTIONS, DOMAIN_LABEL, formatDateRange, useTravelStore, type LearnedPreference, type TravelerProfile } from "@/lib/store";
 import { useUiState } from "@/components/providers/UiState";
-import { useMediaQuery } from "@/lib/use-media-query";
 import { SECTIONS, SECTION_COMPONENT, type SectionKey } from "./ProfileSections";
-
-/** Phones get three screens instead of six: two sections per step, same questions. */
-const PHONE_STEPS: SectionKey[][] = [
-  ["about", "style"],
-  ["stays", "food"],
-  ["logistics", "dealbreakers"],
-];
 
 export function AssistantSettingsDialog() {
   const { assistantOpen } = useUiState();
@@ -30,17 +21,14 @@ const POLARITY_LABEL: Record<LearnedPreference["polarity"], string> = { like: "L
 const SOURCE_LABEL: Record<LearnedPreference["source"], string> = { onboarding: "from onboarding", chat: "learned in chat", feedback: "from your feedback" };
 
 /**
- * First run: a six-step wizard (about you · style & interests · stays · food ·
- * logistics & next trip · dealbreakers & notes). Afterwards: the same sections
- * stacked, plus what XPMatch has learned and the taste profile.
+ * "Update my assistant": every onboarding answer (and the home airport and dealbreakers, which
+ * only this asks) in stacked sections, plus what XPMatch has learned and the taste profile.
+ * The first run is the full-screen onboarding (`src/components/onboarding/OnboardingFlow.tsx`).
  */
 function AssistantSettingsForm() {
   const { profile, preferences, trips, updateProfile, addPreference, removePreference } = useTravelStore();
   const { closeAssistant } = useUiState();
-  const wizard = !profile.onboarded;
-  const phone = !useMediaQuery("(min-width: 640px)");
   const [draft, setDraft] = useState<TravelerProfile>(() => profile);
-  const [step, setStep] = useState(0);
   // Dealbreaker chips start from the stored dealbreakers so the dialog is idempotent.
   const [dealbreakers, setDealbreakers] = useState<string[]>(() =>
     DEALBREAKER_OPTIONS.filter((o) => preferences.some((p) => !p.tripId && p.polarity === "dealbreaker" && same(p.statement, o.statement))).map((o) => o.statement),
@@ -61,13 +49,9 @@ function AssistantSettingsForm() {
   };
 
   const save = () => {
-    updateProfile({ ...draft, onboarded: true });
+    const tripDates = draft.tripInMind === "yes" ? formatDateRange(draft.nextStartDate, draft.nextEndDate) : "";
+    updateProfile({ ...draft, nextWhen: tripDates || draft.nextWhen, onboarded: true });
     syncDealbreakers();
-    closeAssistant();
-  };
-
-  const skip = () => {
-    updateProfile({ ...draft, onboarded: true });
     closeAssistant();
   };
 
@@ -77,71 +61,6 @@ function AssistantSettingsForm() {
   const jump = (key: SectionKey) => {
     document.getElementById(`profile-section-${key}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
-
-  if (wizard) {
-    const steps: SectionKey[][] = phone ? PHONE_STEPS : SECTIONS.map((s) => [s.key]);
-    const index = Math.min(step, steps.length - 1);
-    const last = steps.length - 1;
-    const meta = (key: SectionKey) => SECTIONS.find((s) => s.key === key) ?? SECTIONS[0];
-    const stepTitle = (keys: SectionKey[]) => keys.map((k) => meta(k).title).join(" · ");
-    return (
-      <Modal
-        open
-        onClose={skip}
-        title="Let's personalize your assistant"
-        description={`Step ${index + 1} of ${steps.length} · ${stepTitle(steps[index])}. Everything is optional and editable later under Update my assistant.`}
-        size="lg"
-        footer={
-          <div className="flex items-center justify-between gap-3">
-            <button type="button" onClick={skip} className="text-sm text-muted hover:underline">
-              Skip for now
-            </button>
-            <div className="flex gap-2">
-              {index > 0 ? (
-                <Button variant="outline" onClick={() => setStep(index - 1)}>
-                  <ArrowLeft className="h-4 w-4" /> Back
-                </Button>
-              ) : null}
-              {index < last ? (
-                <Button onClick={() => setStep(index + 1)}>
-                  Next <ArrowRight className="h-4 w-4" />
-                </Button>
-              ) : (
-                <Button onClick={save}>Save preferences</Button>
-              )}
-            </div>
-          </div>
-        }
-      >
-        <ol className="mb-5 flex gap-1.5" aria-label="Onboarding steps" data-testid="onboarding-steps">
-          {steps.map((keys, i) => (
-            <li key={keys.join("-")} className="flex-1">
-              <button
-                type="button"
-                onClick={() => setStep(i)}
-                aria-current={i === index ? "step" : undefined}
-                aria-label={`Step ${i + 1}: ${stepTitle(keys)}`}
-                className={clsx("block h-1.5 w-full rounded-full", i <= index ? "bg-brand" : "bg-surface-2")}
-              />
-            </li>
-          ))}
-        </ol>
-        {steps[index].map((key) => {
-          const Section = SECTION_COMPONENT[key];
-          const section = meta(key);
-          return (
-            <div key={key} className="mb-7 last:mb-0">
-              <div className="mb-4">
-                <h3 className="text-[16px] font-semibold">{section.title}</h3>
-                <p className="text-[13px] text-muted">{section.blurb}</p>
-              </div>
-              <Section {...sectionProps} />
-            </div>
-          );
-        })}
-      </Modal>
-    );
-  }
 
   return (
     <Modal

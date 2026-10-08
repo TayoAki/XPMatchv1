@@ -84,8 +84,8 @@ The map column appears at 1280 px; below that the map is a sheet opened from the
 pill. The side rail appears at 768 px on every page except Discover; below 768 px a tab bar replaces
 it.
 
-- **Under 640 px:** phone behavior. A three-question quiz in the chat replaces the onboarding dialog,
-  chip groups fold, pickers open as sheets.
+- **Under 640 px:** phone behavior. Onboarding runs one column wide (no photo), chip groups in Update
+  my assistant fold, pickers open as sheets.
 - **Under 768 px:** the bottom tab bar (Discover, Trips, Saved, Concierge, More). No side rail,
   header links or account menu.
 - **768 px and up:** the side rail, 236 px (68 px collapsed).
@@ -1322,25 +1322,48 @@ viewer); `trip_items` ideas, bookings and media with an optional place and booki
 
 ### Onboarding
 
-On screens 640 px and wider, a dialog opens once: "Let's personalize your assistant", "Step N of 6",
-with Skip for now, Back, Next and Save preferences. On phones the six steps fold into three, and a
-three-question quiz in the chat replaces it: where you start from and dream of going, what you love
-doing, and how you like to spend.
+The first visit, on every screen size, covers the app with a full-screen flow
+(`src/components/onboarding/OnboardingFlow.tsx`, dialog "Set up your travel assistant"; the shell
+behind it is `inert`). Each screen: the question on the left, a photo from `public/onboarding/` on
+the right (1024 px and up), a progress bar, a back arrow with the step's name, Next, and × to close
+(which saves what was entered and marks onboarding done).
 
-| Step | Fields and options |
+| Screen | What it asks |
 | --- | --- |
-| About you | Name; home city; home airport; usually travel with: Solo, Partner, Family (with kids), Friends, It varies |
-| Style and interests | Budget: Budget, Mid-range, Premium, Luxury. Pace: Relaxed, Balanced, Packed. 12 travel styles (Food & drink, Culture & history, Outdoors & hiking, Beaches, Nightlife, Art & design, Family friendly, Luxury, Budget travel, Road trips, Photography, Wellness). 16 interests (Museums & art, History & architecture, Food tours & markets, Nightlife, Live music, Nature & hiking, Beaches, Wellness & spa, Shopping, Photography spots, Sports & adventure, Family activities, Local neighborhoods, Coffee culture, Wine & craft beer, Street food) |
-| Where you stay | Boutique hotel, Design hotel, Luxury resort, Budget hotel, Apartment, Hostel, B&B / guesthouse, Business hotel. Must-haves: Pool, Gym, Breakfast included, Kitchen, Central location, Quiet room, Workspace, Free cancellation, Walkable area, Near transit, Parking. A free-text note |
-| How you eat | 15 cuisines, 7 dietary needs (Vegetarian, Vegan, Gluten-free, Halal, Kosher, No shellfish, Nut allergy), a note, and "How adventurous?": Play it safe, A bit of both, Try anything |
-| Logistics and next trip | Rhythm: Early riser, In between, Night owl. Walking: Love long walks, Moderate, Keep it short. Getting around. Flights. "Where are you dreaming of going next?" and "Roughly when?" |
-| Dealbreakers and notes | 12 dealbreaker chips, stored as preferences; "Anything else the assistant should remember?" |
+| The basics | First and last name (from sign-up); "Where do you live?" with Places Autocomplete suggestions (`GET /api/places/cities?scope=home`), typed text kept as typed. Next needs a first name |
+| Voice & personality | Four Gemini voices with a sample each (`public/onboarding/voices/*.wav`): Aoede (Breezy), Puck (Upbeat), Sulafat (Warm), Charon (Informative), shown only when voice is set up. Personality: Casual, Neutral, Professional (it sets the chat assistant's tone too) |
+| Your next trip | "Do you have a trip in mind now?" Yes / No; Yes opens a 2,000-character note and Where (suggestions, `scope=any`) / When (two dates) / Who (a stepper) |
+| Favorite places | Places been and places wanted (up to 10 each) as chips with flags (`src/lib/places/flags.ts`) |
+| Interview | "Start voice interview" (Gemini Live) or "Skip interview" (tap through) |
+| Travel style | Who you travel with (Solo, Couple, Family, Friends); budget ($ On a budget … $$$$ Luxury); splurges (Stay, Restaurants, Experiences, Other) |
+| How you stay | Accommodation style (11 choices + Other); loyalty programs (9 + Other) |
+| Food | Kinds of restaurants (12 + Other); dietary restrictions (7 + Other) |
+| Wrapping up | Weekend fun (10 + Other); "Anything to clarify…" (free text) |
 
-The profile (`TravelerProfile`, 24 fields) is saved with `PUT /api/me/profile` into
+The questions live in one place, `src/lib/onboarding/quiz.ts` (`QUIZ`), which both the screens and the
+voice interview use. Finish saves with `PUT /api/me/profile`: the trip in mind (or else the first place
+wanted) becomes `nextDestination`, and a trip with a Where also fills the planner. Labels from the earlier
+quiz stay in `src/lib/profile/options.ts` marked `legacy`: never offered, still matched.
+
+**The voice interview.** `POST /api/voice/session` (session, eight a day) mints a single-use Gemini Live
+token with `authTokens.create` (v1alpha): it must be used within 2 minutes, expires in 30, and locks the
+model (`gemini-3.8-live`), the voice, the system instruction (`interviewInstruction`: name, home, places,
+trip, tone, the four parts in order, never ask for personal details, and what is already answered when a
+second interview resumes), the tools and both transcriptions. The browser (`src/lib/voice/live-interview.ts`)
+connects to the constrained Live endpoint with the token, streams the microphone as 16 kHz 16-bit PCM from
+an AudioWorklet, plays the 24 kHz replies back to back and stops them when the traveler talks over them
+(`interrupted`). The model calls `show_section` before each part, `record_answers` as soon as it hears an
+answer (mapped onto the choices by `applyRecordedAnswers`, own words kept for "Other"; the page answers
+silently with what it saved) and `finish_interview` at the end, after which the call closes once the
+goodbye has played. The bar under the questions shows captions, a mute button and "Type instead"; calls
+end after 8 minutes. `POST /api/voice/usage` records the minutes heard and spoken at the Live price.
+
+The profile (`TravelerProfile`, 35 fields) is saved with `PUT /api/me/profile` into
 `profiles.preferences`. Defaults: balanced pace, mid-range budget, partner, a mix of safe and
-adventurous food, balanced rhythm, moderate walking, learn from chats on. "Update my assistant" shows
-the same sections later, plus "What XPMatch has learned", the "Learn from our chats" switch and "Your
-taste".
+adventurous food, balanced rhythm, moderate walking, learn from chats on, the Aoede voice and the
+Neutral tone. "Update my assistant" shows every answer in stacked sections (plus the home airport,
+pace, must-haves, logistics and dealbreakers, which onboarding no longer asks), "What XPMatch has
+learned", the "Learn from our chats" switch and "Your taste".
 
 ### The shell
 
@@ -1441,18 +1464,19 @@ without it, PGlite in `.data/pglite`.
 
 ## 16. API reference
 
-58 route files under `src/app/api`. "Session" means the handler checks the session; "+ origin" means
+61 route files under `src/app/api`. "Session" means the handler checks the session; "+ origin" means
 writes must also come from the same origin.
 
 | Area | Routes | Access |
 | --- | --- | --- |
 | Accounts | `auth/signup`, `auth/login`, `auth/forgot`, `auth/reset` (rate limited); `auth/logout`; `auth/me` | Public; logout needs the cookie; me needs a session |
-| Health | `health` (runs `SELECT 1`), `config` (model mode) | Public |
+| Health | `health` (runs `SELECT 1`), `config` (model mode, whether places and voice are set up) | Public |
 | The traveler | `me/state` (everything the app needs in one call), `me/profile`, `me/preferences`, `me/feedback`, `me/recs`, `notifications/read`, `saved` | Session + origin |
 | Trips | `trips` GET/POST; `trips/{id}` GET/PATCH/DELETE (a non-owner's delete leaves); `…/items`; `…/members` | Session + origin, members only; viewers can't write |
 | Chats | `chats/{threadId}` PUT/DELETE (delete removes the transcript and saved plans); `…/messages` GET; `…/plans` GET/PUT | Session + origin |
 | Chat runtime | `copilotkit/[[...path]]` | Session |
-| Places | `places/resolve` (up to 12 places, charged to the budget); `places/{id}`; `…/reviews`; `…/checkin`; `places/ask`; `places/nearby`; `places/photo` | Session |
+| Places | `places/resolve` (up to 12 places, charged to the budget); `places/{id}`; `…/reviews`; `…/checkin`; `places/ask`; `places/nearby`; `places/photo`; `places/cities` (city suggestions while typing) | Session |
+| Voice | `voice/session` (a single-use Gemini Live token, eight a day); `voice/usage` (the interview's minutes) | Session + origin |
 | Plans and picks | `itineraries`, `packages`, `packages/events`, `recs/home`, `catalog/pool`, `routes/legs` | Session |
 | Guides | `guides`; `guides/{id}` (author edits); `…/save` | Session + origin |
 | Import | `import` (up to 60 s); `import/{id}` | Session + origin |
@@ -1544,7 +1568,6 @@ Found while tracing the code for this guide. A rebuild can avoid them from the s
 - **Routes on the chat map are straight lines.** Real travel times appear only on the trip board.
 - **A stale session cookie can loop** between `/` and `/login` when its session row is gone, because
   the gate only checks that the cookie exists.
-- **Skipping onboarding drops dealbreakers** the traveler had already picked.
 - **Every board save notifies every other member,** so a drag sends a notification.
 - **Without OpenRouter, Ask and imports probably fail.** The helper model is passed as a bare model
   name, which the AI SDK sends to its own gateway.

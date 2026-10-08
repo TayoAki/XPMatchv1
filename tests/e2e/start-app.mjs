@@ -1,4 +1,4 @@
-// Starts the stand-in model, the Places stub and the app with a fresh embedded database.
+// Starts the stand-in model, the Places stub, the other stand-ins and the app with a fresh embedded database.
 // Used by playwright.config as the web server command and by the restore spec for a second instance.
 import { spawn } from "node:child_process";
 import { rmSync } from "node:fs";
@@ -12,6 +12,7 @@ const modelPort = Number(process.env.MODEL_PORT || 4545);
 const placesPort = Number(process.env.PLACES_PORT || 4546);
 const sitePort = Number(process.env.SITE_PORT || 4547);
 const resendPort = Number(process.env.RESEND_PORT || 4548);
+const geminiPort = Number(process.env.GEMINI_PORT || 4549);
 const dataDir = process.env.PGLITE_DIR || path.join(root, ".data", `e2e-${appPort}`);
 const startMocks = process.env.START_MOCKS !== "0";
 const production = process.env.E2E_PRODUCTION === "1";
@@ -33,6 +34,8 @@ if (startMocks) {
   spawnChild("node", [path.join(here, "mock-site.mjs")], { PORT: String(sitePort) }, "mock site");
   // The email stub keeps what the app sends (password reset links) for the reset spec to read.
   spawnChild("node", [path.join(here, "mock-resend.mjs")], { PORT: String(resendPort) }, "mock resend");
+  // Gemini Live for the voice interview: session tokens and a scripted spoken interview.
+  spawnChild("node", [path.join(here, "mock-gemini.mjs")], { PORT: String(geminiPort) }, "mock gemini");
 }
 
 const appEnv = {
@@ -53,6 +56,9 @@ const appEnv = {
   RESEND_API_KEY: "re_e2e_stand_in",
   RESEND_BASE_URL: `http://localhost:${resendPort}`,
   EMAIL_FROM: "XPMatch <no-reply@xpmatchme.test>",
+  // The voice interview's tokens and Live session come from the stand-in.
+  GEMINI_API_KEY: "e2e-gemini-stand-in",
+  GEMINI_BASE_URL: `http://localhost:${geminiPort}`,
   // The next dev badge would sit on the Chat tab of the phone tab bar and swallow taps.
   NEXT_DEV_INDICATORS: "0",
   COPILOTKIT_TELEMETRY_DISABLED: "true",

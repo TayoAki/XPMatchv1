@@ -1,6 +1,6 @@
 import { findCity } from "@/lib/places/gazetteer";
 import { isLocality } from "@/lib/places/kind";
-import type { LatLng, PhotoCredit, PlaceKind, ResolvedPlace } from "@/lib/places/types";
+import type { CitySuggestion, LatLng, PhotoCredit, PlaceKind, ResolvedPlace } from "@/lib/places/types";
 import {
   findAlias,
   fuzzyCatalogMatch,
@@ -674,4 +674,54 @@ export async function resolvePhotoUri(photoName: string, width: number, fresh = 
   rememberPhotoUri(cacheKey, data.photoUri);
   await setPhotoUrl(cacheKey, data.photoUri);
   return data.photoUri;
+}
+
+/* --------------------------- city suggestions --------------------------- */
+
+/** "home": towns and cities someone lives in; "any": also regions and countries someone travels to. */
+export type CityScope = "home" | "any";
+
+const CITY_TYPES: Record<CityScope, string[]> = {
+  home: ["locality", "postal_town", "sublocality", "administrative_area_level_3", "neighborhood"],
+  any: ["locality", "administrative_area_level_1", "country", "colloquial_area", "archipelago"],
+};
+const citySuggestionCache = new Map<string, { at: number; value: Promise<CitySuggestion[]> }>();
+const CITY_SUGGESTION_TTL_MS = 10 * 60_000;
+
+/** Google Places Autocomplete (New) for a few letters of a city; billed per request after Google's free 10,000 a month. */
+export async function suggestCities(query: string, scope: CityScope): Promise<CitySuggestion[]> {
+  const key = placesApiKey();
+  if (!key) return [];
+  const cacheKey = `${scope}|${query.toLowerCase()}`;
+  const hit = citySuggestionCache.get(cacheKey);
+  if (hit && Date.now() - hit.at < CITY_SUGGESTION_TTL_MS) return hit.value;
+  const value = (async () => {
+    const res = await fetch(`${PLACES_BASE}/places:autocomplete`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": key,
+        "X-Goog-FieldMask": "suggestions.placePrediction.text,suggestions.placePrediction.structuredFormat",
+      },
+      body: JSON.stringify({ input: query, includedPrimaryTypes: CITY_TYPES[scope], languageCode: "en" }),
+      signal: AbortSignal.timeout(6000),
+    });
+    if (!res.ok) throw new Error(`Places autocomplete ${res.status}`);
+    recordUsage("google", "autocomplete_requests");
+    const data = (await res.json()) as {
+      suggestions?: { placePrediction?: { text?: { text?: string }; structuredFormat?: { mainText?: { text?: string }; secondaryText?: { text?: string } } } }[];
+    };
+    return (data.suggestions ?? [])
+      .map((s) => s.placePrediction)
+      .filter((p): p is NonNullable<typeof p> => !!p?.text?.text)
+      .slice(0, 5)
+      .map((p) => ({ text: p.text!.text!, main: p.structuredFormat?.mainText?.text ?? p.text!.text!, secondary: p.structuredFormat?.secondaryText?.text ?? "" }));
+  })().catch((err: unknown) => {
+    citySuggestionCache.delete(cacheKey);
+    console.warn("[places] city suggestions failed:", err instanceof Error ? err.message : err);
+    return [] as CitySuggestion[];
+  });
+  if (citySuggestionCache.size >= 500) citySuggestionCache.delete(citySuggestionCache.keys().next().value as string);
+  citySuggestionCache.set(cacheKey, { at: Date.now(), value });
+  return value;
 }

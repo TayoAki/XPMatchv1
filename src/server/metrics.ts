@@ -58,6 +58,9 @@ function sumBy(rows: UsageRow[], keyOf: (row: UsageRow) => string, valueOf: (row
   return out;
 }
 
+/** Model spend: OpenRouter's chat and helper models, and Gemini Live for the voice interview. */
+const isModel = (row: UsageRow) => row.provider === "openrouter" || row.provider === "gemini";
+
 const listPrice = (row: UsageRow) => (row.provider === "google" && isGoogleSku(row.sku) ? (row.calls * GOOGLE_PRICES[row.sku].per1000) / 1000 : 0);
 
 /** Prices the metered rows: this month by SKU and model, the monthly pace, the last 30 days, and what the caches saved. */
@@ -81,12 +84,14 @@ export function buildCostReport(
   const googleCost = google.reduce((s, g) => s + g.cost, 0);
   const googleListCost = google.reduce((s, g) => s + g.listCost, 0);
 
-  const modelRows = monthRows.filter((r) => r.provider === "openrouter");
-  const models: ModelSpend[] = [...new Set(modelRows.map((r) => r.sku))]
-    .map((model) => {
-      const mine = modelRows.filter((r) => r.sku === model);
+  const modelRows = monthRows.filter(isModel);
+  const models: ModelSpend[] = [...new Set(modelRows.map((r) => `${r.provider}\n${r.sku}`))]
+    .map((key) => {
+      const [provider, model] = key.split("\n");
+      const mine = modelRows.filter((r) => r.provider === provider && r.sku === model);
       return {
         model,
+        unit: provider === "gemini" ? ("seconds" as const) : ("tokens" as const),
         calls: mine.reduce((s, r) => s + r.calls, 0),
         inputTokens: mine.reduce((s, r) => s + r.unitsIn, 0),
         outputTokens: mine.reduce((s, r) => s + r.unitsOut, 0),
@@ -95,6 +100,7 @@ export function buildCostReport(
     })
     .sort((a, b) => b.cost - a.cost || b.calls - a.calls);
   const modelCost = models.reduce((s, m) => s + m.cost, 0);
+  const voiceCost = models.filter((m) => m.unit === "seconds").reduce((s, m) => s + m.cost, 0);
 
   const count = (provider: string, sku?: string, from = monthRows) =>
     from.filter((r) => r.provider === provider && (sku === undefined || r.sku === sku)).reduce((s, r) => s + r.calls, 0);
@@ -109,12 +115,12 @@ export function buildCostReport(
     for (const [sku, calls] of sumBy(recent.filter((r) => r.provider === "google" && isGoogleSku(r.sku)), (r) => r.sku, (r) => r.calls)) {
       monthlyPace += monthlyCost(sku as GoogleSku, Math.round(calls * scale)).cost;
     }
-    monthlyPace += recent.filter((r) => r.provider === "openrouter").reduce((s, r) => s + r.costUsd, 0) * scale;
+    monthlyPace += recent.filter(isModel).reduce((s, r) => s + r.costUsd, 0) * scale;
   }
 
   const days = lastDays(30, today);
   const googleByDay = sumBy(rows, (r) => r.day, listPrice);
-  const modelByDay = sumBy(rows.filter((r) => r.provider === "openrouter"), (r) => r.day, (r) => r.costUsd);
+  const modelByDay = sumBy(rows.filter(isModel), (r) => r.day, (r) => r.costUsd);
   const daily: DailySpend[] = days.map((day) => ({ day, google: googleByDay.get(day) ?? 0, model: modelByDay.get(day) ?? 0 }));
 
   const lookups = {
@@ -135,7 +141,8 @@ export function buildCostReport(
     avoided: (lookups.memory + lookups.catalog + lookups.known) * AVOIDED.lookup + photos.cached * AVOIDED.photo + lists.cached * AVOIDED.list + sheets.cached * AVOIDED.sheet,
   };
 
-  const modelMonth = opts.openrouter ? opts.openrouter.month : modelCost;
+  // OpenRouter's own figure replaces what was metered for it; the voice interview is metered only.
+  const modelMonth = opts.openrouter ? opts.openrouter.month + voiceCost : modelCost;
   return {
     since: opts.since,
     month,

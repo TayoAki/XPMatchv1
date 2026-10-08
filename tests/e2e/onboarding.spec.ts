@@ -13,33 +13,56 @@ interface RecRow {
 }
 
 test("in-depth onboarding drives home picks with match scores and thumbs; itinerary detail; bug reports reach the admin page", async ({ page, browser, baseURL }) => {
-  // Nine steps, several first-visit compiles in dev mode; production mode (CI) finishes in a fraction of this.
+  // Many steps, several first-visit compiles in dev mode; production mode (CI) finishes in a fraction of this.
   test.setTimeout(540_000);
   const email = uniqueEmail("deep");
   const stateJson = async () => (await (await page.request.get("/api/me/state")).json()) as { profile: Record<string, unknown>; chats: { destination?: string }[] };
   const recsJson = async () => (await (await page.request.get("/api/me/recs")).json()) as { recFeedback: RecRow[]; quality: { hitRate: number | null } };
 
-  await test.step("the six-step wizard stores the deep profile", async () => {
+  await test.step("onboarding stores the deep profile: setup screens, the typed questions and the extras", async () => {
     await signup(page, {
       email,
+      homeCity: "Atl",
+      homeCitySuggestion: "Atlanta, GA, USA",
+      personality: "Casual",
+      trip: { notes: "Two of us, a week of food and history.", where: "Rom", whereSuggestion: "Rome, Italy", travelers: 2 },
+      placesBeen: ["Lisbon, Portugal"],
+      placesWant: ["Kyoto, Japan"],
+      companions: "Couple",
+      budget: "Upscale",
+      splurges: ["Restaurants"],
+      stayTypes: ["Boutique hotels"],
+      loyalty: ["Hilton Honors"],
+      cuisines: ["Local street food"],
+      dietaryTags: ["Vegetarian"],
+      interests: ["Art & museums"],
+      notes: "Rooftop bars over clubs.",
+      // Only in "Update my assistant".
       homeAirport: "ATL",
       styles: ["Food & drink", "Culture & history"],
-      interests: ["Museums & art", "History & architecture", "Food tours & markets"],
-      stayTypes: ["Boutique hotel"],
       mustHaves: ["Pool", "Central location"],
-      cuisines: ["Italian"],
-      dietaryTags: ["Vegetarian"],
-      nextDestination: "Rome, Italy",
-      nextWhen: "October",
       dealbreakers: ["Street noise at night"],
-      notes: "Rooftop bars over clubs.",
     });
-    const state = await eventually(stateJson, (s) => s.profile.nextDestination === "Rome, Italy");
-    expect(state.profile.interests).toEqual(["Museums & art", "History & architecture", "Food tours & markets"]);
-    expect(state.profile.stayMustHaves).toEqual(["Pool", "Central location"]);
-    expect(state.profile.cuisines).toEqual(["Italian"]);
-    expect(state.profile.dietaryTags).toEqual(["Vegetarian"]);
-    expect(state.profile.homeAirport).toBe("ATL");
+    const state = await eventually(stateJson, (s) => s.profile.nextDestination === "Rome, Italy" && s.profile.homeAirport === "ATL");
+    expect(state.profile).toMatchObject({
+      homeCity: "Atlanta, GA, USA",
+      personality: "casual",
+      companions: "partner",
+      budgetTier: "premium",
+      splurges: ["Restaurants"],
+      stayTypes: ["Boutique hotels"],
+      loyaltyPrograms: ["Hilton Honors"],
+      cuisines: ["Local street food"],
+      dietaryTags: ["Vegetarian"],
+      interests: ["Art & museums"],
+      notes: "Rooftop bars over clubs.",
+      placesBeen: ["Lisbon, Portugal"],
+      placesWant: ["Kyoto, Japan"],
+      tripInMind: "yes",
+      nextNotes: "Two of us, a week of food and history.",
+      nextTravelers: 2,
+      stayMustHaves: ["Pool", "Central location"],
+    });
   });
 
   await test.step("home picks: three carousel rows for the dreamed-of destination, each pick with a match score", async () => {
@@ -51,7 +74,7 @@ test("in-depth onboarding drives home picks with match scores and thumbs; itiner
       await expect(row.getByTestId("home-pick")).toHaveCount(count, { timeout: 60_000 });
       await expect(row.getByTestId("match-badge")).toHaveCount(count);
     }
-    await expect(page.getByTestId("home-row-things")).toContainText("Because you like Museums & art");
+    await expect(page.getByTestId("home-row-things")).toContainText("Because you like Art & museums");
     await expect(page.getByTestId("home-row-stays")).toContainText("Hotel Artemide");
     await page.getByTestId("home-row-stays").getByTestId("match-badge").first().click();
     await expect(page.getByRole("dialog", { name: "Why this score" })).toBeVisible();
@@ -124,8 +147,12 @@ test("in-depth onboarding drives home picks with match scores and thumbs; itiner
     // The account menu's item comes first in the DOM (the chat's welcome hero has its own button).
     await page.getByRole("button", { name: "Update my assistant" }).first().click();
     const dialog = page.getByRole("dialog", { name: "Update my assistant" });
-    await expect(dialog.getByTestId("interest-chips").getByRole("button", { name: "Museums & art", exact: true })).toHaveAttribute("aria-pressed", "true");
-    await expect(dialog.getByTestId("cuisine-chips").getByRole("button", { name: "Italian", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(dialog.getByTestId("interest-chips").getByRole("button", { name: "Art & museums", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(dialog.getByTestId("cuisine-chips").getByRole("button", { name: "Local street food", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(dialog.getByTestId("loyalty-chips").getByRole("button", { name: "Hilton Honors", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(dialog.getByTestId("settings-places-been")).toContainText("Lisbon");
+    await expect(dialog.getByRole("radio", { name: /^Aoede/ })).toHaveAttribute("aria-checked", "true");
+    await expect(dialog.getByRole("group", { name: "Personality" }).getByRole("button", { name: /^Casual/ })).toHaveAttribute("aria-pressed", "true");
     await expect(dialog.getByTestId("taste-panel")).toBeVisible();
     // exact: the stays section's "Free cancellation" chip also contains "cancel".
     await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
@@ -151,7 +178,7 @@ test("in-depth onboarding drives home picks with match scores and thumbs; itiner
     const context = await browser.newContext({ baseURL });
     const admin = await context.newPage();
     await login(admin, "admin@example.com");
-    // Let the sign-in redirect finish; a fresh admin account still has to walk the wizard (it opens after hydration).
+    // Let the sign-in redirect finish; a fresh admin account still has to go through onboarding (it opens after hydration).
     await admin.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 30_000 });
     const before = (await (await admin.request.get("/api/me/state")).json()) as { profile: { onboarded: boolean } };
     if (!before.profile.onboarded) await completeOnboarding(admin);
@@ -184,7 +211,8 @@ test("in-depth onboarding drives home picks with match scores and thumbs; itiner
     await expect(testerRow).toContainText("Completed");
     await expect(members.getByTestId("member-row").filter({ hasText: "admin@example.com" })).toBeVisible();
     // What people answered: the tester's interests are counted.
-    await expect(admin.getByTestId("quiz-interests")).toContainText("Museums & art");
+    await expect(admin.getByTestId("quiz-interests")).toContainText("Art & museums");
+    await expect(admin.getByTestId("quiz-loyaltyPrograms")).toContainText("Hilton Honors");
     await context.close();
   });
 });

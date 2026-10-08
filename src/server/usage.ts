@@ -11,7 +11,7 @@ import { MODEL_PRICES, tokenCost } from "./pricing";
  * seconds. The admin page prices them (`src/server/metrics.ts`).
  */
 
-export type UsageProvider = "google" | "openrouter" | "resend" | "open-meteo" | "app";
+export type UsageProvider = "google" | "gemini" | "openrouter" | "resend" | "open-meteo" | "app";
 
 interface Counts {
   calls: number;

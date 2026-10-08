@@ -13,15 +13,25 @@ in development), and the app deploys to **Railway** with the included Dockerfile
 
 ## Features
 
-- **Personalized from message one** — a six-step onboarding (about you · style & interests · stays ·
-  food · logistics & next trip · dealbreakers & notes) captures name, home city/airport, companions,
-  budget, pace, travel styles, things you love doing, the kind of place you stay in and its
-  must-haves, cuisines, dietary needs, how adventurous you eat, your day rhythm, walking, transport
-  and flight preferences, where you are dreaming of going next, and "What ruins a trip for you?"
-  dealbreakers; the same sections edit in place under Update my assistant. On a phone the wizard
-  runs as three screens and long chip lists fold behind "Show all". Everything is sent to the
-  agent as context on every run; profile fields heard in conversation go through
-  `update_traveler_profile`.
+- **Personalized from message one** — a full-screen onboarding on every screen size: the basics
+  (name, and a home city with suggestions as you type), a voice and a personality for the assistant
+  (Casual, Neutral or Professional, which also sets how the chat assistant writes), a trip in mind
+  (what, where, when, who), places you have loved and want to go (with flags), then four sections
+  of questions: travel style (who comes along, budget, what you splurge on), stays (accommodation
+  style, hotel loyalty programs), food (kinds of restaurants, dietary needs) and wrapping up
+  (weekend fun, anything else). **Start voice interview** has Gemini Live ask those questions out
+  loud and fill in the answers on screen as you talk; **Skip interview** taps through the same
+  screens. Everything stays editable under Update my assistant, which also keeps the home airport,
+  pace, must-haves, logistics and dealbreakers. Answers from the earlier quiz keep matching. The
+  whole profile is sent to the agent as context on every run, and loyalty programs and splurges
+  feed the match score; profile fields heard in conversation go through `update_traveler_profile`.
+- **A voice interview that never exposes the key** — the server mints a single-use Gemini Live
+  token (`/api/voice/session`, `gemini-3.8-live`) that expires within minutes and locks the model,
+  voice, instructions and tools; the browser streams 16 kHz microphone audio straight to Gemini,
+  plays the 24 kHz replies (cut off when you talk over them), shows live captions and answers the
+  model's `record_answers` / `show_section` / `finish_interview` tool calls, which fill the chips.
+  Calls stop after eight minutes, travelers get eight a day, and their minutes are metered into the
+  admin Costs section (`/api/voice/usage`). XPMatch keeps the answers, never the audio.
 - **A place catalog: every place bought once** — every place Google returns is stored by place id
   (`places`, with what a query resolved to in `place_aliases`, shared list-search results in
   `search_cache` and resolved photo URLs in `photo_urls`) and served to everyone from then on. A
@@ -271,6 +281,8 @@ Without a model key the app starts in demo mode. Model selection lives in `src/s
 | `RESEND_API_KEY` | Turns on outgoing email through Resend ("Forgot password?" links). Unset: the form still answers, nothing is sent, and admins issue links by hand. |
 | `EMAIL_FROM` | Sender on the domain verified in Resend (default `XPMatch <no-reply@xpmatchme.com>`). |
 | `RESEND_BASE_URL` | Override Resend's API base URL (the end-to-end suite points it at a stub; never set in production). |
+| `GEMINI_API_KEY` | Turns on the onboarding's voice interview (Gemini Live). It stays on the server; browsers only get single-use session tokens. Unset: onboarding offers the typed questions only. Use a paid-tier key (the free tier may use the audio to improve Google's products). |
+| `GEMINI_BASE_URL` | Override the Gemini API base URL (the end-to-end suite points it at a stand-in Live server; never set in production). |
 | `APP_VERSION` | Optional build label attached to bug reports (Railway's `RAILWAY_GIT_COMMIT_SHA` is used when unset). |
 | `HOSTING_MONTHLY_USD` | The hosting plan's monthly price in the admin Costs section (default `20`, Railway Pro's minimum). |
 | `HOSTING_PLAN_LABEL` | Its name there (default `Railway Pro`). |
@@ -295,7 +307,8 @@ answer in plain text instead of rendering cards.
 2. Create two keys: a browser key (`NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`) restricted to your HTTP
    referrers and to the Maps JavaScript API, and a server key (`GOOGLE_MAPS_API_KEY`) restricted to
    the Places API. The server key never reaches the browser: photos are served through the
-   `/api/places/photo` redirect and lookups go through `/api/places/resolve`.
+   `/api/places/photo` redirect, lookups go through `/api/places/resolve`, and onboarding's city
+   suggestions (Places Autocomplete, part of the Places API (New)) through `/api/places/cities`.
 3. Optional: create a Map ID for custom styling and set `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID`
    (advanced markers require a Map ID; the default `DEMO_MAP_ID` works for development).
 4. Set `PLACES_DEBUG=1` to log every place lookup the assistant triggers.
@@ -312,7 +325,8 @@ The repo ships a multi-stage `Dockerfile` (Next.js standalone output) and a `rai
    (deploy branch of your choice).
 2. Set the app service variables: `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `OPENROUTER_API_KEY`,
    `OPENROUTER_MODEL`, `GOOGLE_MAPS_API_KEY`, `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` (inlined at build
-   time — Railway passes service variables to the Docker build), `COPILOTKIT_TELEMETRY_DISABLED=true`.
+   time — Railway passes service variables to the Docker build), `COPILOTKIT_TELEMETRY_DISABLED=true`,
+   and `GEMINI_API_KEY` for the voice interview.
 3. Generate a domain. Restrict the browser Google key to that domain and the server key to the
    Places API.
 4. Smoke test: sign up → chat about a city → map pins → create a trip → add a member.
